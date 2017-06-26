@@ -12,14 +12,14 @@ public class Combinators {
 	}
 
 	@SafeVarargs
-	private static <T> CompletionStage<Collection<T>> all(final CompletableFuture<T>... futures) {
+	public static <T> CompletionStage<Collection<T>> all(final CompletableFuture<T>... futures) {
 		return CompletableFuture.allOf(futures).thenApply(ignored -> {
 			return Stream.of(futures).map(CompletableFuture::join).collect(Collectors.toList());
 		});
 	}
 
 	@SuppressWarnings("unchecked")
-	public static <T> CompletionStage<Collection<T>> all(final Collection<CompletionStage<T>> futures) {
+	public static <T> CompletionStage<Collection<T>> all(final Collection<? extends CompletionStage<T>> futures) {
 		return all(futures.stream().map(CompletionStage::toCompletableFuture).toArray(CompletableFuture[]::new));
 	}
 

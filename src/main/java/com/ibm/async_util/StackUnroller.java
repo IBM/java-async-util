@@ -93,7 +93,7 @@ public final class StackUnroller {
               return;
             }
           } else {
-            this.complete(completed);
+            this.complete(c);
             return;
           }
         } while ((c = currentPassBack.poll()) != null);

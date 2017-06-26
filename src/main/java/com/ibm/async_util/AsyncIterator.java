@@ -894,4 +894,9 @@ public interface AsyncIterator<T> {
     });
   }
 
+  public static <T> AsyncIterator<T> error(final Throwable ex) {
+    CompletableFuture<Either<T, End>> future = new CompletableFuture<>();
+    future.completeExceptionally(ex);
+    return () -> future;
+  }
 }
