@@ -743,7 +743,7 @@ public interface AsyncIterator<T> {
    * @param asyncIterators an Collection of AsyncIterators to concatenate
    * @return A single AsyncIterator that is the concatenation of asyncIterators
    */
-  static <T, E extends Exception> AsyncIterator<T> concat(
+  static <T> AsyncIterator<T> concat(
       final Collection<AsyncIterator<T>> asyncIterators) {
     if (asyncIterators.isEmpty()) {
       return AsyncIterator.empty();
@@ -964,7 +964,7 @@ public interface AsyncIterator<T> {
    * @param supplier
    * @return AsyncIterator returning values generated from the Supplier
    */
-  static <T, E extends Exception> AsyncIterator<T> generate(
+  static <T> AsyncIterator<T> generate(
       final Supplier<CompletionStage<T>> supplier) {
     return () -> supplier.get().thenApply(Either::right);
   }
@@ -1030,7 +1030,7 @@ public interface AsyncIterator<T> {
    * @param futures
    * @return AsyncIterator of values produced by futures in order of completion
    */
-  static <T, E extends Exception> AsyncIterator<T> unordered(
+  static <T> AsyncIterator<T> unordered(
       final Collection<? extends CompletionStage<T>> futures) {
     final AtomicInteger size = new AtomicInteger(futures.size());
     final AsyncChannel<Either<Throwable, T>> channel = AsyncChannels.unbounded();
