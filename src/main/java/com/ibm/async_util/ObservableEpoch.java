@@ -23,10 +23,10 @@ public interface ObservableEpoch {
 
 	/**
 	 * Atomically ends the active epoch, preventing new entrants from
-	 * successfully entering and returning a {@link Future} that triggers once
+	 * successfully entering and returning a {@link CompletionStage} that triggers once
 	 * all active participants have exited.
 	 * 
-	 * @return a {@link Future}, which will complete after the last open
+	 * @return a {@link CompletionStage}, which will complete after the last open
 	 *         {@link EpochToken} has been closed. The value of the future will
 	 *         be {@code false} if this epoch was already terminated, otherwise
 	 *         {@code true} for the single call that terminates this epoch
@@ -51,7 +51,7 @@ public interface ObservableEpoch {
 	 * called, and a separate call to {@link #terminate()} must be made before
 	 * this returned future completes
 	 * 
-	 * @return a {@link Future} which will complete after a call to
+	 * @return a {@link CompletionStage} which will complete after a call to
 	 *         {@link #terminate()} has been made, and the last open
 	 *         {@link EpochToken} has been closed.
 	 */

@@ -51,7 +51,7 @@ import java.util.Optional;
  * their answers off to some server somewhere one at a time.
  * 
  * <pre>
- * <code>
+ * {@code
  * AsyncChannel<Integer> channel = AsyncChannels.unbounded();
  * for (i = 0; i < numThreads; i++) {
  *   // spawn threads that send results to channel
@@ -76,7 +76,7 @@ import java.util.Optional;
  * // close the channel, done computing
  * channel.close();
  * 
- * </code>
+ * }
  * </pre>
  * <p>
  * It is also convenient to use a channel to merge many {@link AsyncIterator}s together. Think if we
@@ -86,7 +86,7 @@ import java.util.Optional;
  * channel we process each number as soon as it becomes available.
  * 
  * <pre>
- * <code>
+ * {@code
  * AsyncIterator<Integer> getNumbersFrom(ServerLocation ip);
  * AsyncChannel channel = AsyncChannels.unbounded();
  * futures = ips.stream()
@@ -107,14 +107,16 @@ import java.util.Optional;
  *  channel
  *    .forEach(num -> System.out.println(num))
  *    .thenAccept(ig -> System.out.println("finished getting all numbers")));
- * </code>
+ * }
  * </pre>
  * <p>
  * A reminder, all topics addressed in the documentation of {@link AsyncIterator} apply to this
  * interface as well. Most importantly this means:
+ * <ul>
  * <li>Consumption of an AsyncIterator is <b> not </b> thread safe</li>
  * <li>Lazy methods on AsyncIterator like map/flatMap don't consume anything. Make sure you actually
  * use a consumption operation somewhere, otherwise no one will ever read what was sent</li>
+ * </ul>
  * 
  * @param <T>
  * @see AsyncIterators

@@ -23,17 +23,17 @@ package com.ibm.async_util;
  * An asynchronously acquirable read-write lock which additionally provides an optimistic read mode.
  * Optimistic read mode can be thought of as a weak reader mode which does not prevent writers from
  * acquiring the lock.
- * <p>
- * In practice, optimistic reads of brief read-only sections can reduce memory contention. Great
+ *
+ * <p>In practice, optimistic reads of brief read-only sections can reduce memory contention. Great
  * care must be taken when reading mutable variables, however, as they can change at any point and
  * knowledge of the underlying accessed structures is necessary to ensure a consistent view of the
  * variables.
- * <p>
- * Consider the following example. The BitSet class is not inherently thread-safe, so we need a lock
- * to protect it. Further, our hypothetical use case exhibits only rare modifications but extremely
- * frequent queries, which may justify an optimistic read design:
  *
- * <pre>
+ * <p>Consider the following example. The BitSet class is not inherently thread-safe, so we need a
+ * lock to protect it. Further, our hypothetical use case exhibits only rare modifications but
+ * extremely frequent queries, which may justify an optimistic read design:
+ *
+ * <pre>{@code
  * BitSet bits = new BitSet();
  *
  * Future<Boolean> isSet(int idx) {
@@ -66,15 +66,15 @@ package com.ibm.async_util;
  *     }
  *   }
  * }
- * </pre>
- * <p>
- * This interface draws inspiration from the standard library's
- * {@link java.util.concurrent.locks.StampedLock} but certain implementation details may differ.
- * Identical behavior should not be expected from both locking facilities beyond what is explicitly
+ * }</pre>
+ *
+ * <p>This interface draws inspiration from the standard library's {@link
+ * java.util.concurrent.locks.StampedLock} but certain implementation details may differ. Identical
+ * behavior should not be expected from both locking facilities beyond what is explicitly
  * documented.
- * <p>
- * Implementations will specify whether their lock acquisition is fair or not; this interface does
- * not define this requirement.
+ *
+ * <p>Implementations will specify whether their lock acquisition is fair or not; this interface
+ * does not define this requirement.
  *
  * @see AsyncReadWriteLock
  * @see java.util.concurrent.locks.StampedLock
@@ -85,9 +85,9 @@ public interface AsyncStampedLock extends AsyncReadWriteLock {
    * Attempt to acquire a {@link Stamp} in optimistic-read mode if the lock is not already
    * write-locked. The stamp may subsequently be {@link Stamp#validate() validated} to check whether
    * the write lock has been acquired
-   * 
-   * @return a non-null Stamp if the lock is not currently write-locked. Otherwise, returns
-   *         {@code null}
+   *
+   * @return a non-null Stamp if the lock is not currently write-locked. Otherwise, returns {@code
+   *     null}
    */
   // API note: why a nullable instead of an Optional<Stamp> like the similar try*Lock methods?
   // a few reasons:
@@ -98,11 +98,9 @@ public interface AsyncStampedLock extends AsyncReadWriteLock {
   // object wrapper is undesirable
   Stamp tryOptimisticRead();
 
-
-
   /**
    * An object indicating a successful optimistic read attempt.
-   * 
+   *
    * @see AsyncStampedLock#tryOptimisticRead()
    */
   public interface Stamp {
@@ -110,9 +108,9 @@ public interface AsyncStampedLock extends AsyncReadWriteLock {
     /**
      * Check whether the associated lock's write mode has been acquired in the time after this stamp
      * was issued.
-     * 
+     *
      * @return true iff the stamp is still valid i.e. write lock has not been acquired since this
-     *         stamp was issued
+     *     stamp was issued
      */
     boolean validate();
   }
