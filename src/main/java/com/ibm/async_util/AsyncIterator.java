@@ -713,15 +713,13 @@ public interface AsyncIterator<T> {
 
   public static <T> AsyncIterator<T> once(final T t) {
     return new AsyncIterator<T>() {
-      T curr = t;
+      Either<T, End> curr = Either.left(t);
 
       @Override
       public CompletionStage<Either<T, End>> nextFuture() {
-        if (curr == null) {
-          return AsyncIterators.endFuture();
-        }
-        curr = null;
-        return CompletableFuture.completedFuture(Either.left(curr));
+        Either<T, End> prev = curr;
+        curr = AsyncIterators.end();
+        return CompletableFuture.completedFuture(prev);
       }
     };
   }
@@ -837,10 +835,11 @@ public interface AsyncIterator<T> {
       @Override
       public CompletionStage<Either<T, End>> nextFuture() {
         // if there was a value, apply f to it
+        CompletionStage<Either<T, End>> ret = prev;
         final CompletionStage<Either<T, End>> next =
             this.prev.thenCompose(nxt -> nxt.fold(f, end -> AsyncIterators.endFuture()));
         this.prev = next;
-        return next;
+        return ret;
       }
     };
   }

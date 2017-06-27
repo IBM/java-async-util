@@ -27,12 +27,20 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -41,6 +49,7 @@ import java.util.stream.IntStream;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.experimental.categories.Categories.ExcludeCategory;
 
 import com.ibm.async_util.AsyncIterator.End;
 
@@ -225,15 +234,10 @@ public class AsyncIteratorTest {
     Assert.assertEquals(100, results.size());
   }
 
-  @Test
-  public void testForEachException() {
+  @Test(expected = CompletionException.class)
+  public void testConsumeException() {
     final AsyncIterator<Integer> iterator = AsyncIterator.error(new IOException("test"));
-    try {
-      TestUtil.join(iterator.consume());
-      Assert.fail("Should have been an exception");
-    } catch (final Exception e) {
-      // expected
-    }
+    TestUtil.join(iterator.consume());
   }
 
   @Test
@@ -270,83 +274,73 @@ public class AsyncIteratorTest {
     }
   }
 
-  // @Test
-  // public void testMapAheadParallel()
-  // throws TimeoutException, InterruptedException {
-  // final ThreadPoolExecutor ex =
-  // TestSafeExecutors.INSTANCE.newExecutor(10, "async-iterator-test", true);
-  // final AsyncIterator<Integer> it = intIterator(10);
-  //
-  // final AsyncIterator<Integer> mapped = it.mapAhead(i -> {
-  // final SimpleFuture<Integer, VoidException> f = new SimpleFuture<Integer, VoidException>();
-  // ex.submit(() -> {
-  // try {
-  // Thread.sleep(1000);
-  // } catch (final InterruptedException e) {
-  // }
-  // f.processSuccess(i);
-  // });
-  // return f;
-  // }, 10);
-  //
-  // final List<Integer> lis =
-  // TestUtil.join(mapped.collect(Collectors.toList()), 1900, TimeUnit.MILLISECONDS);
-  // Assert.assertEquals(TestUtil.join(intIterator(10).collect(Collectors.toList())), lis);
-  // ex.shutdown();
-  // ex.awaitTermination(20, TimeUnit.MILLISECONDS);
-  // }
-  //
-  // @Test
-  // public void testMapAheadParallelLonger()
-  // throws VoidException, TimeoutException, InterruptedException {
-  // final ThreadPoolExecutor ex =
-  // TestSafeExecutors.INSTANCE.newExecutor(10, "async-iterator-test", true);
-  // final AsyncIterator<Integer> it = intIterator(100);
-  //
-  // final AsyncIterator<Integer> mapped = it.mapAhead(i -> {
-  // final SimpleFuture<Integer, VoidException> f = new SimpleFuture<Integer, VoidException>();
-  // ex.submit(() -> {
-  // try {
-  // Thread.sleep(100);
-  // } catch (final InterruptedException e) {
-  // }
-  // f.processSuccess(i);
-  // });
-  // return f;
-  // }, 10);
-  //
-  // final List<Integer> lis =
-  // TestUtil.join(mapped.collect(Collectors.toList()), 1900, TimeUnit.MILLISECONDS);
-  // Assert.assertEquals(TestUtil.join(intIterator(100).collect(Collectors.toList())), lis);
-  // ex.shutdown();
-  // ex.awaitTermination(20, TimeUnit.MILLISECONDS);
-  // }
-  //
-  // @Test
-  // public void testMapAheadParallelRandomSleeps()
-  // throws VoidException, TimeoutException, InterruptedException {
-  // final ThreadPoolExecutor ex =
-  // TestSafeExecutors.INSTANCE.newExecutor(10, "async-iterator-test", true);
-  // final AsyncIterator<Integer> it = intIterator(100);
-  //
-  // final AsyncIterator<Integer> mapped = it.mapAhead(i -> {
-  // final SimpleFuture<Integer, VoidException> f = new SimpleFuture<Integer, VoidException>();
-  // ex.submit(() -> {
-  // try {
-  // Thread.sleep((long) (Math.random() * 100));
-  // } catch (final InterruptedException e) {
-  // }
-  // f.processSuccess(i);
-  // });
-  // return f;
-  // }, 10);
-  //
-  // final List<Integer> lis =
-  // TestUtil.join(mapped.collect(Collectors.toList()), 1900, TimeUnit.MILLISECONDS);
-  // Assert.assertEquals(TestUtil.join(intIterator(100).collect(Collectors.toList())), lis);
-  // ex.shutdown();
-  // ex.awaitTermination(20, TimeUnit.MILLISECONDS);
-  // }
+  @Test(expected = IllegalStateException.class)
+  public void mapAheadException() throws Throwable {
+    final AsyncIterator<Integer> x = intIterator(10);
+    final CountDownLatch latch = new CountDownLatch(1);
+    AsyncIterator<Integer> exceptionOn3 = x.mapAhead(i -> {
+      if (i == 3) {
+        latch.countDown();
+        throw new IllegalStateException();
+      } else {
+        return CompletableFuture.supplyAsync(() -> {
+          try {
+            latch.await();
+          } catch (InterruptedException e) {
+          }
+          return 5;
+        });
+      }
+    }, 5);
+
+    final AtomicInteger count = new AtomicInteger(0);
+    try {
+      exceptionOn3.forEach(ig -> count.incrementAndGet()).toCompletableFuture().join();
+      Assert.fail("expected exception");
+    } catch (CompletionException e) {
+      Assert.assertEquals(3, count.get());
+      throw e.getCause();
+    }
+
+  }
+
+  @Test
+  public void testMapAheadParallel() throws TimeoutException, InterruptedException {
+    testMapAhead(10, 10, () -> 1000L, 1900);
+  }
+
+  @Test
+  public void testMapAheadParallelLonger() throws TimeoutException, InterruptedException {
+    testMapAhead(100, 10, () -> 100L, 1900);
+  }
+
+  @Test
+  public void testMapAheadParallelRandomSleeps() throws TimeoutException, InterruptedException {
+    testMapAhead(100, 10, () -> ((long) Math.random() * 100), 1900);
+  }
+
+  private void testMapAhead(final int count, final int ahead, final Supplier<Long> sleepMillis,
+      final long finishInMillis) throws InterruptedException {
+    final ForkJoinPool fjp = new ForkJoinPool(ahead);
+    final AsyncIterator<Integer> it = intIterator(count);
+
+    final AsyncIterator<Integer> mapped = it.mapAhead(i -> {
+      return CompletableFuture.supplyAsync(() -> {
+        try {
+          Thread.sleep(sleepMillis.get());
+        } catch (final InterruptedException e) {
+        }
+        return i;
+      }, fjp);
+    }, ahead);
+
+    final List<Integer> lis =
+        TestUtil.join(mapped.collect(Collectors.toList()), finishInMillis, TimeUnit.MILLISECONDS);
+    Assert.assertEquals(IntStream.range(0, count).boxed().collect(Collectors.toList()), lis);
+    fjp.shutdown();
+    fjp.awaitTermination(1, TimeUnit.SECONDS);
+
+  }
 
   @Test
   public void testFlatMap() {
@@ -354,6 +348,23 @@ public class AsyncIteratorTest {
     final int count = 1000;
     final AsyncIterator<Integer> x = intIterator(count);
     final AsyncIterator<Integer> flatMapped = x.flatMap(c -> repeat(c, c));
+    final List<Integer> expected = new ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      for (int j = 0; j < i; j++) {
+        expected.add(i);
+      }
+    }
+    final List<Integer> list =
+        TestUtil.join(flatMapped.take(expected.size() + 1).collect(Collectors.toList()));
+    Assert.assertEquals(expected, list);
+  }
+
+  @Test
+  public void testFlatMapAhead() {
+    // should take [0,1,2,...,999] -> [1,2,2,3,3,3,4,4,4,4,...999,999]
+    final int count = 1000;
+    final AsyncIterator<Integer> x = intIterator(count);
+    final AsyncIterator<Integer> flatMapped = x.flatMapAhead(c -> repeat(c, c), 5);
     final List<Integer> expected = new ArrayList<>();
     for (int i = 0; i < count; i++) {
       for (int j = 0; j < i; j++) {
@@ -415,6 +426,15 @@ public class AsyncIteratorTest {
     Assert.assertEquals(expected, TestUtil.join(actual));
   }
 
+  @Test(expected = CompletionException.class)
+  public void testFilterPredicateThrows() {
+    final int count = 100000;
+    final Predicate<Integer> filterFun = i -> {
+      throw new IllegalStateException();
+    };
+    intIterator(count).filter(filterFun).collect(Collectors.toList()).toCompletableFuture().join();
+  }
+
   @Test
   public void testFold() {
     final int count = 100000;
@@ -422,6 +442,16 @@ public class AsyncIteratorTest {
     final int actual = TestUtil.join(it.fold((a, b) -> a + b, 0));
     final int expected = (count * (count - 1)) / 2;
     Assert.assertEquals(expected, actual);
+  }
+
+  @Test(expected = CompletionException.class)
+  public void testFoldFunctionThrows() {
+    final int count = 100000;
+    final AsyncIterator<Integer> it = intIterator(count);
+    BiFunction<Integer, Integer, Integer> folder = (a, b) -> {
+      throw new IllegalStateException();
+    };
+    TestUtil.join(it.fold(folder, 0));
   }
 
   @Test
@@ -456,6 +486,13 @@ public class AsyncIteratorTest {
     final List<Integer> expected =
         IntStream.range(0, 5).map(i -> i + i).boxed().collect(Collectors.toList());
     Assert.assertEquals(expected, zipped);
+  }
+
+  @Test(expected = CompletionException.class)
+  public void testZipError() throws Exception {
+    TestUtil.join(AsyncIterator.zipWith(intIterator(5),
+        AsyncIterator.<Integer>error(new IllegalStateException()), (x, y) -> x + y)
+        .collect(Collectors.toList()));
   }
 
   @Test
@@ -499,6 +536,16 @@ public class AsyncIteratorTest {
       Assert.assertEquals(i, TestUtil.join(nextFuture).intValue());
     }
     Assert.assertFalse(TestUtil.join(it.nextFuture()).isLeft());
+  }
+
+  @Test(expected = CompletionException.class)
+  public void testUnorderedError() throws Exception {
+    AsyncIterator
+        .unordered(IntStream.range(0, 5)
+            .mapToObj(i -> i == 3 ? TestUtil.<Integer>errorFuture(new IllegalStateException())
+                : CompletableFuture.completedFuture(i))
+            .collect(Collectors.toList()))
+        .consume().toCompletableFuture().join();
   }
 
   @Test
@@ -574,6 +621,62 @@ public class AsyncIteratorTest {
     Assert.assertEquals(Collections.singleton(new HashSet<>(list)),
         TestUtil.join(AsyncIterator.fromIterator(list.iterator())
             .batch(Collectors.toSet(), list.size()).collect(Collectors.toSet())));
+  }
+
+  @Test
+  public void testFind() {
+    Assert.assertEquals(7,
+        intIterator(10).find(i -> i == 7).toCompletableFuture().join().get().intValue());
+    Assert.assertEquals(Optional.empty(),
+        intIterator(10).find(i -> i == 11).toCompletableFuture().join());
+  }
+
+  @Test(expected = NullPointerException.class)
+  public void testFindNull() throws Throwable {
+    try {
+      AsyncIterator.<Integer>once(null).find(i -> i == null).toCompletableFuture().join().get();
+    } catch (CompletionException e) {
+      throw e.getCause();
+    }
+  }
+
+  @Test
+  public void testFilterConvert() {
+    int evenSum = intIterator(5).filterConvert(i -> Optional.ofNullable(i % 2 == 0 ? i : null))
+        .collect(Collectors.summingInt(i -> i)).toCompletableFuture().join();
+    // 0 + 2 + 4
+    Assert.assertEquals(6, evenSum);
+  }
+
+  @Test
+  public void testFilterMap() {
+    int evenSum = intIterator(5)
+        .filterMap(
+            i -> CompletableFuture.completedFuture(Optional.ofNullable(i % 2 == 0 ? i : null)))
+        .collect(Collectors.summingInt(i -> i)).toCompletableFuture().join();
+    // 0 + 2 + 4
+    Assert.assertEquals(6, evenSum);
+  }
+
+  @Test
+  public void testUnfold() {
+    {
+      List<Integer> unfolded = AsyncIterator
+          .unfold(0, i -> CompletableFuture.completedFuture(Either.<Integer, End>left(i + 1)))
+          .take(5).collect(Collectors.toList()).toCompletableFuture().join();
+      Assert.assertEquals(IntStream.range(0, 5).boxed().collect(Collectors.toList()), unfolded);
+    }
+    {
+      List<Integer> unfolded = AsyncIterator.unfold(0, i -> AsyncIterators.endFuture())
+          .collect(Collectors.toList()).toCompletableFuture().join();
+      Assert.assertEquals(IntStream.range(0, 1).boxed().collect(Collectors.toList()), unfolded);
+    }
+  }
+  
+  @Test
+  public void testNullValues() {
+    Assert.assertEquals(5, AsyncIterator.<Integer>repeat(null).take(5)
+        .collect(Collectors.counting()).toCompletableFuture().join().intValue());
   }
 
 
