@@ -243,7 +243,7 @@ public class AsyncIteratorTest {
   @Test
   public void testMap() {
     final AsyncIterator<Integer> x = intIterator(1000);
-    final AsyncIterator<Integer> mapped = x.map(c -> CompletableFuture.completedFuture(c + 1));
+    final AsyncIterator<Integer> mapped = x.thenCompose(c -> CompletableFuture.completedFuture(c + 1));
     final List<Integer> list = TestUtil.join(mapped.take(1001).collect(Collectors.toList()));
     Assert.assertEquals(1000, list.size());
     for (int i = 0; i < 1000; i++) {
@@ -254,7 +254,7 @@ public class AsyncIteratorTest {
   @Test
   public void testConvert() {
     final AsyncIterator<Integer> x = intIterator(1000);
-    final AsyncIterator<Integer> mapped = x.convert(c -> c + 1);
+    final AsyncIterator<Integer> mapped = x.thenApply(c -> c + 1);
     final List<Integer> list = TestUtil.join(mapped.take(1001).collect(Collectors.toList()));
     Assert.assertEquals(1000, list.size());
     for (int i = 0; i < 1000; i++) {
@@ -266,7 +266,7 @@ public class AsyncIteratorTest {
   public void testMapAhead() {
     final AsyncIterator<Integer> x = intIterator(1000);
     final AsyncIterator<Integer> mapped =
-        x.mapAhead(c -> CompletableFuture.completedFuture(c + 1), 2);
+        x.thenComposeAhead(c -> CompletableFuture.completedFuture(c + 1), 2);
     final List<Integer> list = TestUtil.join(mapped.take(1001).collect(Collectors.toList()));
     Assert.assertEquals(1000, list.size());
     for (int i = 0; i < 1000; i++) {
@@ -278,7 +278,7 @@ public class AsyncIteratorTest {
   public void mapAheadException() throws Throwable {
     final AsyncIterator<Integer> x = intIterator(10);
     final CountDownLatch latch = new CountDownLatch(1);
-    AsyncIterator<Integer> exceptionOn3 = x.mapAhead(i -> {
+    AsyncIterator<Integer> exceptionOn3 = x.thenComposeAhead(i -> {
       if (i == 3) {
         latch.countDown();
         throw new IllegalStateException();
@@ -324,7 +324,7 @@ public class AsyncIteratorTest {
     final ForkJoinPool fjp = new ForkJoinPool(ahead);
     final AsyncIterator<Integer> it = intIterator(count);
 
-    final AsyncIterator<Integer> mapped = it.mapAhead(i -> {
+    final AsyncIterator<Integer> mapped = it.thenComposeAhead(i -> {
       return CompletableFuture.supplyAsync(() -> {
         try {
           Thread.sleep(sleepMillis.get());
@@ -347,7 +347,7 @@ public class AsyncIteratorTest {
     // should take [0,1,2,...,999] -> [1,2,2,3,3,3,4,4,4,4,...999,999]
     final int count = 1000;
     final AsyncIterator<Integer> x = intIterator(count);
-    final AsyncIterator<Integer> flatMapped = x.flatMap(c -> repeat(c, c));
+    final AsyncIterator<Integer> flatMapped = x.thenFlatten(c -> repeat(c, c));
     final List<Integer> expected = new ArrayList<>();
     for (int i = 0; i < count; i++) {
       for (int j = 0; j < i; j++) {
@@ -364,7 +364,7 @@ public class AsyncIteratorTest {
     // should take [0,1,2,...,999] -> [1,2,2,3,3,3,4,4,4,4,...999,999]
     final int count = 1000;
     final AsyncIterator<Integer> x = intIterator(count);
-    final AsyncIterator<Integer> flatMapped = x.flatMapAhead(c -> repeat(c, c), 5);
+    final AsyncIterator<Integer> flatMapped = x.thenFlattenAhead(c -> repeat(c, c), 5);
     final List<Integer> expected = new ArrayList<>();
     for (int i = 0; i < count; i++) {
       for (int j = 0; j < i; j++) {
@@ -380,7 +380,7 @@ public class AsyncIteratorTest {
   public void testFlatMapIsLazy() {
     final AtomicBoolean called = new AtomicBoolean();
     final AsyncIterator<Integer> x = intIterator(10);
-    final AsyncIterator<Integer> y = x.flatMap(c -> {
+    final AsyncIterator<Integer> y = x.thenFlatten(c -> {
       called.set(true);
       return repeat(c, c);
     });
@@ -393,7 +393,7 @@ public class AsyncIteratorTest {
   public void testMapIsLazy() {
     final AtomicBoolean called = new AtomicBoolean();
     final AsyncIterator<Integer> x = intIterator(10);
-    final AsyncIterator<Object> y = x.map(i -> {
+    final AsyncIterator<Object> y = x.thenCompose(i -> {
       called.set(true);
       return CompletableFuture.completedFuture(i);
     });
@@ -406,7 +406,7 @@ public class AsyncIteratorTest {
   public void testConvertIsLazy() {
     final AtomicBoolean called = new AtomicBoolean();
     final AsyncIterator<Integer> x = intIterator(10);
-    final AsyncIterator<Object> y = x.convert(i -> {
+    final AsyncIterator<Object> y = x.thenApply(i -> {
       called.set(true);
       return i;
     });
@@ -642,7 +642,7 @@ public class AsyncIteratorTest {
 
   @Test
   public void testFilterConvert() {
-    int evenSum = intIterator(5).filterConvert(i -> Optional.ofNullable(i % 2 == 0 ? i : null))
+    int evenSum = intIterator(5).filterApply(i -> Optional.ofNullable(i % 2 == 0 ? i : null))
         .collect(Collectors.summingInt(i -> i)).toCompletableFuture().join();
     // 0 + 2 + 4
     Assert.assertEquals(6, evenSum);

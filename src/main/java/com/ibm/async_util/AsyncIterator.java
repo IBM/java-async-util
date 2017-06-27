@@ -10,6 +10,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -27,48 +28,249 @@ import com.ibm.async_util.AsyncLock.LockToken;
 public interface AsyncIterator<T> {
 
   /**
-   * A marker interface that indicates there are no elements left in the iterator
+   * A marker interface that indicates there are no elements left in the iterator.
    */
   interface End {
   }
 
   /**
-   * Return a future representing the next element of the iterator. If the optional is empty, the
-   * iterator has no more elements. After an iterator returns empty, a consumer should make no
-   * subsequent calls to nextFuture
+   * Returns a future representing the next element of the iterator.
+   * 
+   * If the optional is empty, the iterator has no more elements. After an iterator returns empty, a
+   * consumer should make no subsequent calls to nextFuture
    * 
    * @return A future of the next element for iteration, or empty
    */
   CompletionStage<Either<T, End>> nextFuture();
 
   /**
-   * Like {@link AsyncIterator#flatMap(Function)} but allows for executeAhead
+   * Applies f to the results of the stages in {@code this} iterator
+   * 
+   * <p>
+   * Example:
+   * <p>
+   * 
+   * <pre>
+   * intIterator // 1,2,3,...
+   *     .thenApply(Integer::toString)
+   * </pre>
+   * 
+   * returns an AsyncIterator of "1","2","3"...
+   * 
+   * @param f A function which produces a U from the given T
+   * @return A new AsyncIterator which produces stages of f applied to the result of the stages from
+   *         {@code this} iterator
+   */
+  default <U> AsyncIterator<U> thenApply(final Function<? super T, ? extends U> f) {
+    return () -> nextFuture().thenApply(ot -> ot.left().map(f));
+  }
+
+  /**
+   * Applies f to the results of the stages in {@code this} iterator, executed with the previous
+   * stage's default asynchronous execution facility.
+   * 
+   * <p>
+   * Example:
+   * <p>
+   * 
+   * <pre>
+   * intIterator // 1,2,3,...
+   *     .thenApply(Integer::toString)
+   * </pre>
+   * 
+   * returns an AsyncIterator of "1","2","3"...
+   * 
+   * @param f A function which produces a U from the given T
+   * @return A new AsyncIterator which produces stages of f applied to the result of the stages from
+   *         {@code this} iterator
+   */
+  default <U> AsyncIterator<U> thenApplyAsync(final Function<? super T, ? extends U> f) {
+    return () -> nextFuture().thenApplyAsync(ot -> ot.left().map(f));
+  }
+
+  /**
+   * Applies f to the results of the stages in {@code this} iterator, executed with the provided
+   * Executor.
+   * 
+   * <p>
+   * Example:
+   * <p>
+   * 
+   * <pre>
+   * intIterator // 1,2,3,...
+   *     .thenApply(Integer::toString, ex)
+   * </pre>
+   * 
+   * returns an AsyncIterator of "1","2","3"...
+   * 
+   * @param f A function which produces a U from the given T
+   * @return A new AsyncIterator which produces stages of f applied to the result of the stages from
+   *         {@code this} iterator
+   */
+  default <U> AsyncIterator<U> thenApplyAsync(final Function<? super T, ? extends U> f,
+      final Executor executor) {
+    return () -> nextFuture().thenApplyAsync(ot -> ot.left().map(f), executor);
+  }
+
+  /**
+   * Creates a new AsyncIterator using the produced stages of {@code f} applied to the output from
+   * the stages of {@code this}.
+   * 
+   * <pre>
+   * <code>
+   * CompletableFuture<String> asyncToString(final int i);
+   * intIterator // 1, 2, 3
+   *   .thenCompose(this::asyncToString);
+   * </code>
+   * </pre>
+   * 
+   * returns an AsyncIterator of "1", "2", "3"...
+   * 
+   * 
+   * @param f A function which produces a new CompletionStage from a T
+   * @return A new AsyncIterator which produces stages of f composed with the result of the stages
+   *         from {@code this} iterator
+   * 
+   */
+  default <U> AsyncIterator<U> thenCompose(final Function<T, CompletionStage<U>> f) {
+    return () -> {
+      return nextFuture().thenCompose(nt -> {
+        // if there's a value, apply f and wrap the result in an optional,
+        // otherwise an empty result
+        return nt.fold(t -> f.apply(t).thenApply(u -> Either.<U, End>left(u)),
+            end -> AsyncIterators.endFuture());
+      });
+    };
+  }
+
+  /**
+   * Creates a new AsyncIterator using the produced stages of {@code f} applied to the output from
+   * the stages of {@code this}. {@code f} will be run on the default asynchronous execution
+   * facility of the stages of {@code this}.
+   * 
+   * <pre>
+   * <code>
+   * CompletableFuture<String> asyncToString(final int i);
+   * intIterator // 1, 2, 3
+   *   .thenCompose(this::asyncToString);
+   * </code>
+   * </pre>
+   * 
+   * returns an AsyncIterator of "1", "2", "3"...
+   * 
+   * 
+   * @param f A function which produces a new CompletionStage from a T
+   * @return A new AsyncIterator which produces stages of f composed with the result of the stages
+   *         from {@code this} iterator
+   * 
+   */
+  default <U> AsyncIterator<U> thenComposeAsync(final Function<T, CompletionStage<U>> f) {
+    return () -> {
+      return nextFuture().thenComposeAsync(nt -> {
+        // if there's a value, apply f and wrap the result in an optional,
+        // otherwise an empty result
+        return nt.fold(t -> f.apply(t).thenApply(u -> Either.<U, End>left(u)),
+            end -> AsyncIterators.endFuture());
+      });
+    };
+  }
+
+  /**
+   * Creates a new AsyncIterator using the produced stages of {@code f} applied to the output from
+   * the stages of {@code this}. {@code f} will be run on the supplied executor.
+   * 
+   * <pre>
+   * <code>
+   * CompletableFuture<String> asyncToString(final int i);
+   * intIterator // 1, 2, 3
+   *   .thenCompose(this::asyncToString, executor);
+   * </code>
+   * </pre>
+   * 
+   * returns an AsyncIterator of "1", "2", "3"...
+   * 
+   * 
+   * @param f A function which produces a new CompletionStage from a T
+   * @return A new AsyncIterator which produces stages of f composed with the result of the stages
+   *         from {@code this} iterator
+   * 
+   */
+  default <U> AsyncIterator<U> thenComposeAsync(final Function<T, CompletionStage<U>> f,
+      final Executor executor) {
+    return () -> {
+      return nextFuture().thenComposeAsync(nt -> {
+        // if there's a value, apply f and wrap the result in an optional,
+        // otherwise an empty result
+        return nt.fold(t -> f.apply(t).thenApply(u -> Either.<U, End>left(u)),
+            end -> AsyncIterators.endFuture());
+      }, executor);
+    };
+  }
+
+  /**
+   * Composes f to the stages of {@code this} iterator, and flattens the resulting iterator of
+   * iterators.
+   * <p>
+   * Example:
+   * 
+   * <p>
+   * Suppose f is a function that takes an integer i and returns the AsyncIterator of Strings less
+   * than i.
+   * 
+   * <pre>
+   * intIterator // 1,2,3,...
+   *     .thenFlatten(f)
+   * </pre>
+   * 
+   * returns an AsyncIterator of "1","1","2","1","2","3"...
+   * 
+   * @param f A function which produces a new AsyncIterator
+   * @return A new AsyncIterator consisting of flattened iterators from applying f to elements of
+   *         {@code this}
+   */
+  default <U> AsyncIterator<U> thenFlatten(final Function<T, AsyncIterator<U>> f) {
+    return AsyncIterator.concat(this.thenApply(f));
+  }
+
+  /**
+   * Applies a transformation and flattening to {@code this} iterator with parallelism.
+   * 
+   * This method will consume results from {@code this} sequentially, but will apply the mapping
+   * function {@code f} in parallel. The resulting iterator will retain the order of {@code this}.
+   * Up to {@code executeAhead} asynchronous operations past what the consumer of the new iterator
+   * has already consumed can be started in parallel. <br>
    * 
    * @param f A function which produces a new AsyncIterator
    * @param executeAhead An integer indicating the number of allowable calls to f that can be made
    *        ahead of the user has already consumed
    * @return A new AsyncIterator consisting of flattened iterators from apply f to elements of
    *         {@code this}
-   * @see #flatMap(Function)
+   * @see #thenFlatten(Function)
    */
-  default <U> AsyncIterator<U> flatMapAhead(final Function<T, AsyncIterator<U>> f,
+  default <U> AsyncIterator<U> thenFlattenAhead(final Function<T, AsyncIterator<U>> f,
       final int executeAhead) {
     final Function<T, CompletionStage<AsyncIterator<U>>> andThen =
         f.andThen(CompletableFuture::completedFuture);
-    return AsyncIterator.<U>concat(mapAhead(andThen, executeAhead));
+    return AsyncIterator.<U>concat(thenComposeAhead(andThen, executeAhead));
   }
 
   /**
-   * Like {@link #map(Function)} but allows for executeAhead
+   * Applies a transformation to {@code this} iterator with parallelism.
    * 
-   * @param f A function which produces a new ObservableFuture
+   * This method will consume results from {@code this} sequentially, but will apply the mapping
+   * function {@code f} in parallel. The resulting iterator will retain the order of {@code this}.
+   * Up to {@code executeAhead} asynchronous operations past what the consumer of the new iterator
+   * has already consumed can be started in parallel. <br>
+   * Like {@link #thenCompose(Function)} but allows for executeAhead
+   * 
+   * @param f A function which produces a new CompletionStage
    * @param executeAhead An integer indicating the number of allowable calls to f that can be made
    *        ahead of the user has already consumed
    * @return A transformed AsyncIterator
    * 
-   * @see #map(Function)
+   * @see #thenCompose(Function)
    */
-  default <U> AsyncIterator<U> mapAhead(final Function<T, CompletionStage<U>> f,
+  default <U> AsyncIterator<U> thenComposeAhead(final Function<T, CompletionStage<U>> f,
       final int executeAhead) {
 
     // apply user function and wrap future result in a Option
@@ -150,105 +352,11 @@ public interface AsyncIterator<T> {
 
 
   /**
-   * Using f, create a new AsyncIterator from applying f to elements of {@code this} iterator, which
-   * returns elements from the newly generated iterators.
-   * 
-   * <p>
-   * Example:
-   * 
-   * <p>
-   * Suppose f is a function that takes an integer i and returns the AsyncIterator of Strings less
-   * than i.
-   * 
-   * <pre>
-   * intIterator // 1,2,3,...
-   *     .flatMap(f)
-   * </pre>
-   * 
-   * returns an AsyncIterator of "1","1","2","1","2","3"...
-   * 
-   * @param f A function which produces a new AsyncIterator
-   * @return A new AsyncIterator consisting of flattened iterators from apply f to elements of
-   *         {@code this}
-   * @see #flatMapAhead(Function, int)
-   * @see Stream#flatMap(Function)
-   */
-  default <U> AsyncIterator<U> flatMap(final Function<T, AsyncIterator<U>> f) {
-    return AsyncIterator.concat(this.convert(f));
-  }
-
-  /**
-   * Using f, create a new AsyncIterator that will return futures generated by f applied to
-   * {@code this} iterator's elements
-   * <p>
-   * Example:
-   * <p>
-   * Suppose f is a function that takes an integer i and returns a String of i
-   * 
-   * <pre>
-   * intIterator // 1,2,3,...
-   *     .convert(f)
-   * </pre>
-   * 
-   * returns an AsyncIterator of "1","2","3"...
-   * 
-   * @param f A function which produces a U from the given T
-   * @return A transformed AsyncIterator
-   * @see Stream#map(Function)
-   * 
-   */
-  default <U> AsyncIterator<U> convert(final Function<? super T, ? extends U> f) {
-    return () -> nextFuture().thenApply(ot -> ot.left().map(f));
-  }
-
-
-  /**
-   * Using f, asynchronously generate new values from the values of {@code this} iterator to produce
-   * a new iterator
-   * 
-   * When a consumer is using the resulting iterator, a value will be produced from {@code this}
-   * iterator, and the future will be produced using f. When the future is ready, the consumer will
-   * recieve the U value returned by the f future. If f produces an exception, iteration will end,
-   * even if {@code this} iterator has more elements.
-   * 
-   * <pre>
-   * <code>
-   * ObservableFuture<String, E> sillyMicroservice(final int i);
-   * intIterator // 1, 2, 3
-   *   .map(this::sillyMicroservice);
-   * </code>
-   * </pre>
-   * 
-   * returns an AsyncIterator of "1", "2", "3"...
-   * 
-   * 
-   * @param f A function which produces a new ObservableFuture from a T
-   * @return A transformed AsyncIterator
-   * @see #mapAhead(Function, int)
-   * @see Stream#map(Function)
-   * @see #convert(Function)
-   * 
-   */
-  default <U> AsyncIterator<U> map(final Function<T, CompletionStage<U>> f) {
-    return () -> {
-      return nextFuture().thenCompose(nt -> {
-        // if there's a value, apply f and wrap the result in an optional,
-        // otherwise an empty result
-        return nt.left().map(f).left().map(future -> future.thenApply(u -> Either.<U, End>left(u)))
-            .fold(future -> future, end -> AsyncIterators.endFuture());
-      });
-    };
-  }
-
-
-  /**
-   * Return a new AsyncIterator which will only return results that match predicate
+   * Returns a new AsyncIterator which will only produce results that match predicate
    * 
    * @param predicate A function that takes a T and returns true if it should be returned by the new
    *        iterator, and false otherwise
    * @return a new AsyncIterator which will only return results that match predicate
-   * 
-   * @see Stream#filter(Predicate)
    */
   default AsyncIterator<T> filter(final Predicate<T> predicate) {
 
@@ -266,58 +374,34 @@ public interface AsyncIterator<T> {
   }
 
   /**
-   * Using a function that produces Us from Us and Ts, generate a U from applying the function to
-   * every element T of {@code this} iterator
+   * Apply a function and filter an AsyncIterator at the same time
    * 
-   * <pre></pre>
-   * 
-   * @param accumulator a function from U,T to U
-   * @param identity a starting U value
-   * @return an ObservableFuture containing the resulting U from repeated application of accumulator
-   * 
-   * @see AsyncIterator#reduce(BinaryOperator, Object)
-   * @see Stream#reduce(Object, BiFunction, BinaryOperator)
+   * @param f a conditional transformation from T to U. If f produces empty, this result will not be
+   *        included in the new iterator
+   * @return An AsyncIterator of all the Us that were present
    */
-  default <U> CompletionStage<U> fold(final BiFunction<U, T, U> accumulator, final U identity) {
-    @SuppressWarnings("unchecked")
-    U[] uarr = (U[]) new Object[] {identity};
-    return this.collect(() -> uarr, (u, t) -> {
-      uarr[0] = accumulator.apply(uarr[0], t);
-    }).thenApply(arr -> arr[0]);
-  }
-
-
-  /**
-   * The same as {@link #reduce(BinaryOperator, Object)}, but with a function that operates only on
-   * Ts
-   * 
-   * @param accumulator a function from T,T to T
-   * @param identity a default T value
-   * @return an ObservableFuture containing the resulting T from repeated application of accumulator
-   * 
-   * @see #reduce(BiFunction, Object)
-   * @see Stream#reduce(Object, BinaryOperator)
-   */
-  default CompletionStage<T> fold(final BinaryOperator<T> accumulator, final T identity) {
-
-    // don't make this a lambda - otherwise it will look like a BinaryOperator instead of a
-    // BiFunction and we'll recurse
-    final BiFunction<T, T, T> biAccumulator = new BiFunction<T, T, T>() {
-      @Override
-      public T apply(final T t, final T u) {
-        return accumulator.apply(t, u);
-      }
-    };
-    return fold(biAccumulator, identity);
+  default <U> AsyncIterator<U> filterApply(final Function<T, Optional<U>> f) {
+    return this.thenApply(f).filter(Optional::isPresent).thenApply(Optional::get);
   }
 
   /**
-   * Return an AsyncIterator that will return only the first n elements of {@code this}
+   * Compose and filter an AsyncIterator at the same time
+   * 
+   * 
+   * @param f an asynchronous conditional transformation from T to U. If f produces empty, this
+   *        result will not be included in the new iterator
+   * @return An AsyncIterator of all the Us that were present
+   */
+  default <U> AsyncIterator<U> filterMap(final Function<T, CompletionStage<Optional<U>>> f) {
+    return this.thenCompose(f).filter(Optional::isPresent).thenApply(Optional::get);
+  }
+
+  /**
+   * Returns an AsyncIterator that will return only the first n elements of {@code this}
    * AsyncIterator
    * 
    * @param n
    * @return an n element AsyncIterator
-   * @see AsyncIterators#takeWhile(AsyncIterator, Predicate)
    */
   default AsyncIterator<T> take(final long n) {
     return new AsyncIterator<T>() {
@@ -335,7 +419,7 @@ public interface AsyncIterator<T> {
   }
 
   /**
-   * Return an AsyncIterator that returns elements from the backing iterator until coming across an
+   * Returns an AsyncIterator that returns elements from the backing iterator until coming across an
    * element that does not satisfy the predicate
    * 
    * @param iterator
@@ -363,102 +447,6 @@ public interface AsyncIterator<T> {
         });
       }
     };
-  }
-
-
-  /**
-   * Call nextFuture one at a time until reaching the end of the iterator
-   * 
-   * @return A future that is completed when consumption is finished
-   * @see #consumeWhile(Predicate)
-   */
-  default CompletionStage<Void> consume() {
-    return FutureSupport.voided(nextFuture().thenCompose(firstValue -> StackUnroller
-        .<Either<T, End>>asyncWhile(Either::isLeft, ig -> nextFuture(), firstValue)));
-  }
-
-  /**
-   * Perform a mutable reduction operation using collector and return a future of the result. This
-   * is a terminal operation.
-   * 
-   * @param collector
-   * @return
-   * 
-   * @see Stream#collect(Collector)
-   * @see AsyncIterator#collect(Supplier, BiConsumer)
-   */
-  default <R, A> CompletionStage<R> collect(final Collector<? super T, A, R> collector) {
-    final A container = collector.supplier().get();
-    final BiConsumer<A, ? super T> acc = collector.accumulator();
-    return forEach(t -> acc.accept(container, t))
-        .thenApply(ig -> AsyncIterators.finishContainer(container, collector));
-  }
-
-  /**
-   * Perform a mutable reduction operation and return a future of the result. This is a terminal
-   * operation.
-   * 
-   * @param supplier
-   * @param accumulator
-   * @return
-   * 
-   * @see Stream#collect(Supplier, BiConsumer, BiConsumer)
-   * @see AsyncIterator#collect(Collector)
-   * 
-   */
-  default <R> CompletionStage<R> collect(final Supplier<R> supplier,
-      final BiConsumer<R, ? super T> accumulator) {
-    final R container = supplier.get();
-    return forEach(t -> accumulator.accept(container, t)).thenApply(ig -> container);
-  }
-
-  /**
-   * Perform the side effecting action until the end of iteration is reached
-   * 
-   * @param action A side-effecting action that takes a T
-   * @return A future that returns when action will stop being called
-   * @see #forEachConditional(Predicate, Consumer)
-   */
-  default CompletionStage<Void> forEach(final Consumer<T> action) {
-    return FutureSupport.voided(nextFuture()
-        .thenCompose(firstValue -> StackUnroller.<Either<T, End>>asyncWhile(Either::isLeft, nt -> {
-          nt.left().consume(action);
-          return nextFuture();
-        }, firstValue)));
-  }
-
-  /**
-   * Get the first element that satisfies predicate, or empty if no such element exists
-   * 
-   * @param predicate the predicate that returns true for the desired element
-   * @return the first T to satisfy predicate, or empty if no such T exists
-   */
-  default CompletionStage<Optional<T>> find(final Predicate<T> predicate) {
-    return this.filter(predicate).nextFuture().thenApply(e -> e.left().toOptional());
-  }
-
-  /**
-   * Convert and filter an AsyncIterator at the same time
-   * 
-   * Provide a conditional transformation from T to U.
-   * 
-   * @param f
-   * @return An AsyncIterator of all the Us that were present
-   */
-  default <U> AsyncIterator<U> filterConvert(final Function<T, Optional<U>> f) {
-    return this.convert(f).filter(Optional::isPresent).convert(Optional::get);
-  }
-
-  /**
-   * Map and filter an AsyncIterator at the same time
-   * 
-   * Provide a conditional transformation from T to U.
-   * 
-   * @param f
-   * @return An AsyncIterator of all the Us that were present
-   */
-  default <U> AsyncIterator<U> filterMap(final Function<T, CompletionStage<Optional<U>>> f) {
-    return this.map(f).filter(Optional::isPresent).convert(Optional::get);
   }
 
   /**
@@ -628,9 +616,103 @@ public interface AsyncIterator<T> {
     return batch(counter, counter);
   }
 
-  @SuppressWarnings("unchecked")
-  public static <T> AsyncIterator<T> empty() {
-    return (AsyncIterator<T>) AsyncIterators.EMPTY_ITERATOR;
+  /**
+   * Using a function that produces an accumulation from an existing accumulation and a new element,
+   * generate an accumulation from applying the function to every element T of {@code this} iterator
+   * 
+   * @param accumulator a function from U,T to U
+   * @param identity a starting U value
+   * @return a CompletionStage containing the resulting U from repeated application of accumulator
+   */
+  default <U> CompletionStage<U> fold(final BiFunction<U, T, U> accumulator, final U identity) {
+    @SuppressWarnings("unchecked")
+    U[] uarr = (U[]) new Object[] {identity};
+    return this.collect(() -> uarr, (u, t) -> {
+      uarr[0] = accumulator.apply(uarr[0], t);
+    }).thenApply(arr -> arr[0]);
+  }
+
+
+  /**
+   * The same as {@link #fold(BiFunction, Object)}, but with a function that operates only on
+   * Ts
+   * 
+   * @param accumulator a function from T,T to T
+   * @param identity a default T value
+   * @return a CompletionStage containing the resulting T from repeated application of accumulator
+   * 
+   */
+  default CompletionStage<T> fold(final BinaryOperator<T> accumulator, final T identity) {
+
+    // don't make this a lambda - otherwise it will look like a BinaryOperator instead of a
+    // BiFunction and we'll recurse
+    final BiFunction<T, T, T> biAccumulator = new BiFunction<T, T, T>() {
+      @Override
+      public T apply(final T t, final T u) {
+        return accumulator.apply(t, u);
+      }
+    };
+    return fold(biAccumulator, identity);
+  }
+
+  /**
+   * Call nextFuture one at a time until reaching the end of the iterator
+   * 
+   * @return A future that is completed when consumption is finished
+   */
+  default CompletionStage<Void> consume() {
+    return FutureSupport.voided(nextFuture().thenCompose(firstValue -> StackUnroller
+        .<Either<T, End>>asyncWhile(Either::isLeft, ig -> nextFuture(), firstValue)));
+  }
+
+  /**
+   * Perform a mutable reduction operation using collector and return a CompletionStage of the result.
+   * 
+   * @param collector
+   * @return a CompletionStage which will complete with the collected value
+   */
+  default <R, A> CompletionStage<R> collect(final Collector<? super T, A, R> collector) {
+    final A container = collector.supplier().get();
+    final BiConsumer<A, ? super T> acc = collector.accumulator();
+    return forEach(t -> acc.accept(container, t))
+        .thenApply(ig -> AsyncIterators.finishContainer(container, collector));
+  }
+
+  /**
+   * Perform a mutable reduction operation and return a future of the result.
+   * 
+   * @param supplier
+   * @param accumulator
+   * @return a CompletionStage which will complete with the accumulated value
+   */
+  default <R> CompletionStage<R> collect(final Supplier<R> supplier,
+      final BiConsumer<R, ? super T> accumulator) {
+    final R container = supplier.get();
+    return forEach(t -> accumulator.accept(container, t)).thenApply(ig -> container);
+  }
+
+  /**
+   * Perform the side effecting action until the end of iteration is reached
+   * 
+   * @param action A side-effecting action that takes a T
+   * @return A future that returns when action will stop being called
+   */
+  default CompletionStage<Void> forEach(final Consumer<T> action) {
+    return FutureSupport.voided(nextFuture()
+        .thenCompose(firstValue -> StackUnroller.<Either<T, End>>asyncWhile(Either::isLeft, nt -> {
+          nt.left().consume(action);
+          return nextFuture();
+        }, firstValue)));
+  }
+
+  /**
+   * Get the first element that satisfies predicate, or empty if no such element exists
+   * 
+   * @param predicate the predicate that returns true for the desired element
+   * @return the first T to satisfy predicate, or empty if no such T exists
+   */
+  default CompletionStage<Optional<T>> find(final Predicate<T> predicate) {
+    return this.filter(predicate).nextFuture().thenApply(e -> e.left().toOptional());
   }
 
   /**
@@ -702,16 +784,44 @@ public interface AsyncIterator<T> {
     };
   }
 
+  /**
+   * Create an empty AsyncIterator
+   * 
+   * @return an AsyncIterator that will immediately produce an {@link End} marker
+   */
+  @SuppressWarnings("unchecked")
+  public static <T> AsyncIterator<T> empty() {
+    return (AsyncIterator<T>) AsyncIterators.EMPTY_ITERATOR;
+  }
+
+  /**
+   * Creates an AsyncIterator from an {@link Iterator}
+   * 
+   * @param iterator
+   * @return A new AsyncIterator which will yield the elements of {@code iterator}
+   */
   public static <T> AsyncIterator<T> fromIterator(final Iterator<T> iterator) {
     return () -> CompletableFuture
         .completedFuture(iterator.hasNext() ? Either.left(iterator.next()) : AsyncIterators.end());
   }
 
+  /**
+   * Creates an AsyncIterator from a CompletionStage of an {@link Iterator}
+   * 
+   * @param future a stage that produces an iterator
+   * @return a new AsyncIterator which will yield the elements of the produced iterator
+   */
   public static <T> AsyncIterator<T> fromIteratorStage(
       final CompletionStage<AsyncIterator<T>> future) {
     return () -> future.thenCompose(AsyncIterator::nextFuture);
   }
 
+  /**
+   * Creates an AsyncIterator of one element.
+   * 
+   * @param t the element to return
+   * @return an AsyncIterator which yield the element t, and then afterward produce the {@link End} marker.
+   */
   public static <T> AsyncIterator<T> once(final T t) {
     return new AsyncIterator<T>() {
       Either<T, End> curr = Either.left(t);
@@ -725,6 +835,24 @@ public interface AsyncIterator<T> {
     };
   }
 
+  /**
+   * Creates an AsyncIterator for which all downstream operations will be completed with an exception
+   * 
+   * @param ex
+   * @return an AsyncIterator that produces exceptional CompletionStages
+   */
+  public static <T> AsyncIterator<T> error(final Throwable ex) {
+    CompletableFuture<Either<T, End>> future = new CompletableFuture<>();
+    future.completeExceptionally(ex);
+    return () -> future;
+  }
+
+  /**
+   * Creates an infinite AsyncIterator of the same value. 
+   * 
+   * @param t the value to repeat
+   * @return An AsyncIterator that will always return {@code t}
+   */
   public static <T> AsyncIterator<T> repeat(final T t) {
     final Either<T, End> ret = Either.left(t);
     return () -> CompletableFuture.completedFuture(ret);
@@ -739,12 +867,10 @@ public interface AsyncIterator<T> {
    * 
    * The futures returned by nextFuture will be already completed.
    * 
-   * @param start - The start point of iteration (inclusive)
-   * @param end - The end point of iteration (exclusive)
-   * @param delta
+   * @param start the start point of iteration (inclusive)
+   * @param end the end point of iteration (exclusive)
+   * @param delta the step amount for each iterator, it may be negative
    * @return an AsyncIterator that will return a integers from start to end incremented by delta
-   * 
-   * @see #infiniteRange(long, long)
    */
   public static AsyncIterator<Integer> range(final int start, final int end, final int delta) {
     if (delta == 0) {
@@ -767,18 +893,16 @@ public interface AsyncIterator<T> {
   }
 
   /***
-   * Create an Infinite AsyncIterator for a range.
+   * Create an infinite AsyncIterator for a range.
    * 
    * If you try to consume this entire iterator (perhaps by using a 'terminal' operation like
-   * {@link AsyncIterator#reduce}), it will infinite loop.
+   * {@link AsyncIterator#fold}), it will infinite loop.
    * 
    * The futures returned by nextFuture will be already completed.
    * 
-   * @param start - The start point of iteration (inclusive)
-   * @param delta
-   * @return an AsyncIterator that will return a integers from start to end incremented by delta
-   * 
-   * @see #range(long, long, long)
+   * @param start the start point of iteration (inclusive)
+   * @param delta the increment/decrement for each iteration (may be negative)
+   * @return an AsyncIterator that will return a integers starting with start incremented by delta
    */
   public static AsyncIterator<Integer> infiniteRange(final int start, final int delta) {
     if (delta == 0) {
@@ -797,12 +921,10 @@ public interface AsyncIterator<T> {
   }
 
   /**
-   * Produce an infinite stream of type T.
+   * Produce an infinite AsyncIterator of type T.
    * 
    * @param supplier
-   * @return AsyncIterator returning values from Supplier
-   * 
-   * @see Stream#generate(Supplier)
+   * @return AsyncIterator returning values generated from the Supplier
    */
   public static <T, E extends Exception> AsyncIterator<T> generate(
       final Supplier<CompletionStage<T>> supplier) {
@@ -814,17 +936,15 @@ public interface AsyncIterator<T> {
    * contains an empty optional or returns an exception. Creates an iterator of values of
    * applications
    * 
-   * For example, if f = t -> ObservableFutures.success(Optional.of(g(t))), then this would produce
+   * For example, if <code> f = t -> CompletableFuture.completedFuture(Either.left(f(t))) </code>, then this would produce
    * an asynchronous stream of the values
    * 
    * seed, f(seed), f(f(seed)), f(f(f(seed))),...
    * 
-   * The stream is potentially infinite - it would be in the above example. If you want an infinite
-   * stream and plan on never returning Optional.empty, you may use
-   * {@link #infiniteIterate(Object, Function)} for convenience.
+   * The stream is potentially infinite - it would be in the above example.
    * 
-   * @param seed
-   * @param f
+   * @param seed the first value returned by the returned iterator
+   * @param f the function that is applied to the previous value to generate the next value
    * @return AsyncIterator of the values returned by f
    * @see Stream#iterate(Object, java.util.function.UnaryOperator)
    */
@@ -850,10 +970,12 @@ public interface AsyncIterator<T> {
    * Create an iterator that is the result of f applied to iteration elements returned by tIt and
    * uIt
    * 
+   * If either input stream terminates, the returned iterator will terminate.
+   * 
    * @param tIt
    * @param uIt
    * @param f
-   * @return AsyncIterator of f applied to elements of tIt and uIt {@link #zip}
+   * @return AsyncIterator of f applied to elements of tIt and uIt
    */
   public static <T, U, V> AsyncIterator<V> zipWith(final AsyncIterator<T> tIt,
       final AsyncIterator<U> uIt, final BiFunction<T, U, V> f) {
@@ -885,18 +1007,12 @@ public interface AsyncIterator<T> {
         }
       });
     }
-    return channel.map(either -> {
+    return channel.thenCompose(either -> {
       return either.fold(t -> CompletableFuture.completedFuture(t), ex -> {
         CompletableFuture<T> future = new CompletableFuture<>();
         future.completeExceptionally(ex);
         return future;
       });
     });
-  }
-
-  public static <T> AsyncIterator<T> error(final Throwable ex) {
-    CompletableFuture<Either<T, End>> future = new CompletableFuture<>();
-    future.completeExceptionally(ex);
-    return () -> future;
   }
 }
