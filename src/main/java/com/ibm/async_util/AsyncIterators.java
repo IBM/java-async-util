@@ -33,27 +33,27 @@ class AsyncIterators {
 
   private AsyncIterators() {}
   
-  private static final Either<?, End> ITERATION_END = Either.right(new End(){});
+  private static final Either<End, ?> ITERATION_END = Either.left(new End(){});
 
-  private static final CompletionStage<? extends Either<?, End>> END_FUTURE =
+  private static final CompletionStage<? extends Either<End, ?>> END_FUTURE =
       CompletableFuture.completedFuture(ITERATION_END);
 
   static final EmptyAsyncIterator<?> EMPTY_ITERATOR =
       new EmptyAsyncIterator<>();
 
   @SuppressWarnings("unchecked")
-  static <T> Either<T, End> end() {
-    return (Either<T, End>) ITERATION_END;
+  static <T> Either<End, T> end() {
+    return (Either<End, T>) ITERATION_END;
   }
 
   @SuppressWarnings("unchecked")
-  static <T> CompletionStage<Either<T, End>> endFuture() {
-    return (CompletionStage<Either<T, End>>) END_FUTURE;
+  static <T> CompletionStage<Either<End, T>> endFuture() {
+    return (CompletionStage<Either<End, T>>) END_FUTURE;
   }
 
   private static class EmptyAsyncIterator<T> implements AsyncIterator<T> {
     @Override
-    public CompletionStage<Either<T, End>> nextFuture() {
+    public CompletionStage<Either<End, T>> nextFuture() {
       return AsyncIterators.endFuture();
     }
 
@@ -89,8 +89,8 @@ class AsyncIterators {
     });
   }
   
-  static <T, U, V> Either<V, End> zipWith(Either<T, End> et, Either<U, End> eu, final BiFunction<T, U, V> f) {
-    return et.fold(t -> eu.fold(u -> Either.left(f.apply(t, u)), end -> end()), end -> end());
+  static <T, U, V> Either<End, V> zipWith(Either<End, T> et, Either<End, U> eu, final BiFunction<T, U, V> f) {
+    return et.fold(end -> end(), t -> eu.fold(end -> end(), u -> Either.right(f.apply(t, u))));
   }
 
 }

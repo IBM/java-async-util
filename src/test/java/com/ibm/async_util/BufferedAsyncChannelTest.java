@@ -79,12 +79,12 @@ public class BufferedAsyncChannelTest extends AbstractAsyncChannelTest {
         .collect(Collectors.toList());
 
     for (int i = 0; i < BUFFER; i++) {
-      CompletableFuture<Either<Integer, End>> fut = this.channel.nextFuture().toCompletableFuture();
+      CompletableFuture<Either<End, Integer>> fut = this.channel.nextFuture().toCompletableFuture();
 
       // could change with impl, but with a full channel, futures should already be completed
       Assert.assertTrue(fut.isDone());
       // not closed
-      Assert.assertTrue(fut.join().isLeft());
+      Assert.assertTrue(fut.join().isRight());
 
       // impl supports fairness (for now), every release, the next waiting future should complete
       for (int j = 0; j < BUFFER; j++) {
@@ -132,7 +132,7 @@ public class BufferedAsyncChannelTest extends AbstractAsyncChannelTest {
 
     for (int i = 0; i < BUFFER; i++) {
       // consume one item
-      Assert.assertEquals(i, this.channel.nextFuture().toCompletableFuture().join().left().get().intValue());
+      Assert.assertEquals(i, this.channel.nextFuture().toCompletableFuture().join().right().get().intValue());
       // delayeds less than item should be done
       Assert.assertTrue(delayeds.stream().limit(i + 1).map(Future::isDone).allMatch(b -> b));
       Assert
@@ -151,9 +151,9 @@ public class BufferedAsyncChannelTest extends AbstractAsyncChannelTest {
 
     // consume delayed results
     for (int i = BUFFER; i < 2 * BUFFER; i++) {
-      Assert.assertEquals(i, this.channel.nextFuture().toCompletableFuture().join().left().get().intValue());
+      Assert.assertEquals(i, this.channel.nextFuture().toCompletableFuture().join().right().get().intValue());
     }
-    Assert.assertFalse(this.channel.nextFuture().toCompletableFuture().join().isLeft());
+    Assert.assertFalse(this.channel.nextFuture().toCompletableFuture().join().isRight());
     Assert.assertTrue(closeFuture.isDone());
     Assert.assertTrue(rejected.isDone());
     Assert.assertFalse(rejected.join());

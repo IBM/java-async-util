@@ -214,7 +214,7 @@ public abstract class AbstractAsyncChannelTest {
         }));
       }
       // wait for all threads
-      CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get(1, TimeUnit.SECONDS);
+      CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get(2, TimeUnit.SECONDS);
     }
 
     // all senders finished, end the stream

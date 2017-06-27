@@ -128,12 +128,12 @@ public final class AsyncChannels {
     @sun.misc.Contended
     private volatile Node<T> tail;
 
-    private static class Node<T> extends CompletableFuture<Either<T, End>> {
+    private static class Node<T> extends CompletableFuture<Either<End, T>> {
       private Node<T> next = null;
 
       Node() {}
 
-      Node(final Either<T, End> c) {
+      Node(final Either<End, T> c) {
         super.complete(c);
       }
 
@@ -147,7 +147,7 @@ public final class AsyncChannels {
     }
 
     @Override
-    public CompletableFuture<Either<T, End>> nextFuture() {
+    public CompletableFuture<Either<End, T>> nextFuture() {
       // whenever we get a value from the head future, we should unlink that node, and move the head
       // pointer forward. We know head.next must exist, because a node's next value is always
       // updated before completion.
@@ -161,11 +161,11 @@ public final class AsyncChannels {
 
     public Optional<T> poll() {
       // head can never complete exceptionally so this should never throw
-      Either<T, End> currentResult = this.head.getNow(null);
+      Either<End, T> currentResult = this.head.getNow(null);
       if (currentResult != null) {
         // we're going to consume a value, move the header pointer forward
         this.head = this.head.next;
-        return currentResult.left().toOptional();
+        return currentResult.right();
       }
 
       // future wasn't completed
@@ -174,7 +174,7 @@ public final class AsyncChannels {
 
     @Override
     public boolean send(final T item) {
-      return sendImpl(Either.left(item), new Node<>());
+      return sendImpl(Either.right(item), new Node<>());
     }
 
     @Override
@@ -182,7 +182,7 @@ public final class AsyncChannels {
       sendImpl(AsyncIterators.end(), UnboundedChannel.stopNode());
     }
 
-    private boolean sendImpl(final Either<T, End> item, final Node<T> newTail) {
+    private boolean sendImpl(final Either<End, T> item, final Node<T> newTail) {
       Node<T> oldTail;
       do {
         oldTail = this.tail;
@@ -222,11 +222,11 @@ public final class AsyncChannels {
     @Override
     // ask for a future from the backing channel, release permit on completion since we
     // dequeued something.
-    public CompletionStage<Either<T, End>> nextFuture() {
+    public CompletionStage<Either<End, T>> nextFuture() {
       return this.backingChannel.nextFuture().thenApply(res -> {
         // only need to release if the backing channel is open. after it is closed, senders will
         // release automatically
-        res.left().consume(t -> this.sendThrottle.release());
+        res.forEach(ig -> {}, t -> this.sendThrottle.release());
         return res;
       });
     }

@@ -81,10 +81,10 @@ public class AsyncIteratorTest {
   // assert the iterator is the ascending range from 0 to expected size
   private void verifySorted(final AsyncIterator<Integer> concat, final int expectedSize)
       throws Exception {
-    Either<Integer, End> curr = TestUtil.join(concat.nextFuture());
+    Either<End, Integer> curr = TestUtil.join(concat.nextFuture());
     int i = 0;
-    while (curr.isLeft()) {
-      Assert.assertEquals(i, curr.left().get().intValue());
+    while (curr.isRight()) {
+      Assert.assertEquals(i, curr.right().get().intValue());
       i++;
       curr = TestUtil.join(concat.nextFuture());
     }
@@ -106,7 +106,7 @@ public class AsyncIteratorTest {
     final AsyncIterator<Integer> touchyIterator = () -> {
       final int curr = count.getAndIncrement();
       if (curr == 0) {
-        return CompletableFuture.completedFuture(Either.left(0));
+        return CompletableFuture.completedFuture(Either.right(0));
       } else if (curr == 1) {
         return AsyncIterators.endFuture();
       }
@@ -175,7 +175,7 @@ public class AsyncIteratorTest {
 
   private void verifyExceptionThrown(final AsyncIterator<Integer> iterator) {
     Exception e = null;
-    Either<Integer, End> curr;
+    Either<End, Integer> curr;
     do {
       try {
         curr = TestUtil.join(iterator.nextFuture());
@@ -184,7 +184,7 @@ public class AsyncIteratorTest {
         break;
       }
 
-    } while (curr.isLeft());
+    } while (curr.isRight());
     Assert.assertNotNull(e);
   }
 
@@ -529,13 +529,13 @@ public class AsyncIteratorTest {
     final AsyncIterator<Integer> it = AsyncIterator.unordered(futures);
     // complete 0..5 in random order
     for (final int i : new int[] {1, 4, 2, 0, 3}) {
-      final CompletionStage<Integer> nextFuture = it.nextFuture().thenApply(e -> e.left().get());
+      final CompletionStage<Integer> nextFuture = it.nextFuture().thenApply(e -> e.right().get());
       Assert.assertFalse(nextFuture.toCompletableFuture().isDone());
       futures.get(i).complete(i);
       Assert.assertTrue(nextFuture.toCompletableFuture().isDone());
       Assert.assertEquals(i, TestUtil.join(nextFuture).intValue());
     }
-    Assert.assertFalse(TestUtil.join(it.nextFuture()).isLeft());
+    Assert.assertFalse(TestUtil.join(it.nextFuture()).isRight());
   }
 
   @Test(expected = CompletionException.class)
@@ -587,14 +587,14 @@ public class AsyncIteratorTest {
         });
 
     Assert.assertEquals(expected, TestUtil.join(iter.collect(Collectors.toList())));
-    Assert.assertFalse(TestUtil.join(iter.nextFuture()).isLeft());
+    Assert.assertFalse(TestUtil.join(iter.nextFuture()).isRight());
   }
 
   @Test
   public void testBatchEmpty() throws Exception {
     Assert.assertFalse(
         TestUtil.join(AsyncIterator.empty().batch(Collectors.toList(), (a, b) -> true).nextFuture())
-            .isLeft());
+            .isRight());
   }
 
   @Test
@@ -604,7 +604,7 @@ public class AsyncIteratorTest {
     };
     Assert.assertFalse(TestUtil.join(
         AsyncIterator.empty().batch(Collectors.toCollection(supplier), (a, b) -> true).nextFuture())
-        .isLeft());
+        .isRight());
   }
 
   @Test
@@ -662,7 +662,7 @@ public class AsyncIteratorTest {
   public void testUnfold() {
     {
       List<Integer> unfolded = AsyncIterator
-          .unfold(0, i -> CompletableFuture.completedFuture(Either.<Integer, End>left(i + 1)))
+          .unfold(0, i -> CompletableFuture.completedFuture(Either.<End, Integer>right(i + 1)))
           .take(5).collect(Collectors.toList()).toCompletableFuture().join();
       Assert.assertEquals(IntStream.range(0, 5).boxed().collect(Collectors.toList()), unfolded);
     }

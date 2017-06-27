@@ -1,41 +1,13 @@
-//
-//
-// (C) Copyright IBM Corp. 2005 All Rights Reserved.
-//
-// Contact Information:
-//
-// IBM Corporation
-// Legal Department
-// 222 South Riverside Plaza
-// Suite 1700
-// Chicago, IL 60606, USA
-//
-// END-OF-HEADER
-//
-// -----------------------
-// @author: python
-//
-// Date: Jun 08, 2017
-// ---------------------
-
 package com.ibm.async_util;
 
-import java.util.Collection;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Stream;
-
-import com.ibm.async_util.BiasedEithers.LeftEither;
-import com.ibm.async_util.BiasedEithers.RightEither;
-
-
-
-// @formatter:off
 
 /**
  * A container which may yield one of two possible, mutually exclusive types.
  */
-public interface Either<LEFT, RIGHT> {
+public interface Either<L, R> {
 
   /**
    * @return true if this is a Left, false otherwise
@@ -60,9 +32,9 @@ public interface Either<LEFT, RIGHT> {
    * individually operate on the object's possible types. Apply f1 if this is a left or f2 if this
    * is a right.
    */
-  <RESULT> RESULT fold(
-      final Function<? super LEFT, ? extends RESULT> f1,
-      final Function<? super RIGHT, ? extends RESULT> f2);
+  <V> V fold(
+      final Function<? super L, ? extends V> f1,
+      final Function<? super R, ? extends V> f2);
 
   /**
    * Access the object encompassed in this {@link Either} by providing two functions that
@@ -70,8 +42,8 @@ public interface Either<LEFT, RIGHT> {
    * is a right.
    */
   default void forEach(
-      final Consumer<? super LEFT> c1,
-      final Consumer<? super RIGHT> c2) {
+      final Consumer<? super L> c1,
+      final Consumer<? super R> c2) {
     fold(
         left -> {
           c1.accept(left);
@@ -91,34 +63,27 @@ public interface Either<LEFT, RIGHT> {
    * NOTE: if the target types are the same, use {@link Either#fold(Function, Function)} instead.
    */
   default <A, B> Either<A, B> map(
-      final Function<? super LEFT, ? extends A> f1,
-      final Function<? super RIGHT, ? extends B> f2) {
+      final Function<? super L, ? extends A> f1,
+      final Function<? super R, ? extends B> f2) {
     return fold(
         left -> Either.left(f1.apply(left)),
         right -> Either.right(f2.apply(right)));
   }
-
-  /**
-   * Project Left, providing convenience methods that operate only on the left element, if present.
-   * 
-   * @see LeftEither
-   */
-  default LeftEither<LEFT, RIGHT> left() {
-    return fold(
-        LeftEither::left,
-        LeftEither::right);
+  
+  default <V> Either<L, V> map(final Function<? super R, ? extends V> f) {
+    return fold(left -> Either.left(left), r -> Either.right(f.apply(r)));
   }
 
-  /**
-   * Project Right, providing convenience methods that operate only on the right element, if
-   * present.
-   * 
-   * @see RightEither
-   */
-  default RightEither<LEFT, RIGHT> right() {
-    return fold(
-        RightEither::left,
-        RightEither::right);
+  default <V> Either<L, V> flatMap(final Function<? super R, ? extends Either<L, V>> f) {
+    return fold(left -> Either.left(left), f);
+  }
+  
+  default Optional<L> left() {
+    return fold(Optional::of, r -> Optional.empty());
+  }
+
+  default Optional<R> right() {
+    return fold(l -> Optional.empty(), Optional::of);
   }
 
   /**
@@ -192,29 +157,4 @@ public interface Either<LEFT, RIGHT> {
       }
     };
   }
-
-  /**
-   * Stream all present Left values from a collection of {@link Either} objects. Right values will
-   * not be in the resulting stream.
-   */
-  static <LEFT, RIGHT> Stream<LEFT> leftStream(
-      final Collection<? extends Either<LEFT, RIGHT>> elements) {
-    return elements
-        .stream()
-        .filter(Either::isLeft)
-        .map(element -> element.left().get());
-  }
-
-  /**
-   * Stream all present Right values from a collection of {@link Either} objects. Left values will
-   * not be in the resulting stream.
-   */
-  static <LEFT, RIGHT> Stream<RIGHT> rightStream(
-      final Collection<? extends Either<LEFT, RIGHT>> elements) {
-    return elements
-        .stream()
-        .filter(Either::isRight)
-        .map(element -> element.right().get());
-  }
 }
-// @formatter:on
