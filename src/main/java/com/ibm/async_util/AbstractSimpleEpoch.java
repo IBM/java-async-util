@@ -1,8 +1,8 @@
 package com.ibm.async_util;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import com.ibm.async_util.ObservableEpoch.EpochToken;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A base epoch implementation used to construct various epoch mechanisms, e.g.
@@ -22,7 +22,7 @@ abstract class AbstractSimpleEpoch
 	 * terminated bit set, the whenCleared method is run. Similarly, if the
 	 * terminating CAS finds that the count was previously zero, the whenCleared
 	 * method is called directly.
-	 * 
+	 *
 	 * This implementation serves as its own epoch token as all operations are
 	 * performed on the same state integer.
 	 */
