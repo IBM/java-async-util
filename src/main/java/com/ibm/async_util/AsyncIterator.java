@@ -26,15 +26,16 @@ import com.ibm.async_util.AsyncLock.LockToken;
 
 public interface AsyncIterator<T> {
 
-  public interface End {
+  /**
+   * A marker interface that indicates there are no elements left in the iterator
+   */
+  interface End {
   }
 
   /**
    * Return a future representing the next element of the iterator. If the optional is empty, the
    * iterator has no more elements. After an iterator returns empty, a consumer should make no
    * subsequent calls to nextFuture
-   * 
-   * The values returned by nextFuture (T) <b> must be non-null </b>
    * 
    * @return A future of the next element for iteration, or empty
    */

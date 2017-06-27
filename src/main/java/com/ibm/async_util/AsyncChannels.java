@@ -34,7 +34,7 @@ public final class AsyncChannels {
   private AsyncChannels() {}
 
   /**
-   * Get an unbounded AsyncChannel.
+   * Gets an unbounded AsyncChannel.
    * 
    * Sends on an unbounded channel always complete synchronously, and throttling must be managed by
    * the senders to ensure senders don't get too far ahead of the consumer. {@link AsyncChannel} for
@@ -47,7 +47,7 @@ public final class AsyncChannels {
   }
 
   /**
-   * Get a bounded AsyncChannel.
+   * Gets a bounded AsyncChannel.
    * 
    * This channel can only accept one value at a time until it is consumed. It is useful when you
    * want to produce work potentially in parallel, but want to be throttled at the rate at which you
@@ -64,7 +64,7 @@ public final class AsyncChannels {
   }
 
   /**
-   * Get a buffered AsyncChannel.
+   * Gets a buffered AsyncChannel.
    * 
    * This channel can accept up to {@code maxBuffer} values before the futures returned by send
    * become delayed. See {@link BoundedAsyncChannel} for details
@@ -107,7 +107,6 @@ public final class AsyncChannels {
    * 
    * 
    * @param <T>
-   * @param <E>
    */
   private static final class UnboundedChannel<T> implements AsyncChannel<T> {
     @SuppressWarnings("rawtypes")

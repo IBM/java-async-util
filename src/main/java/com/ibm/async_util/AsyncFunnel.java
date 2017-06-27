@@ -26,18 +26,28 @@ import java.util.function.Supplier;
 
 
 /**
- * Used when many clients need the result of an expensive asynchronous operation but only one should
- * be ongoing at any given time. If {@link AsyncFunnel#doOrGet(Collapsible)} called while an
- * operation is ongoing, the future result of that ongoing task is returned
+ * Enforces that a single asynchronous computation occurs at a time, allowing others to observe it.
  * 
- * Note: doOrGet does not have a hard guarantee that when the future completed by doOrGet completes
- * a new call to doOrGet will generate a new future. (Usually, that will be the case though)
+ * Used when many clients need the result of an expensive asynchronous operation but only one should
+ * be ongoing at any given time. If {@link AsyncFunnel#doOrGet} is called while an operation is
+ * ongoing, the future result of that ongoing task is returned. After the operation completes, a new
+ * task can be created.
+ * 
  */
 public class AsyncFunnel<T> {
   private final AtomicReference<CompletionStage<T>> current = new AtomicReference<>(null);
 
-  public CompletionStage<T> doOrGet(
-      final Supplier<CompletionStage<T>> action) {
+  /**
+   * Runs the provided action, or returns an existing future if the action is already running.
+   * 
+   * This method does not have a hard guarantee that when the future completed by doOrGet completes
+   * a new call to doOrGet will generate a new future. (Usually, that will be the case though)
+   * 
+   * @param action Supplier of a future of T that only runs if no action is currently running
+   * @return A {@link CompletionStage} produced by <code> action </code> or one that was previously
+   *         produced
+   */
+  public CompletionStage<T> doOrGet(final Supplier<CompletionStage<T>> action) {
     CompletableFuture<T> newFuture;
     do {
       final CompletionStage<T> oldFuture = this.current.get();
@@ -56,6 +66,6 @@ public class AsyncFunnel<T> {
       }
 
     });
-        
+
   }
 }
