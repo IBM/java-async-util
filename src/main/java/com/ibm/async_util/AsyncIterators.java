@@ -19,27 +19,31 @@
 
 package com.ibm.async_util;
 
+import com.ibm.async_util.AsyncIterator.End;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.stream.Collector;
 
-import com.ibm.async_util.AsyncIterator.End;
-
-/**
- * Package private methods to use in {@link AsyncIterator}
- */
+/** Package private methods to use in {@link AsyncIterator} */
 class AsyncIterators {
 
   private AsyncIterators() {}
-  
-  private static final Either<End, ?> ITERATION_END = Either.left(new End(){});
+
+  private static final Either<End, ?> ITERATION_END =
+      Either.left(
+          new End() {
+            @Override
+            public String toString() {
+              return "End of iteration";
+            }
+          });
 
   private static final CompletionStage<? extends Either<End, ?>> END_FUTURE =
       CompletableFuture.completedFuture(ITERATION_END);
 
-  static final EmptyAsyncIterator<?> EMPTY_ITERATOR =
-      new EmptyAsyncIterator<>();
+  static final EmptyAsyncIterator<?> EMPTY_ITERATOR = new EmptyAsyncIterator<>();
 
   @SuppressWarnings("unchecked")
   static <T> Either<End, T> end() {
@@ -51,7 +55,7 @@ class AsyncIterators {
     return (CompletionStage<Either<End, T>>) END_FUTURE;
   }
 
-  private static class EmptyAsyncIterator<T> implements AsyncIterator<T> {
+  private static class EmptyAsyncIterator<T> extends AsyncIterator<T> {
     @Override
     public CompletionStage<Either<End, T>> nextFuture() {
       return AsyncIterators.endFuture();
@@ -63,13 +67,13 @@ class AsyncIterators {
     }
   }
 
-
   @SuppressWarnings("unchecked")
   static <A, R> R finishContainer(final A accumulator, final Collector<?, A, R> collector) {
     // cast instead of applying the finishing function if the collector indicates the
     // finishing function is just identity
     return collector.characteristics().contains(Collector.Characteristics.IDENTITY_FINISH)
-        ? ((R) accumulator) : collector.finisher().apply(accumulator);
+        ? ((R) accumulator)
+        : collector.finisher().apply(accumulator);
   }
 
   static <T> CompletableFuture<T> exceptional(final Throwable ex) {
@@ -78,19 +82,19 @@ class AsyncIterators {
     return completableFuture;
   }
 
-
   static <T> void listen(final CompletionStage<T> source, final CompletableFuture<T> dest) {
-    source.whenComplete((t, ex) -> {
-      if (t != null) {
-        dest.complete(t);
-      } else {
-        dest.completeExceptionally(ex);
-      }
-    });
+    source.whenComplete(
+        (t, ex) -> {
+          if (t != null) {
+            dest.complete(t);
+          } else {
+            dest.completeExceptionally(ex);
+          }
+        });
   }
-  
-  static <T, U, V> Either<End, V> zipWith(Either<End, T> et, Either<End, U> eu, final BiFunction<T, U, V> f) {
+
+  static <T, U, V> Either<End, V> zipWith(
+      Either<End, T> et, Either<End, U> eu, final BiFunction<T, U, V> f) {
     return et.fold(end -> end(), t -> eu.fold(end -> end(), u -> Either.right(f.apply(t, u))));
   }
-
 }

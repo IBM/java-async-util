@@ -123,7 +123,7 @@ import java.util.Optional;
  * @see AsyncChannels
  * @see BoundedAsyncChannel
  */
-public interface AsyncChannel<T> extends AsyncIterator<T> {
+public abstract class AsyncChannel<T> extends AsyncIterator<T> {
   /**
    * Sends a value into this channel that can be consumed via the {@link AsyncIterator} interface.
    * 
@@ -136,7 +136,7 @@ public interface AsyncChannel<T> extends AsyncIterator<T> {
    * @return true if the item was accepted, false if it was rejected because the channel has been
    *         closed
    */
-  boolean send(T item);
+  public abstract boolean send(T item);
 
   /**
    * Closes the channel.
@@ -145,7 +145,7 @@ public interface AsyncChannel<T> extends AsyncIterator<T> {
    * consumer consumes whatever was sent before the close, the consumer will receive an end of
    * iteration notification.
    */
-  void close();
+  public abstract void close();
 
   /**
    * Gets a result from the channel if there is one ready right now.
@@ -164,7 +164,7 @@ public interface AsyncChannel<T> extends AsyncIterator<T> {
    * @return A value if there was one immediately available in the channel, empty if the channel is
    *         currently empty.
    */
-  Optional<T> poll();
+  public abstract Optional<T> poll();
 }
 
 

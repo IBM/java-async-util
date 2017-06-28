@@ -97,7 +97,7 @@ import java.util.concurrent.CompletionStage;
  * @see AsyncChannel
  * @see AsyncChannels
  */
-public interface BoundedAsyncChannel<T> extends AsyncIterator<T> {
+public abstract class BoundedAsyncChannel<T> extends AsyncIterator<T> {
 
   /**
    * Send a value into this channel that can be consumed via the {@link AsyncIterator} interface.
@@ -119,7 +119,7 @@ public interface BoundedAsyncChannel<T> extends AsyncIterator<T> {
    *     has been closed
    * @see AsyncChannel#send
    */
-  CompletionStage<Boolean> send(T item);
+  public abstract CompletionStage<Boolean> send(T item);
 
   /**
    * Close the channel.
@@ -141,7 +141,7 @@ public interface BoundedAsyncChannel<T> extends AsyncIterator<T> {
    *     made it into the channel
    * @see AsyncChannel#close()
    */
-  CompletionStage<Void> close();
+  public abstract CompletionStage<Void> close();
 
   /**
    * Get a result from the channel if there is one ready right now.
@@ -159,5 +159,5 @@ public interface BoundedAsyncChannel<T> extends AsyncIterator<T> {
    *     currently empty.
    * @see AsyncChannel#poll()
    */
-  Optional<T> poll();
+  public abstract Optional<T> poll();
 }

@@ -78,8 +78,8 @@ public final class StackUnroller {
         final PassBack currentPassBack = new PassBack();
         T c = completed;
         do {
-          if (this.shouldContinue.test(c)) {
-            try {
+          try {
+            if (this.shouldContinue.test(c)) {
               this.f
                   .apply(c)
                   .whenComplete(
@@ -90,12 +90,12 @@ public final class StackUnroller {
                           unroll(next, currentThread, currentPassBack);
                         }
                       });
-            } catch (Exception e) {
-              this.completeExceptionally(e);
+            } else {
+              this.complete(c);
               return;
             }
-          } else {
-            this.complete(c);
+          } catch (Throwable e) {
+            this.completeExceptionally(e);
             return;
           }
         } while ((c = currentPassBack.poll()) != null);

@@ -108,7 +108,7 @@ public final class AsyncChannels {
    * 
    * @param <T>
    */
-  private static final class UnboundedChannel<T> implements AsyncChannel<T> {
+  private static final class UnboundedChannel<T> extends AsyncChannel<T> {
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<UnboundedChannel, Node> TAIL_UPDATER =
         AtomicReferenceFieldUpdater.newUpdater(UnboundedChannel.class, Node.class, "tail");
@@ -209,8 +209,7 @@ public final class AsyncChannels {
 
   }
 
-  private static class BufferedChannel<T>
-      implements BoundedAsyncChannel<T> {
+  private static class BufferedChannel<T> extends BoundedAsyncChannel<T> {
     final AsyncSemaphore sendThrottle;
     final AsyncChannel<T> backingChannel;
 
