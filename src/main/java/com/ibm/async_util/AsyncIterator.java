@@ -26,7 +26,7 @@ import java.util.stream.Collector;
 import java.util.stream.Stream;
 
 /**
- * Interface to allow async iteration.
+ * A mechanism for asynchronously generating and consuming values
  *
  * <p>Consider this an async version of {@link Stream}.
  *
@@ -62,11 +62,11 @@ import java.util.stream.Stream;
  * consuming</b> values in parallel. This means the choice to work in parallel is generally made by
  * the library returning the AsyncIterator, not by the user of it.
  *
- * <p>To implement an AsyncIterator you must only implement nextFuture - however, it is recommended
- * that you avoid actually using nextFuture to consume the results of iteration. On top of being
- * tedious, it can also be error prone. It is easy to cause a stack overflow by incorrectly
- * recursing on calls to nextFuture. You should prefer to use the other higher level methods on this
- * interface.
+ * <p>To implement an AsyncIterator you must only implement the {@link #nextFuture()} method-
+ * however, it is recommended that you avoid actually using nextFuture to consume the results of
+ * iteration. On top of being tedious, it can also be error prone. It is easy to cause a stack
+ * overflow by incorrectly recursing on calls to nextFuture. You should prefer to use the other
+ * higher level methods on this interface.
  *
  * <p>There are 3 categories of method on this interface
  *
@@ -75,18 +75,17 @@ import java.util.stream.Stream;
  *       for those in (3). This means that no calls to nextFuture on {@code this} will occur until a
  *       call to nextFuture on the transformed iterator occurs. For example,
  *       <pre>{@code
- * AsyncIterator myIt = new AsyncIterator() {
- *  public CompletionStage<Either<End, T>> nextFuture() {
- *      System.out.println("hello");
- *      return 1;
- *  }
- * }
+ * AsyncIterator<Integer> myIt = AsyncIterator.generate(() -> {
+ *     System.out.println("hello");
+ *     return 1;
+ * });
  * transformed = myIt.thenApply(t -> i + 1);
  * }</pre>
  *       will not print hello, because the mapping was lazy. However the moment one consumes a value
  *       from transformed, i.e. {@code transformed.nextFuture();}, hello will be printed. Lazy
  *       transformations will propagate exceptions similarly to {@link CompletionStage}, a dependent
- *       AsyncIterator will return exceptional futures if the upstream future encounters one.
+ *       AsyncIterator will return exceptional futures if the upstream iterator generated
+ *       exceptional elements.
  *   <li>Terminal/consumption operations. Methods that return a {@link CompletionStage} instead of
  *       another AsyncIterator consume all or part of the iterator. If any of the stages in the
  *       chain that comprise {@code this} iterator were exceptional, the {@link CompletionStage}
@@ -95,10 +94,12 @@ import java.util.stream.Stream;
  *       transformation step in parallel. this iterator will still be consumed in a sequential
  *       fashion, but this consumption can happen before downstream operations have consumed it. In
  *       the example from (1), if it were changed to
- *       <pre>
+ *       <pre>{@code
  * transformed = myIt.thenComposeAhead(t -> CompletableFuture.completedFuture(i + 1), 5);
- * </pre>
- *       you would expect to see a hello printed immediately with the mapAhead call.
+ * transformed.nextFuture();
+ * }</pre>
+ *       you would expect to see a hello printed immediately multiple times with the ahead call,
+ *       even though nextFuture was only called once.
  * </ol>
  *
  * <p>The exception propagation scheme should be familiar to users of {@link CompletionStage},
@@ -110,10 +111,10 @@ import java.util.stream.Stream;
  *
  * <p>The behavior of an AsyncIterator if {@link #nextFuture()} is called after the end of iteration
  * marker is returned is left to the implementation. You may ensure that all subsequent calls always
- * return the end marker by using
+ * return the end marker by using {@link #fuse()}.
  *
  * @param <T> Type of object being iterated over.
- * @see {@link Stream}
+ * @see Stream
  */
 public abstract class AsyncIterator<T> {
 
@@ -231,8 +232,8 @@ public abstract class AsyncIterator<T> {
             safeNextFuture()
                 .thenCompose(
                     nt -> {
-                      // if there's a value, apply f and wrap the result in an optional,
-                      // otherwise an empty result
+                      // if there's a value, apply f and wrap the result in an Either,
+                      // otherwise just return end marker
                       return nt.fold(
                           end -> AsyncIterators.endFuture(),
                           t -> f.apply(t).thenApply(Either::right));
@@ -1054,7 +1055,7 @@ public abstract class AsyncIterator<T> {
   }
 
   /**
-   * * Create an AsyncIterator for a range.
+   * Create an AsyncIterator for a range.
    *
    * <p>If delta is positive, similar to {@code for(i = start; start < end; start+=delta)}. If delta
    * is negative, similar to {@code for(i = start; start > end; start+=delta)}.
@@ -1087,7 +1088,7 @@ public abstract class AsyncIterator<T> {
   }
 
   /**
-   * * Create an infinite AsyncIterator for a range.
+   * Create an infinite AsyncIterator for a range.
    *
    * <p>If you try to consume this entire iterator (perhaps by using a 'terminal' operation like
    * {@link AsyncIterator#fold}), it will infinite loop.
