@@ -44,7 +44,7 @@ import java.util.concurrent.CompletionStage;
  *   while(keepGoing) {
  *     channel.send(Completed.success(Optional.of(i++)));
  *   }
- *   channel.close();
+ *   channel.terminate();
  * });
  * channel.forEach(i -> {
  *   slowWriteToDisk(i);
@@ -64,7 +64,7 @@ import java.util.concurrent.CompletionStage;
  *   while(shouldContinue()) {
  *     ProductionBlocking.get(channel.send(Completed.success(Optional.of(i++))));
  *   }
- *   channel.close();
+ *   channel.terminate();
  * });
  *
  * // alternative: async sender
@@ -79,8 +79,8 @@ import java.util.concurrent.CompletionStage;
  *  // consumes futures one by one
  *  .consumeWhile(ig -> shouldContinue())
  *
- *  // finished, close channel
- *  .onComplete(ig -> channel.close());
+ *  // finished, terminate channel
+ *  .onComplete(ig -> channel.terminate());
  *
  *  // consumer doesn't know or care channel is bounded
  * channel.forEach(i -> {
@@ -110,8 +110,8 @@ public interface BoundedAsyncChannel<T> extends AsyncIterator<T> {
    * certain number of values to be buffered before applying back pressure, or it could use some out
    * of band metric to decide.
    *
-   * <p>Note that {@link #close()} is the <b>only</b> way to close the channel. Specifically,
-   * exceptions don't close the channel. See {@link #close()} for details
+   * <p>Note that {@link #close()} is the <b>only</b> way to terminate the channel. Specifically,
+   * exceptions don't terminate the channel. See {@link #close()} for details
    *
    * @param item element to send into the channel
    * @return A future that completes when the channel is ready to accept another message. It
@@ -125,13 +125,13 @@ public interface BoundedAsyncChannel<T> extends AsyncIterator<T> {
    * Close the channel.
    *
    * <p>After the channel is closed, all subsequent sends will be rejected, returning false. After
-   * the consumer consumes whatever was sent before the close, the consumer will receive
+   * the consumer consumes whatever was sent before the terminate, the consumer will receive
    * Optional.empty(). When the {@link CompletionStage} returned by this method completes, no more
    * messages will ever make it into the channel. Equivalently, all {@code true} futures generated
    * by calls to {@link #send} will have been completed by the time the returned future completes.
    *
-   * <p>Note that {@link #close()} is the <b>only</b> way to close the channel. Specifically,
-   * exceptions don't close the channel. This is consistent with the interface on {@link
+   * <p>Note that {@link #close()} is the <b>only</b> way to terminate the channel. Specifically,
+   * exceptions don't terminate the channel. This is consistent with the interface on {@link
    * AsyncIterator}; While higher level methods generally stop iteration on exception or empty,
    * {@link AsyncIterator#nextFuture()} can still return exceptions and iteration may continue. This
    * allows users of AsyncChannel/AsyncIterator to continue iterating over possibly exceptional
@@ -139,7 +139,7 @@ public interface BoundedAsyncChannel<T> extends AsyncIterator<T> {
    *
    * @return A future that indicates when all sends that were sent before the {@link #close()} have
    *     made it into the channel
-   * @see AsyncChannel#close()
+   * @see AsyncChannel#terminate()
    */
   CompletionStage<Void> close();
 

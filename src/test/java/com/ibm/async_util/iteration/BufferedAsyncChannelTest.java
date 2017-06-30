@@ -123,13 +123,13 @@ public class BufferedAsyncChannelTest extends AbstractAsyncChannelTest {
         .collect(Collectors.toList());
     Assert.assertFalse(delayeds.stream().map(CompletableFuture::isDone).anyMatch(b -> b));
 
-    // close
+    // terminate
     final CompletableFuture<Void> closeFuture = this.channel.close().toCompletableFuture();
 
     Assert.assertFalse(delayeds.stream().map(Future::isDone).anyMatch(b -> b));
     Assert.assertFalse(closeFuture.isDone());
 
-    // send after close
+    // send after terminate
     final CompletableFuture<Boolean> rejected = this.channel.send(3).toCompletableFuture();
 
     for (int i = 0; i < BUFFER; i++) {
@@ -141,11 +141,11 @@ public class BufferedAsyncChannelTest extends AbstractAsyncChannelTest {
           .assertTrue(delayeds.stream().limit(i + 1).map(CompletableFuture::join).allMatch(b -> b));
       // delayeds more than item should be pending
       Assert.assertFalse(delayeds.stream().skip(i + 1).map(Future::isDone).anyMatch(b -> b));
-      // close should not be done until all delayeds are done
+      // terminate should not be done until all delayeds are done
 
-      // according to the contract, the close future could be done when the last delayed is
+      // according to the contract, the terminate future could be done when the last delayed is
       // accepted, however it is not required. only check that if there is outstanding acceptable
-      // work, we don't finish close
+      // work, we don't finish terminate
       if (i == BUFFER - 1) {
         Assert.assertFalse(closeFuture.isDone());
       }

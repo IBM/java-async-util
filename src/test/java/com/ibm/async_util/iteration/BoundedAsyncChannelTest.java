@@ -61,13 +61,13 @@ public class BoundedAsyncChannelTest extends AbstractAsyncChannelTest {
     final CompletableFuture<Boolean> f2 = this.channel.send(2).toCompletableFuture();
     Assert.assertFalse(f2.isDone());
 
-    // close
+    // terminate
     final CompletableFuture<Void> closeFuture = this.channel.close().toCompletableFuture();
 
     Assert.assertFalse(f2.isDone());
     Assert.assertFalse(closeFuture.isDone());
 
-    // send after close
+    // send after terminate
     final CompletableFuture<Boolean> f3 = this.channel.send(3).toCompletableFuture();
 
     // consume a result
@@ -80,7 +80,7 @@ public class BoundedAsyncChannelTest extends AbstractAsyncChannelTest {
     Assert.assertEquals(2, this.channel.nextFuture().toCompletableFuture().join().right().get().intValue());
     Assert.assertFalse(this.channel.nextFuture().toCompletableFuture().join().isRight());
 
-    // close should be done, f3 should be done and rejected
+    // terminate should be done, f3 should be done and rejected
     Assert.assertTrue(closeFuture.isDone());
     Assert.assertTrue(f3.isDone());
     Assert.assertFalse(f3.join());

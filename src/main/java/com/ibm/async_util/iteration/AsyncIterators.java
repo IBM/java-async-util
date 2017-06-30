@@ -81,12 +81,7 @@ class AsyncIterators {
         : collector.finisher().apply(accumulator);
   }
 
-  static <T> CompletableFuture<T> exceptional(final Throwable ex) {
-    CompletableFuture<T> completableFuture = new CompletableFuture<>();
-    completableFuture.completeExceptionally(ex);
-    return completableFuture;
-  }
-
+  /** Complete dest with whatever result (T or a Throwable) comes out of source */
   static <T> void listen(final CompletionStage<T> source, final CompletableFuture<T> dest) {
     source.whenComplete(
         (t, ex) -> {
@@ -107,6 +102,7 @@ class AsyncIterators {
     }
   }
 
+  /** If both et and eu are right, then compute a new right either, otherwise just return left */
   static <T, U, V> Either<AsyncIterator.End, V> zipWith(
       Either<AsyncIterator.End, T> et,
       Either<AsyncIterator.End, U> eu,

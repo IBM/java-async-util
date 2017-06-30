@@ -44,7 +44,7 @@ public class AsyncChannelTest extends AbstractAsyncChannelTest {
 
   @Override
   void closeImpl() {
-    this.channel.close();
+    this.channel.terminate();
   }
 
   @Override

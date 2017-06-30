@@ -31,18 +31,19 @@ import java.util.Optional;
  *
  * <p>This interface represents an <i> unbounded </i> queue, meaning there is no mechanism to notify
  * the sender that the queue is "full" (nor is there a notion of the queue being full to begin
- * with...). The channel will continue to accept values as fast as the senders can {@link #send}
- * them, regardless of the rate at which the values are being consumed. If senders produce a lot of
- * values much faster than the consumption rate, it will lead to an out of memory, so users are
- * responsible for enforcing that the channel does not grow too large. If you would like a channel
- * abstraction that provides backpressure, see {@link BoundedAsyncChannel}.
+ * with). The channel will continue to accept values as fast as the senders can {@link #send} them,
+ * regardless of the rate at which the values are being consumed. If senders produce a lot of values
+ * much faster than the consumption rate, it will lead to an out of memory, so users are responsible
+ * for enforcing that the channel does not grow too large. If you would like a channel abstraction
+ * that provides backpressure, see {@link BoundedAsyncChannel}.
  *
- * <p>This channel can only be closed by someone calling {@link #close()}, it can be called by
+ * <p>This channel can be terminated by someone calling {@link #terminate()}, it can be called by
  * consumers or senders. It is strongly recommended that all instances of this class eventually be
- * closed. Almost all terminal/consuming operations on {@link AsyncIterator} return futures that
- * require the iterator be closed before returning. An unclosed channel has a high probability of
- * introducing an uncompleted future on the reader's side. After the channel is closed, subsequent
- * {@link #send}s are rejected, and consumption attempts return immediately with empty futures.
+ * terminated. Mose terminal operations on {@link AsyncIterator} return {@link
+ * java.util.concurrent.CompletionStage CompletionStages} that whose stage will not complete until
+ * the channel is terminated. After the channel is terminated, subsequent {@link #send}s are
+ * rejected, though consumers of the channel will still receive any values that were sent before the
+ * termination.
  *
  * <p>Typically you'll want to use a channel when you have some "source" of items, and want to
  * consume them asynchronously as the become available. Some examples of sources could be a
@@ -65,15 +66,15 @@ import java.util.Optional;
  * //consumer of channel, sending numbers to a server one at a time
  * channel
  *   // lazily map numbers to send
- *   .map(number -> sendToServer(number))
+ *   .thenCompose(number -> sendToServer(number))
  *   // consume all values
  *   .consume()
- *   // iteration stopped (meaning channel was closed)
+ *   // iteration stopped (meaning channel was terminated)
  *   .thenAccept(ig -> sendToServer("no more numbers!");
  *
  * threadpool.awaitTermination();
- * // close the channel, done computing
- * channel.close();
+ * // terminate the channel, done computing
+ * channel.terminate();
  *
  * }</pre>
  *
@@ -97,8 +98,8 @@ import java.util.Optional;
  *  // bundle futures into a list
  *  .collect(Collectors.toList());
  *
- *  // close the channel whenever we're done sending
- *  Combinators.all(futures).thenAccept(ignore -> channel.close());
+ *  // terminate the channel whenever we're done sending
+ *  Combinators.all(futures).thenAccept(ignore -> channel.terminate());
  *
  *  // prints each number returned by servers as they arrive
  *  channel
@@ -116,8 +117,7 @@ import java.util.Optional;
  *       sent
  * </ul>
  *
- * @param <T>
- * @see AsyncIterators
+ * @param <T> The type of the elements in this channel
  * @see AsyncChannels
  * @see BoundedAsyncChannel
  */
@@ -130,28 +130,32 @@ public interface AsyncChannel<T> extends AsyncIterator<T> {
    * store them in memory until they can be consumed. If you are sending work faster than you can
    * consume it, this can easily lead to an out of memory condition.
    *
-   * @param item
-   * @return true if the item was accepted, false if it was rejected because the channel has been
-   *     closed
+   * @param item the item to be sent into the channel
+   * @return true if the item was accepted, false if it was rejected because the channel has already
+   *     been terminated
    */
   boolean send(T item);
 
   /**
-   * Closes the channel.
+   * Terminates the channel, disabling {@link #send}.
    *
-   * <p>After the channel is closed all subsequent sends will be rejected, returning false. After
-   * the consumer consumes whatever was sent before the close, the consumer will receive an end of
-   * iteration notification.
+   * <p>After the channel is terminated all subsequent sends will be rejected, returning false.
+   * After the consumer consumes whatever was sent before the terminate, the consumer will receive
+   * an end of iteration notification.
+   *
+   * <p>This method is thread-safe, and can be called multiple times. An attempt to terminate after
+   * termination has already occurred is a no-op.
    */
-  void close();
+  void terminate();
 
   /**
    * Gets a result from the channel if there is one ready right now.
    *
    * <p>This method consumes parts of the channel, so like the consumption methods on {@link
-   * AsyncIterator}, this method should be used in a single threaded fashion. After {@link #close()}
-   * is called and all outstanding results are consumed, poll will always return empty. This method
-   * <b> should not </b> be used if there are null values in the channel. <br>
+   * AsyncIterator}, this method is not thread-safe should be used in a single threaded fashion.
+   * After {@link #terminate()} is called and all outstanding results are consumed, poll will always
+   * return empty. This method <b> should not </b> be used if there are null values in the channel.
+   * <br>
    * Notice that the channel being closed is indistinguishable from the channel being transiently
    * empty. To discover that no more results will ever be available, you must use the normal means
    * on {@link AsyncIterator}: either calling {@link #nextFuture()} and seeing if the result
@@ -159,8 +163,8 @@ public interface AsyncChannel<T> extends AsyncIterator<T> {
    * that only complete once the channel has been closed.
    *
    * @throws NullPointerException if the polled result is null
-   * @return A value if there was one immediately available in the channel, empty if the channel is
-   *     currently empty.
+   * @return a value if there was one immediately available in the channel, empty if the channel is
+   *     currently empty
    */
   Optional<T> poll();
 }

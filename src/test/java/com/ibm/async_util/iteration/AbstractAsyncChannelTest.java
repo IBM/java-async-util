@@ -254,7 +254,7 @@ public abstract class AbstractAsyncChannelTest {
         while ((next = chunk.poll()) != null) {
           final long sendNum = sentBeforeKill.getAndIncrement();
           if (sendNum == killAt) {
-            // close
+            // terminate
             close();
             killed.set(true);
           } else if (killed.get()) {
@@ -302,7 +302,7 @@ public abstract class AbstractAsyncChannelTest {
         poll().ifPresent(lis::add);
         Thread.yield();
       }
-      // consume whatever's left after close
+      // consume whatever's left after terminate
       Integer i;
       while ((i = poll().orElse(null)) != null) {
         lis.add(i);

@@ -1,8 +1,8 @@
 package com.ibm.async_util.iteration;
 
+import com.ibm.async_util.locks.AsyncLock;
 import com.ibm.async_util.locks.FairAsyncLock;
 import com.ibm.async_util.util.Either;
-import com.ibm.async_util.locks.AsyncLock;
 
 import java.util.ArrayDeque;
 import java.util.Collection;
@@ -39,32 +39,20 @@ import java.util.stream.Stream;
  * consumed only once. Typically you should not apply multiple transformations to the same source
  * AsyncIterator, it almost certainly won't do what you want it to do.
  *
- * <p>Though this class is abstract, it cannot be extended by users. Instead use the static methods
- * {@link #generate(Supplier)}, {@link #supply(Supplier)}, and {@link #unfold(Object, Function)} to
- * create new AsyncIterators.
+ * <p>Implementors of the interface need only implement {@link #nextFuture()}. Alternatively, the
+ * static methods {@link #generate(Supplier)}, {@link #supply(Supplier)}, and {@link #unfold(Object,
+ * Function)} can be used to create new AsyncIterators from functions that generate iteration
+ * elements.
  *
- * <p>A note on thread safety: This class makes no assumption that nextFuture is thread safe! Many
- * methods that generate transformed iterators assume that nextFuture will not be called
+ * <p>A note on thread safety: This class makes no assumption that {@link #nextFuture()} is thread
+ * safe! Many methods that generate transformed iterators assume that nextFuture will not be called
  * concurrently, and even stronger, that nextFuture won't be called again until the previous future
- * returned by nextFuture has completed. That is to say,
+ * returned by nextFuture has completed.
  *
- * <pre>{@code
- * // bad
- * pool.exeucte(() -> nextFuture())
- * pool.execute(() -> nextFuture())
- *
- * // just as bad
- * f1 = nextFuture();
- * f2 = nextFuture();
- *
- * // good
- * nextFuture().thenCompose(t -> nextFuture());
- * }</pre>
- *
- * You can still accomplish parallelization using the ahead methods described below. The difference
- * is that the parallelization in that case is from <b>producing</b> values in parallel, <b>not
- * consuming</b> values in parallel. This means the choice to work in parallel is generally made by
- * the library returning the AsyncIterator, not by the user of it.
+ * <p>You can still accomplish parallelization using the ahead methods described below. The
+ * difference is that the parallelization in that case is from <b>producing</b> values in parallel,
+ * <b>not consuming</b> values in parallel. This means the choice to work in parallel is generally
+ * made by the library returning the AsyncIterator, not by the user of it.
  *
  * <p>To implement an AsyncIterator you must only implement the {@link #nextFuture()} method-
  * however, it is recommended that you avoid actually using nextFuture to consume the results of
@@ -72,46 +60,42 @@ import java.util.stream.Stream;
  * overflow by incorrectly recursing on calls to nextFuture. You should prefer to use the other
  * higher level methods on this interface.
  *
- * <p>There are 3 categories of method on this interface
+ * <p>There are 2 main categories of such methods on this interface: Intermediate and Terminal.
+ * These methods can be combined to form pipelines, which generally consist of a source (often
+ * created with the static constructor methods on this interface ({@link #fromIterator(Iterator)},
+ * {@link #unfold(Object, Function)}, etc)), followed by zero or more intermediate operations (such
+ * as {@link #filter(Predicate)}, {@link #thenApply(Function)}), and completed with a terminal
+ * operation which returns a {@link CompletionStage}.
  *
- * <ol>
- *   <li>Lazy transformations - every method that returns another AsyncIterator is truly lazy except
- *       for those in (3). This means that no calls to nextFuture on {@code this} will occur until a
- *       call to nextFuture on the transformed iterator occurs. For example,
- *       <pre>{@code
- * AsyncIterator<Integer> myIt = AsyncIterator.generate(() -> {
- *     System.out.println("hello");
- *     return 1;
- * });
- * transformed = myIt.thenApply(t -> i + 1);
- * }</pre>
- *       will not print hello, because the mapping was lazy. However the moment one consumes a value
- *       from transformed, i.e. {@code transformed.nextFuture();}, hello will be printed. Lazy
- *       transformations will propagate exceptions similarly to {@link CompletionStage}, a dependent
- *       AsyncIterator will return exceptional futures if the upstream iterator generated
- *       exceptional elements.
- *   <li>Terminal/consumption operations. Methods that return a {@link CompletionStage} instead of
- *       another AsyncIterator consume all or part of the iterator. If any of the stages in the
- *       chain that comprise {@code this} iterator were exceptional, the {@link CompletionStage}
- *       returned by a terminal operation will also be exceptional.
- *   <li>Parallel. Methods that end with 'ahead' will allow you to perform an expensive
- *       transformation step in parallel. this iterator will still be consumed in a sequential
- *       fashion, but this consumption can happen before downstream operations have consumed it. In
- *       the example from (1), if it were changed to
- *       <pre>{@code
- * transformed = myIt.thenComposeAhead(t -> CompletableFuture.completedFuture(i + 1), 5);
- * transformed.nextFuture();
- * }</pre>
- *       you would expect to see a hello printed immediately multiple times with the ahead call,
- *       even though nextFuture was only called once.
- * </ol>
+ * <p><b>Intermediate methods</b> - All methods which return {@link AsyncIterator AsyncIterators}
+ * are intermediate methods. They can further be broken down into lazy and partially eager methods.
+ * Methods that end with the suffix <i>ahead</i> are partially eager, the rest are lazy. A lazy
+ * intermediate transformation will not be evaluated until some downstream eager operation is
+ * called.
+ *
+ * <p>Methods ending with the suffix <i> ahead </i>, are partially eager. They can be used when
+ * there is an expensive transformation step that should be performed in parallel. They will eagerly
+ * consume from their upstream iterator up to a specified amount (still sequentially!) and eagerly
+ * apply the transformation step.
+ *
+ * <p>Intermediate transformations will propagate exceptions similarly to {@link CompletionStage}, a
+ * dependent AsyncIterator will return exceptional futures if the upstream iterator generated
+ * exceptional elements.
+ *
+ * <p><b>Terminal operations</b> Methods that return a {@link CompletionStage} instead of another
+ * AsyncIterator consume the iterator. After a terminal operation is called, the iterator is
+ * considered consumed and should not be used further. If any of the stages in the chain that
+ * comprise {@code this} iterator were exceptional, the {@link CompletionStage} returned by a
+ * terminal operation will also be exceptional.
  *
  * <p>The exception propagation scheme should be familiar to users of {@link CompletionStage},
  * upstream errors will appear wherever the AsyncIterator is consumed and the result is observed
- * (with {@link CompletableFuture#join()} for instance). That being said, a daring user may have
- * applications where they wish to recover from exceptions and continue iteration. This is not
- * forbidden, you may use {@link #nextFuture()} directly in which case you are free to continue
- * iterating after an iterator in the chain has produced an exception.
+ * (with {@link CompletableFuture#join()} for instance). Exceptions at any stage in the pipeline can
+ * be recovered from by using {@link #exceptionally(Function)}, however this won't recover
+ * exceptions that are produced downstream. A daring user may have applications where they wish to
+ * manually iterate past exceptions without converting them. This is not forbidden, you may use
+ * {@link #nextFuture()} directly in which case you are free to continue iterating after an iterator
+ * in the chain has produced an exception.
  *
  * <p>The behavior of an AsyncIterator if {@link #nextFuture()} is called after the end of iteration
  * marker is returned is left to the implementation. You may ensure that all subsequent calls always
@@ -128,19 +112,39 @@ public interface AsyncIterator<T> {
   /**
    * Returns a future representing the next element of the iterator.
    *
-   * <p>If the optional is empty, the iterator has no more elements. After an iterator returns
-   * empty, a consumer should make no subsequent calls to nextFuture
+   * <p>This is not a terminal method, it can be safely called multiple times. Additionally, this
+   * method is unique in that it can continue to be called even after a returned stage completes
+   * exceptionally. However, this method is not thread safe, and should only be called in a
+   * single-threaded fashion. Moreover, after a call another call should not be made until the
+   * {@link CompletionStage} returned by the previous call has completed. That is to say,
    *
-   * @return A future of the next element for iteration, or empty
+   * <pre>{@code
+   * // illegal
+   * pool.exeucte(() -> nextFuture())
+   * pool.execute(() -> nextFuture())
+   *
+   * // just as illegal
+   * f1 = nextFuture();
+   * f2 = nextFuture();
+   *
+   * // good
+   * nextFuture().thenCompose(t -> nextFuture());
+   * }</pre>
+   *
+   * Though this is not a terminal method, if a terminal method has been called it is no longer safe
+   * to call this method. In general this method should be avoided in favor of the higher level
+   * methods on this interface unless some unique feature of this method is required. When {@link
+   * #nextFuture()} returns {@link End}, the iterator has no more elements. After an iterator emits
+   * an {@link End} indicator, the result of subsequent call to nextFuture is undefined.
+   *
+   * @return A {@link CompletionStage} of the next element for iteration, or an instance of {@link
+   *     End}, indicating the end of iteration.
    */
-  public CompletionStage<Either<End, T>> nextFuture();
+  CompletionStage<Either<End, T>> nextFuture();
 
   /**
-   * Applies f to the results of the stages in {@code this} iterator
-   *
-   * <p>Example:
-   *
-   * <p>
+   * Returns a new AsyncIterator that iterates over the results of f applied to the outcomes of
+   * stages in this iterator when they complete normally.
    *
    * <pre>
    * intIterator // 1,2,3,...
@@ -158,12 +162,9 @@ public interface AsyncIterator<T> {
   }
 
   /**
-   * Applies f to the results of the stages in {@code this} iterator, executed with the previous
-   * stage's default asynchronous execution facility.
-   *
-   * <p>Example:
-   *
-   * <p>
+   * Returns a new AsyncIterator that iterates over the results of f applied to the outcomes of
+   * stages in this iterator when they complete normally. f is executed with the previous stage's
+   * default asynchronous execution facility.
    *
    * <pre>
    * intIterator // 1,2,3,...
@@ -181,12 +182,8 @@ public interface AsyncIterator<T> {
   }
 
   /**
-   * Applies f to the results of the stages in {@code this} iterator, executed with the provided
-   * Executor.
-   *
-   * <p>Example:
-   *
-   * <p>
+   * Returns a new AsyncIterator that iterates over the results of f applied to the outcomes of
+   * stages in this iterator when they complete normally. f is executed with the provided Executor.
    *
    * <pre>
    * intIterator // 1,2,3,...
@@ -196,6 +193,7 @@ public interface AsyncIterator<T> {
    * returns an AsyncIterator of "1","2","3"...
    *
    * @param f A function which produces a U from the given T
+   * @param executor A {@link Executor} where the function {@code f} should run
    * @return A new AsyncIterator which produces stages of f applied to the result of the stages from
    *     {@code this} iterator
    */
@@ -512,6 +510,21 @@ public interface AsyncIterator<T> {
                         }));
       }
     };
+  }
+
+  /**
+   * Returns an AsyncIterator where any exception produced by {@code this} iterator will be
+   * transformed with the provided function.
+   *
+   * @param fn the Function used to convert an error from this iterator into a T. If {@code fn}
+   *     itself throws an exception, that exception will be emitted in the resulting iterator.
+   * @return a new AsyncIterator where exceptions from this iterator have been converted using
+   *     {@code fn}
+   */
+  default AsyncIterator<T> exceptionally(Function<Throwable, T> fn) {
+    return () ->
+        AsyncIterators.convertSynchronousException(this::nextFuture)
+            .exceptionally(ex -> Either.right(fn.apply(ex)));
   }
 
   /**
@@ -942,10 +955,9 @@ public interface AsyncIterator<T> {
    * @return A new AsyncIterator which will yield the elements of {@code iterator}
    */
   public static <T> AsyncIterator<T> fromIterator(final Iterator<T> iterator) {
-    return
-        () ->
-            CompletableFuture.completedFuture(
-                iterator.hasNext() ? Either.right(iterator.next()) : AsyncIterators.end());
+    return () ->
+        CompletableFuture.completedFuture(
+            iterator.hasNext() ? Either.right(iterator.next()) : AsyncIterators.end());
   }
 
   /**
@@ -1071,7 +1083,7 @@ public interface AsyncIterator<T> {
    * order in which values are returned does not reflect the original order of the collection of
    * futures.
    *
-   * @param futures
+   * @param futures a Collection of futures that will be emitted in the returned iterator as they complete
    * @return AsyncIterator of values produced by futures in order of completion
    */
   public static <T> AsyncIterator<T> unordered(
@@ -1084,8 +1096,8 @@ public interface AsyncIterator<T> {
             Either<Throwable, T> toSend = t != null ? Either.right(t) : Either.left(ex);
             channel.send(toSend);
             if (size.decrementAndGet() == 0) {
-              // close the channel
-              channel.close();
+              // terminate the channel
+              channel.terminate();
             }
           });
     }
