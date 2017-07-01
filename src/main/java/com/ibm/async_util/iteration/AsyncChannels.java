@@ -265,7 +265,7 @@ public final class AsyncChannels {
     }
 
     @Override
-    public CompletionStage<Void> close() {
+    public CompletionStage<Void> terminate() {
       // note we still want to respect the buffer here, fairness of our backing semaphore will
       // ensure that any sends queued before the terminate will still hit the backingChannel before the
       // terminate does

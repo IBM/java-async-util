@@ -47,9 +47,10 @@ import java.util.Optional;
  *
  * <p>Typically you'll want to use a channel when you have some "source" of items, and want to
  * consume them asynchronously as the become available. Some examples of sources could be a
- * collection of futures, bytes off of a socket, results produced by dedicated worker threads, etc.
- * Suppose you had scenario where you had many threads doing some CPU intensive computation, and
- * you'd send their answers off to some server somewhere one at a time.
+ * collection of {@link java.util.concurrent.CompletionStage CompletionStages}, bytes off of a
+ * socket, results produced by dedicated worker threads, etc. Suppose you had scenario where you had
+ * many threads doing some CPU intensive computation, and you'd send their answers off to some
+ * server somewhere one at a time.
  *
  * <pre>{@code
  * AsyncChannel<Integer> channel = AsyncChannels.unbounded();
@@ -163,8 +164,8 @@ public interface AsyncChannel<T> extends AsyncIterator<T> {
    * that only complete once the channel has been closed.
    *
    * @throws NullPointerException if the polled result is null
-   * @return a value if there was one immediately available in the channel, empty if the channel is
-   *     currently empty
+   * @return a present T value if there was one immediately available in the channel, empty if the
+   *     channel is currently empty
    */
   Optional<T> poll();
 }

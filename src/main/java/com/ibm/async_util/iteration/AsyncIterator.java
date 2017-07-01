@@ -79,7 +79,7 @@ import java.util.stream.Stream;
  * apply the transformation step.
  *
  * <p>Intermediate transformations will propagate exceptions similarly to {@link CompletionStage}, a
- * dependent AsyncIterator will return exceptional futures if the upstream iterator generated
+ * dependent AsyncIterator will return exceptional stages if the upstream iterator generated
  * exceptional elements.
  *
  * <p><b>Terminal operations</b> Methods that return a {@link CompletionStage} instead of another
@@ -889,12 +889,12 @@ public interface AsyncIterator<T> {
               return this.curr
                   .nextFuture()
                   .thenCompose(
-                      optional -> {
+                      either -> {
                         /*
                          * if the result from the last call to nextFuture() is empty, grab another
                          * AsyncIterator out of asyncIterators and set curr
                          */
-                        return optional.fold(
+                        return either.fold(
                             end -> {
                               // current iterator was out of elements
                               return asyncIterators
@@ -1083,7 +1083,8 @@ public interface AsyncIterator<T> {
    * order in which values are returned does not reflect the original order of the collection of
    * futures.
    *
-   * @param futures a Collection of futures that will be emitted in the returned iterator as they complete
+   * @param futures a Collection of futures that will be emitted in the returned iterator as they
+   *     complete
    * @return AsyncIterator of values produced by futures in order of completion
    */
   public static <T> AsyncIterator<T> unordered(

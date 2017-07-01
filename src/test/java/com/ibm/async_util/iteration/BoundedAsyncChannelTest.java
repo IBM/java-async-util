@@ -47,7 +47,7 @@ public class BoundedAsyncChannelTest extends AbstractAsyncChannelTest {
 
   @Override
   void closeImpl() {
-    this.channel.close();
+    this.channel.terminate();
   }
 
   @Test
@@ -62,7 +62,7 @@ public class BoundedAsyncChannelTest extends AbstractAsyncChannelTest {
     Assert.assertFalse(f2.isDone());
 
     // terminate
-    final CompletableFuture<Void> closeFuture = this.channel.close().toCompletableFuture();
+    final CompletableFuture<Void> closeFuture = this.channel.terminate().toCompletableFuture();
 
     Assert.assertFalse(f2.isDone());
     Assert.assertFalse(closeFuture.isDone());

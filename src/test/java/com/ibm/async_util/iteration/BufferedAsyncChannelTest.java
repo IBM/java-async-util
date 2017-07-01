@@ -56,7 +56,7 @@ public class BufferedAsyncChannelTest extends AbstractAsyncChannelTest {
 
   @Override
   void closeImpl() {
-    this.channel.close();
+    this.channel.terminate();
   }
 
 
@@ -94,10 +94,10 @@ public class BufferedAsyncChannelTest extends AbstractAsyncChannelTest {
       }
     }
 
-    this.channel.close();
+    this.channel.terminate();
     for (int i = 0; i < BUFFER * 5; i++) {
       if (i % 2 == 0) {
-        this.channel.close();
+        this.channel.terminate();
       } else {
         this.channel.send(1);
       }
@@ -124,7 +124,7 @@ public class BufferedAsyncChannelTest extends AbstractAsyncChannelTest {
     Assert.assertFalse(delayeds.stream().map(CompletableFuture::isDone).anyMatch(b -> b));
 
     // terminate
-    final CompletableFuture<Void> closeFuture = this.channel.close().toCompletableFuture();
+    final CompletableFuture<Void> closeFuture = this.channel.terminate().toCompletableFuture();
 
     Assert.assertFalse(delayeds.stream().map(Future::isDone).anyMatch(b -> b));
     Assert.assertFalse(closeFuture.isDone());

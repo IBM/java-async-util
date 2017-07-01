@@ -19,6 +19,11 @@
 
 package com.ibm.async_util.iteration;
 
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -39,11 +44,6 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
 
 public abstract class AbstractAsyncChannelTest {
   private final static int NUM_THREADS = 5;
@@ -84,7 +84,7 @@ public abstract class AbstractAsyncChannelTest {
     Assert.assertTrue(this.consumerThread.awaitTermination(1, TimeUnit.SECONDS));
   }
 
-  private void close() {
+  private void terminate() {
     closeImpl();
     this.closed.set(true);
   }
@@ -115,7 +115,7 @@ public abstract class AbstractAsyncChannelTest {
       while ((next = this.queue.poll()) != null) {
         Assert.assertTrue(send(next));
       }
-      close();
+      terminate();
 
       // should be rejected
       Assert.assertFalse(send(1));
@@ -169,7 +169,7 @@ public abstract class AbstractAsyncChannelTest {
     CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
     // all senders finished, end the stream
-    close();
+    terminate();
 
     // should be rejected
     Assert.assertFalse(send(1));
@@ -216,7 +216,7 @@ public abstract class AbstractAsyncChannelTest {
     }
 
     // all senders finished, end the stream
-    close();
+    terminate();
 
     // should be rejected
     Assert.assertFalse(send(1));
@@ -255,7 +255,7 @@ public abstract class AbstractAsyncChannelTest {
           final long sendNum = sentBeforeKill.getAndIncrement();
           if (sendNum == killAt) {
             // terminate
-            close();
+            terminate();
             killed.set(true);
           } else if (killed.get()) {
             // send a value that indicates it was sent after kill
@@ -278,7 +278,7 @@ public abstract class AbstractAsyncChannelTest {
   public void pollAfterCloseEmptyTest() {
     send(1);
     Assert.assertEquals(poll().get().intValue(), 1);
-    close();
+    terminate();
     Assert.assertFalse(poll().isPresent());
     Assert.assertFalse(poll().isPresent());
   }
@@ -288,7 +288,7 @@ public abstract class AbstractAsyncChannelTest {
     send(1);
     Assert.assertEquals(poll().get().intValue(), 1);
     send(2);
-    close();
+    terminate();
     Assert.assertEquals(poll().get().intValue(), 2);
     Assert.assertFalse(poll().isPresent());
     Assert.assertFalse(poll().isPresent());

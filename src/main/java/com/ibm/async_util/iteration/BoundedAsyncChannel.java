@@ -31,7 +31,7 @@ import java.util.concurrent.CompletionStage;
  * channel faster than the consumer is capable of consuming them. Without backpressure, the senders
  * could cause an out of memory condition if they eventually sent too many messages into the
  * channel. Users are expected to respect backpressure by refraining from making a subsequent call
- * to {@link #send} until the previous call completes.
+ * to {@link #send} until the {@link CompletionStage} returned by the previous call completes.
  *
  * <p>Currently you can produce a bounded channel with {@link AsyncChannels#bounded()} or {@link
  * AsyncChannels#buffered(int)}.
@@ -42,7 +42,7 @@ import java.util.concurrent.CompletionStage;
  * AsyncChannel channel = AsyncChannels.unbounded();
  * pool.submit(() -> {
  *   while(keepGoing) {
- *     channel.send(Completed.success(Optional.of(i++)));
+ *     channel.send(i++);
  *   }
  *   channel.terminate();
  * });
@@ -62,7 +62,7 @@ import java.util.concurrent.CompletionStage;
  * // blocking sender
  * pool.submit(() -> {
  *   while(shouldContinue()) {
- *     ProductionBlocking.get(channel.send(Completed.success(Optional.of(i++))));
+ *     channel.send(i++).toCompletableFuture().join();
  *   }
  *   channel.terminate();
  * });
@@ -74,13 +74,13 @@ import java.util.concurrent.CompletionStage;
  *  .iterate(i -> i + 1)
  *
  *  // send to channel
- *  .map(i -> channel.send(Completed.success(Optional.of(i))))
+ *  .thenApply(i -> channel.send(i))
  *
  *  // consumes futures one by one
  *  .consumeWhile(ig -> shouldContinue())
  *
  *  // finished, terminate channel
- *  .onComplete(ig -> channel.terminate());
+ *  .thenRun(() -> channel.terminate());
  *
  *  // consumer doesn't know or care channel is bounded
  * channel.forEach(i -> {
@@ -92,7 +92,7 @@ import java.util.concurrent.CompletionStage;
  * full. In practice, this means that if your number of senders is very large you can still consume
  * too much memory even if you are respecting the send interface.
  *
- * @param <T>
+ * @param <T> the type of the items sent and consumed from this channel
  * @see AsyncIterator
  * @see AsyncChannel
  * @see AsyncChannels
@@ -103,60 +103,56 @@ public interface BoundedAsyncChannel<T> extends AsyncIterator<T> {
    * Send a value into this channel that can be consumed via the {@link AsyncIterator} interface.
    *
    * <p>This method is thread safe - multiple threads can send values into this channel
-   * concurrently. This channel is bounded, so after a call to {@code send} a future is returned to
-   * the sender. When the future completes, consumption has progressed enough that the channel is
-   * again willing to accept messages. The implementation may decide when a channel is writable, it
-   * could require that all outstanding values are consumed by the consumer, it could allow a
-   * certain number of values to be buffered before applying back pressure, or it could use some out
-   * of band metric to decide.
-   *
-   * <p>Note that {@link #close()} is the <b>only</b> way to terminate the channel. Specifically,
-   * exceptions don't terminate the channel. See {@link #close()} for details
+   * concurrently. This channel is bounded, so after a call to {@code send} a {@link
+   * CompletionStage} is returned to the sender. When the stage finishes, consumption has progressed
+   * enough that the channel is again willing to accept messages. The implementation may decide when
+   * a channel is writable, it could require that all outstanding values are consumed by the
+   * consumer, it could allow a certain number of values to be buffered before applying back
+   * pressure, or it could use some out of band metric to decide.
    *
    * @param item element to send into the channel
-   * @return A future that completes when the channel is ready to accept another message. It
-   *     completes with true if the item was accepted, false if it was rejected because the channel
-   *     has been closed
+   * @return a {@link CompletionStage} that completes when the channel is ready to accept another
+   *     message. It completes with true if the item was accepted, false if it was rejected because
+   *     the channel has already been terminated.
    * @see AsyncChannel#send
    */
   CompletionStage<Boolean> send(T item);
 
   /**
-   * Close the channel.
+   * Terminate the channel, after termination subsequent attempts to {@link #send} into the channel
+   * will fail.
    *
-   * <p>After the channel is closed, all subsequent sends will be rejected, returning false. After
-   * the consumer consumes whatever was sent before the terminate, the consumer will receive
-   * Optional.empty(). When the {@link CompletionStage} returned by this method completes, no more
-   * messages will ever make it into the channel. Equivalently, all {@code true} futures generated
-   * by calls to {@link #send} will have been completed by the time the returned future completes.
+   * <p>After the channel is terminated, all subsequent sends will return stages that will complete
+   * with false. After the consumer consumes whatever was sent before the terminate, the consumer
+   * will receive an {@link com.ibm.async_util.iteration.AsyncIterator.End} marker. When the {@link
+   * CompletionStage} returned by this method completes, no more messages will ever make it into the
+   * channel. Equivalently, all stages generated by {@link #send} that will complete with {@code
+   * true} generated by calls to {@link #send} will have been completed by the time the returned
+   * stage completes.
    *
-   * <p>Note that {@link #close()} is the <b>only</b> way to terminate the channel. Specifically,
-   * exceptions don't terminate the channel. This is consistent with the interface on {@link
-   * AsyncIterator}; While higher level methods generally stop iteration on exception or empty,
-   * {@link AsyncIterator#nextFuture()} can still return exceptions and iteration may continue. This
-   * allows users of AsyncChannel/AsyncIterator to continue iterating over possibly exceptional
-   * values, at the cost of having to use nextFuture directly to do so.
-   *
-   * @return A future that indicates when all sends that were sent before the {@link #close()} have
-   *     made it into the channel
+   * @return a {@link CompletionStage} that indicates when all sends that were sent before the {@link #terminate()}
+   *     have made it into the channel
    * @see AsyncChannel#terminate()
    */
-  CompletionStage<Void> close();
+  CompletionStage<Void> terminate();
 
   /**
-   * Get a result from the channel if there is one ready right now.
+   * Gets a result from the channel if there is one ready right now.
    *
    * <p>This method consumes parts of the channel, so like the consumption methods on {@link
-   * AsyncIterator}, this method should be used in a single threaded fashion. After {@link #close()}
-   * is called and all outstanding results are consumed, poll will always return empty. <br>
+   * AsyncIterator}, this method is not thread-safe should be used in a single threaded fashion.
+   * After {@link #terminate()} is called and all outstanding results are consumed, poll will always
+   * return empty. This method <b> should not </b> be used if there are null values in the channel.
+   * <br>
    * Notice that the channel being closed is indistinguishable from the channel being transiently
    * empty. To discover that no more results will ever be available, you must use the normal means
-   * on {@link AsyncIterator}: Either calling {@link #nextFuture()} and seeing if the result is
-   * empty when the future completes, or using one of the consumer methods that only complete once
-   * the channel has been closed.
+   * on {@link AsyncIterator}: either calling {@link #nextFuture()} and seeing if the result
+   * indicates an end of iteration when the future completes, or using one of the consumer methods
+   * that only complete once the channel has been closed.
    *
-   * @return A value if there was one immediately available in the channel, empty if the channel is
-   *     currently empty.
+   * @throws NullPointerException if the polled result is null
+   * @return a present T value if there was one immediately available in the channel, empty if the channel is
+   *     currently empty
    * @see AsyncChannel#poll()
    */
   Optional<T> poll();
