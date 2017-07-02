@@ -45,7 +45,7 @@ public interface AsyncReadWriteLock {
    * lock is not currently held by a writer.
    * <p>
    * Implementations may define whether this attempt can succeed while a writer is waiting to
-   * acquire ("barging"). This interface only requires that the attempt will succeed if all writers
+   * acquire ("barging"). This interface only requires that the attempt will succeed if allOf writers
    * have released and no new writers are acquiring.
    * 
    * @return An {@link Optional} holding a {@link ReadLockToken} if the lock is not held by a
@@ -80,7 +80,7 @@ public interface AsyncReadWriteLock {
    */
   public interface ReadLockToken {
     /**
-     * Release this read lock, possibly allowing writers to enter once all read locks have been
+     * Release this read lock, possibly allowing writers to enter once allOf read locks have been
      * released.
      */
     void releaseReadLock();

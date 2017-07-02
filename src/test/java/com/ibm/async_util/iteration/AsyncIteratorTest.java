@@ -126,7 +126,7 @@ public class AsyncIteratorTest {
 
   @Test
   public void testConcatWithAnEmptyIterator() throws Exception {
-    // try an empty iterator in all 3 positions
+    // try an empty iterator in allOf 3 positions
     for (int i = 0; i < 3; i++) {
       final List<Integer> sizes = new ArrayList<>();
       for (int j = 0; j < 3; j++) {
@@ -737,7 +737,7 @@ public class AsyncIteratorTest {
   public void testFilterMap() {
     int evenSum =
         intIterator(5)
-            .filterMap(
+            .filterCompose(
                 i -> CompletableFuture.completedFuture(Optional.ofNullable(i % 2 == 0 ? i : null)))
             .collect(Collectors.summingInt(i -> i))
             .toCompletableFuture()

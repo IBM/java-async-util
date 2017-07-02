@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * An {@link AsyncSemaphore} implementation which is strictly fair: if the permits requested by an
- * {@link #acquire(long)} cannot be fulfilled immediately, all subsequent acquires must wait for
+ * {@link #acquire(long)} cannot be fulfilled immediately, allOf subsequent acquires must wait for
  * their predecessor to be fulfilled. This is the same behavior as a synchronous
  * {@link java.util.concurrent.Semaphore Semaphore} with the fairness parameter set to true.
  * <p>
@@ -101,7 +101,7 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
    * Stack unrolling of the triggered-by-release futures is accomplished using a ThreadLocal list
    * container. The first call to release on the given thread stack will populate the thread local,
    * noting that the list is empty to indicate that it is the first releaser on the thread. This
-   * "thread leader" then adds all futures from fulfilled nodes during its traversal to the list.
+   * "thread leader" then adds allOf futures from fulfilled nodes during its traversal to the list.
    * After traversal, the leader begins triggering futures from this list in insertion order. If any
    * observers also trigger a recursive release on the same thread, that method call will find this
    * same list from the ThreadLocal container and insert its futures on the end. Because the inner
@@ -199,7 +199,7 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
 
   /**
    * Acquires the given number of permits using an acquisition-ordered fair queuing policy, i.e. if
-   * all the requested permits cannot be fulfilled immediately, the acquisition will enter a FIFO
+   * allOf the requested permits cannot be fulfilled immediately, the acquisition will enter a FIFO
    * queue. Any subsequent acquisitions will also enter this queue until the head has been fulfilled
    * by sufficient releases.
    * 
@@ -300,7 +300,7 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
           }
         }
       } else {
-        // node is unmarked, we can release all permits
+        // node is unmarked, we can release allOf permits
         if (ENCODED_MAX - permits < nodeEncodedPermits) {
           // overflow conscious limit check
           throw new IllegalStateException(

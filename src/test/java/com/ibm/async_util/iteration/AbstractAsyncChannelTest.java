@@ -168,7 +168,7 @@ public abstract class AbstractAsyncChannelTest {
     }
     CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
-    // all senders finished, end the stream
+    // allOf senders finished, end the stream
     terminate();
 
     // should be rejected
@@ -211,11 +211,11 @@ public abstract class AbstractAsyncChannelTest {
           Assert.assertTrue(send(finali));
         }));
       }
-      // wait for all threads
+      // wait for allOf threads
       CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get(2, TimeUnit.SECONDS);
     }
 
-    // all senders finished, end the stream
+    // allOf senders finished, end the stream
     terminate();
 
     // should be rejected

@@ -19,6 +19,10 @@
 
 package com.ibm.async_util.util;
 
+import com.ibm.async_util.iteration.AsyncTrampoline;
+import org.junit.Assert;
+import org.junit.Test;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
@@ -27,19 +31,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
-import com.ibm.async_util.iteration.StackUnroller;
-import org.junit.Assert;
-import org.junit.Test;
 
-
-public class StackUnrollerTest {
+public class AsyncTrampolineTest {
 
   @Test
   public void testExceptionalStackUnroll() {
     final AtomicInteger sum = new AtomicInteger();
     final int breakPoint = 1000000; // enough to cause StackOverflow if broken
 
-    final CompletionStage<Integer> sumFuture = StackUnroller.asyncWhile(
+    final CompletionStage<Integer> sumFuture = AsyncTrampoline.asyncWhile(
         c -> c < breakPoint,
         c -> {
           sum.addAndGet(c);
@@ -52,7 +52,6 @@ public class StackUnrollerTest {
     Assert.assertEquals(expected, sum.get());
   }
 
-
   @Test
   public void testThreadsABA() throws Exception {
     final Executor execA = Executors.newSingleThreadExecutor();
@@ -62,7 +61,7 @@ public class StackUnrollerTest {
     final Thread threadB = CompletableFuture.supplyAsync(() -> Thread.currentThread(), execB).get();
 
     final int sum = CompletableFuture.supplyAsync(
-        () -> StackUnroller.asyncWhile(
+        () -> AsyncTrampoline.asyncWhile(
             c -> c < 3,
             c -> {
               final CompletableFuture<Integer> future = new CompletableFuture<>();
@@ -88,7 +87,7 @@ public class StackUnrollerTest {
     final Executor execA = Executors.newSingleThreadExecutor();
 
     final int sum = CompletableFuture.supplyAsync(
-        () -> StackUnroller.asyncWhile(
+        () -> AsyncTrampoline.asyncWhile(
             c -> c < 3,
             c -> {
               final CompletableFuture<Integer> future = new CompletableFuture<>();

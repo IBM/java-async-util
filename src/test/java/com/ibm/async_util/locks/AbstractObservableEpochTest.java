@@ -67,7 +67,7 @@ public abstract class AbstractObservableEpochTest {
     final AtomicBoolean completed = new AtomicBoolean(false);
     e.terminate().thenAccept(ignored -> completed.set(true));
 
-    // terminate all but 1
+    // terminate allOf but 1
     Arrays.stream(tokens, 1, tokens.length).parallel().forEach(ObservableEpoch.EpochToken::close);
     Assert.assertTrue(e.isTerminated());
     Assert.assertFalse(completed.get());
@@ -95,7 +95,7 @@ public abstract class AbstractObservableEpochTest {
       Assert.assertFalse(e.enter().isPresent());
       Assert.assertFalse(TestUtil.join(e.terminate()));
     }
-    // all entrants exited
+    // allOf entrants exited
     {
       final ObservableEpoch e = newEpoch();
       Assert.assertFalse(e.isTerminated());

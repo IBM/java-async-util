@@ -63,10 +63,8 @@ public class AsyncFunnel<T> {
 
   /**
    * Runs the provided action, or returns an existing {@link CompletionStage} if an action is
-   * already running.
-   *
-   * <p>After the returned stage is completed, the first subsequent doOrGet call will start a new
-   * action
+   * already running. After the returned stage is completed, the first subsequent doOrGet call will
+   * start a new action
    *
    * @param action Supplier of a {@link CompletionStage} of T that only runs if no action is
    *     currently running

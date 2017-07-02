@@ -70,7 +70,7 @@ public class BufferedAsyncChannelTest extends AbstractAsyncChannelTest {
           Assert.assertTrue(f.join());
         });
 
-    // next 5 should all wait
+    // next 5 should allOf wait
     final List<CompletableFuture<Boolean>> collect = IntStream.range(0, BUFFER)
         .mapToObj(this.channel::send)
         .map(CompletionStage::toCompletableFuture)
@@ -114,7 +114,7 @@ public class BufferedAsyncChannelTest extends AbstractAsyncChannelTest {
         .map(CompletionStage::toCompletableFuture)
         .collect(Collectors.toList());
 
-    Assert.assertTrue(Combinators.all(immediate).toCompletableFuture().join().stream().allMatch(b -> b));
+    Assert.assertTrue(Combinators.allOf(immediate).toCompletableFuture().join().stream().allMatch(b -> b));
 
     final List<CompletableFuture<Boolean>> delayeds = IntStream
         .range(0, BUFFER)
@@ -141,7 +141,7 @@ public class BufferedAsyncChannelTest extends AbstractAsyncChannelTest {
           .assertTrue(delayeds.stream().limit(i + 1).map(CompletableFuture::join).allMatch(b -> b));
       // delayeds more than item should be pending
       Assert.assertFalse(delayeds.stream().skip(i + 1).map(Future::isDone).anyMatch(b -> b));
-      // terminate should not be done until all delayeds are done
+      // terminate should not be done until allOf delayeds are done
 
       // according to the contract, the terminate future could be done when the last delayed is
       // accepted, however it is not required. only check that if there is outstanding acceptable

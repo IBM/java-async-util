@@ -11,34 +11,43 @@ public class FutureSupport {
   private static final CompletableFuture<Void> VOID = CompletableFuture.completedFuture(null);
 
   /**
-   * A common static instance to use instead of CompletableFuture.completedFuture(null)
+   * Gets an already completed {@link CompletionStage} of Void. This common static instance can be
+   * used as an alternative to CompletableFuture.completedFuture(null)
    *
    * <p>This has a few advantages:
    *
    * <ul>
-   *   <li>Depending on context, Futures.of(null) could either mean a {@code Future<Void>} or an
-   *       {@literal Future<T>}. Using this method clearly indicates that we are returning a void
-   *       future, not a normal future with a null result.
+   *   <li>Depending on context, CompletableFuture.completedFuture(null) could either mean a {@code
+   *       CompletionStage<Void>} or an {@code CompletionStage<T>}. Using this method clearly
+   *       indicates that we are returning a void future, not a T future with a null result.
    *   <li>Immediately completed null futures are very common. Since they are final and static, we
    *       can just reuse a single object and save allocations
    * </ul>
    *
-   * @return An immediately completed future of Void
+   * @return An immediately completed {@link CompletionStage} of Void
    */
   public static CompletionStage<Void> voidFuture() {
     return VOID;
   }
 
   /**
-   * Ignore the result of a future
+   * Creates a {@link CompletionStage} that completes when {@code stage} completes but ignores the
+   * result
    *
-   * @param future
-   * @return A future of Void when the input future completes
+   * @param stage a non-void {@link CompletionStage}
+   * @return a {@link CompletionStage} of type Void which completes when {@code stage} completes
    */
-  public static <T> CompletionStage<Void> voided(final CompletionStage<T> future) {
-    return future.thenApply(ig -> null);
+  public static <T> CompletionStage<Void> voided(final CompletionStage<T> stage) {
+    return stage.thenApply(ig -> null);
   }
 
+  /**
+   * Creates a {@link CompletionStage} that is already completed exceptionally. This is the
+   * exceptional analog of {@link CompletableFuture#completedFuture(Object)}.
+   *
+   * @param ex the exception that completes the returned stage
+   * @return a {@link CompletionStage} that has already been completed exceptionally with {@code ex}
+   */
   public static <T> CompletionStage<T> errorStage(final Throwable ex) {
     CompletableFuture<T> fut = new CompletableFuture<>();
     fut.completeExceptionally(ex);
@@ -86,9 +95,11 @@ public class FutureSupport {
             T t = actionUnderResource.apply(r);
             return r.close().thenApply(ig -> t);
           } catch (Throwable e) {
-            return r.close().handleAsync((t, ex) -> {
-                throw new CompletionException(e);
-            });
+            return r.close()
+                .handleAsync(
+                    (t, ex) -> {
+                      throw new CompletionException(e);
+                    });
           }
         });
   }

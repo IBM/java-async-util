@@ -21,7 +21,7 @@ abstract class AbstractSimpleEpoch
 	 * terminating CAS finds that the count was previously zero, the whenCleared
 	 * method is called directly.
 	 *
-	 * This implementation serves as its own epoch token as all operations are
+	 * This implementation serves as its own epoch token as allOf operations are
 	 * performed on the same state integer.
 	 */
 	static final int TERMINATED = 0x80000000;
@@ -37,7 +37,7 @@ abstract class AbstractSimpleEpoch
 	}
 
 	/**
-	 * Method to call when an epoch has been terminated and all participants
+	 * Method to call when an epoch has been terminated and allOf participants
 	 * have exited. May be called from the last exiting participant's thread, or
 	 * the terminating thread if there are no active participants
 	 * <p>

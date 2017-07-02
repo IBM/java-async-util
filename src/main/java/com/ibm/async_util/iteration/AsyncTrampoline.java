@@ -9,57 +9,69 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /**
- * This class provides methods for asynchronous "stack unrolling". When working with futures, it's
- * often desirable to keep producing futures until some condition is met (like a while loop).
- * Because continuations are asynchronous, it's usually easiest to do this with a recursive
- * approach:
+ * Static methods for asynchronous looping prodcedures without blowing the stack.
+ *
+ * <p>When working with {@link CompletionStage}, it's often desirable to have a loop like construct
+ * which keeps producing stages until some condition is met. Because continuations are asynchronous,
+ * it's usually easiest to do this with a recursive approach:
  *
  * <pre>{@code
- * Future<Integer> getNextNumber();
+ * CompletionStage<Integer> getNextNumber();
  *
- * Future<Integer> getFirstOddNumber(int current) {
+ * CompletionStage<Integer> getFirstOddNumber(int current) {
  *   if (current % 2 != 0)
  *     // found odd number
- *     return Futures.of(current);
+ *     return CompletableFuture.of(current);
  *   else
  *     // get the next number and recurse
- *     return getNextNumber().flatMap(next -> getFirstOddNumber(next));
+ *     return getNextNumber().thenCompose(next -> getFirstOddNumber(next));
  * }
  * }</pre>
  *
- * The problem with this is that if the implementation of getNextNumber is synchronous:
+ * The problem with this is that if the implementation of getNextNumber happens to be synchronous
  *
  * <pre>{@code
- * Future<Integer> getNextNumber() {
- *   return Futures.of(random.nextInt());
+ * CompletionStage<Integer> getNextNumber() {
+ *   return CompletableFuture.completedFuture(random.nextInt());
  * }
  * }</pre>
  *
- * then getFirstOddNumber can easily StackOverflow. This situation often happens when a cache is put
- * under an async API, and all the values are cached and returned immediately.
+ * then getFirstOddNumber can easily cause a StackOverflow. This situation often happens when a
+ * cache is put under an async API, and allOf the values are cached and returned immediately. This
+ * could be avoided by scheduling the recursive calls back to a thread pool using {@link
+ * CompletionStage#thenComposeAsync}, however the overhead of the thread pool submissions may be
+ * high and may cause unnecessary context switching.
  *
  * <p>The methods on this class ensure that the stack doesn't blow up - if multiple calls happen on
- * the same thread they are queued and run in a while loop. You could write the previous example
- * like this:
+ * the same thread they are queued and run in a loop. You could write the previous example like
+ * this:
  *
  * <pre>{@code
- * Future<Integer> getFirstOddNumber(int initial) {
- *   return StackUnroller.asyncWhile(i -> i % 2 == 0, i -> getNextNumber(), initial);
+ * CompletionStage<Integer> getFirstOddNumber(int initial) {
+ *   return AsyncTrampoline.asyncWhile(
+ *    i -> i % 2 == 0,
+ *    i -> getNextNumber(),
+ *    initial);
  * }
  * }</pre>
+ *
+ * Though this class provides efficient methods for a few loop patterns, many are better represented
+ * by the more expressive API available on {@link AsyncIterator}, which is also stack safe. For
+ * example, the preceding snippet can be expressed as {@code
+ * AsyncIterator.generate(this::getNextNumber).find(i -> i % 2 != 0)}
  *
  * @see AsyncIterator
  */
-public final class StackUnroller {
+public final class AsyncTrampoline {
 
-  private StackUnroller() {}
+  private AsyncTrampoline() {}
 
-  private static class StackUnrollerInternal<T> extends CompletableFuture<T> {
+  private static class TrampolineInternal<T> extends CompletableFuture<T> {
 
     private final Predicate<T> shouldContinue;
     private final Function<T, CompletionStage<T>> f;
 
-    private StackUnrollerInternal(
+    private TrampolineInternal(
         final Predicate<T> shouldContinue,
         final Function<T, CompletionStage<T>> f,
         final T initialValue) {
@@ -118,51 +130,95 @@ public final class StackUnroller {
   }
 
   /**
-   * Like {@link StackUnroller#asyncWhile(Predicate, Function, Object)}, except the body is run
-   * first on the initial value, without first testing via shouldContinue. f is guaranteed to be
-   * called at least once.
+   * Repeatedly applies an asynchronous function {@code fn} to a value until {@code shouldContinue}
+   * returns {@code false}. The asynchronous equivalent of
    *
-   * @param f
-   * @param initialValue
-   * @param shouldContinue
-   * @return A future that contains the first value other than initialValue such that shouldContinue
-   *     returns false
-   */
-  public static <T> CompletionStage<T> asyncDoWhile(
-      final Function<T, CompletionStage<T>> f,
-      final T initialValue,
-      final Predicate<T> shouldContinue) {
-    return f.apply(initialValue).thenCompose(t -> StackUnroller.asyncWhile(shouldContinue, f, t));
-  }
-
-  /**
-   * Repeatedly apply an asynchronous function f to a value, but unroll the stack to avoid
-   * stackoverflows. (Basically async tail call optimization)
+   * <pre>{@code
+   * T t = initialValue;
+   * while (shouldContinue.test(t)) {
+   *     t = fn.apply(t);
+   * }
+   * return t;
+   * }</pre>
    *
-   * <p>Effectively produces f(seed).flatMap(f).flatMap(f)... .flatMap(f) until an value fails the
-   * predicate. Note that predicate will be applied on seed (like a while loop, the initial value is
-   * tested). For a do/while style see {@link #asyncDoWhile(Function, Object, Predicate)}.
+   * <p>Effectively produces {@code fn(seed).thenCompose(fn).thenCompose(fn)... .thenCompose(fn)}
+   * until an value fails the predicate. Note that predicate will be applied on seed (like a while
+   * loop, the initial value is tested). For a do/while style see {@link #asyncDoWhile(Function,
+   * Object, Predicate)}. If the predicate or fn throw an exception, or the {@link CompletionStage}
+   * returned by fn completes exceptionally, iteration will stop and an exceptional stage will be
+   * returned.
    *
-   * @param shouldContinue - Whether we should continue
-   * @param f - the loop body, producing the next result
-   * @param initialValue
-   * @return A future that contains the first value t such that shouldContinue.test(T) == false
+   * @param shouldContinue a predicate which will be applied to every intermediate T value
+   *     (including the {@code initialValue}) until it fails and looping stops.
+   * @param fn the function for the loop body which produces a new {@link CompletionStage} based on
+   *     the result of the previous iteration.
+   * @param initialValue the value that will initially be passed to {@code fn}, it will also be
+   *     initially tested by {@code shouldContinue}
+   * @param <T> the type of elements produced by the loop
+   * @return a {@link CompletionStage} that completes with the first value t such that {@code
+   *     shouldContinue.test(T) == false}, or with an exception if one was thrown.
    */
   public static <T> CompletionStage<T> asyncWhile(
       final Predicate<T> shouldContinue,
-      final Function<T, CompletionStage<T>> f,
+      final Function<T, CompletionStage<T>> fn,
       final T initialValue) {
-    return new StackUnrollerInternal<>(shouldContinue, f, initialValue);
+    return new TrampolineInternal<>(shouldContinue, fn, initialValue);
   }
 
   /**
-   * Loop body simply returns whether iteration should continue. True means continue, False means
-   * break.
+   * Repeatedly use the function {@code fn} to produce a {@link CompletionStage} of a boolean,
+   * stopping when then boolean is {@code false}. The asynchronous equivalent of {@code
+   * while(fn.get());}. Generally, the function fn must perform some side effect for this method to
+   * be useful. If the {@code fn} throws or produces an exceptional {@link CompletionStage}, an
+   * exceptional stage will be returned.
    *
-   * @param f a way to generate a future that indicates whether iteration should continue
-   * @return A future that is complete when iteration has completed
+   * @param fn a {@link Supplier} of a {@link CompletionStage} that indicates whether iteration
+   *     should continue
+   * @return a {@link CompletionStage} that is complete when a stage produced by {@code fn} has
+   *     returned {@code false}, or with an exception if one was thrown
    */
-  public static CompletionStage<Void> asyncWhile(final Supplier<CompletionStage<Boolean>> f) {
-    return FutureSupport.voided(StackUnroller.asyncWhile(b -> b, b -> f.get(), true));
+  public static CompletionStage<Void> asyncWhile(final Supplier<CompletionStage<Boolean>> fn) {
+    return FutureSupport.voided(AsyncTrampoline.asyncWhile(b -> b, b -> fn.get(), true));
+  }
+
+  /**
+   * Repeatedly applies an asynchronous function {@code fn} to a value until {@code shouldContinue}
+   * returns {@code false}, unconditionally applying fn to {@code initialValue} on the first
+   * iteration. The asynchronous equivalent of
+   *
+   * <pre>{@code
+   * T t = initialValue;
+   * do {
+   *     t = fn.apply(t);
+   * } while(shouldContinue.test(t));
+   * return t;
+   * }</pre>
+   *
+   * <p>Effectively produces {@code fn(seed).thenCompose(fn).thenCompose(fn)... .thenCompose(fn)}
+   * until an value fails the predicate. Note that predicate will be applied on seed (like a while
+   * loop,
+   *
+   * <p>Effectively produces fn(seed).then(fn).flatMap(fn)... .flatMap(fn) until an value fails the
+   * predicate. Note that predicate will not be applied to {@code initialValue}, for a {@code while}
+   * style loop see {@link #asyncWhile(Predicate, Function, Object)} . If the predicate or fn throw
+   * an exception, or the {@link CompletionStage} returned by fn completes exceptionally, iteration
+   * will stop and an exceptional stage will be returned.
+   *
+   * @param shouldContinue a predicate which will be applied to intermediate T value other than the
+   *     {@code initialValue} the in until it fails and looping stops.
+   * @param fn the function for the loop body which produces a new {@link CompletionStage} based on
+   *     the result of the previous iteration.
+   * @param initialValue the value that will initially be passed to {@code fn}, it will not be
+   *     initially tested by {@code shouldContinue}
+   * @param <T> the type of elements produced by the loop
+   * @return a {@link CompletionStage} that completes with the first value t such that {@code
+   *     shouldContinue.test(T) == false}, or with an exception if one was thrown.
+   */
+  public static <T> CompletionStage<T> asyncDoWhile(
+      final Function<T, CompletionStage<T>> fn,
+      final T initialValue,
+      final Predicate<T> shouldContinue) {
+    return fn.apply(initialValue)
+        .thenCompose(t -> AsyncTrampoline.asyncWhile(shouldContinue, fn, t));
   }
 }
