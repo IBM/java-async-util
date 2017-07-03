@@ -37,7 +37,7 @@ import java.util.function.Supplier;
  * }</pre>
  *
  * then getFirstOddNumber can easily cause a StackOverflow. This situation often happens when a
- * cache is put under an async API, and allOf the values are cached and returned immediately. This
+ * cache is put under an async API, and all the values are cached and returned immediately. This
  * could be avoided by scheduling the recursive calls back to a thread pool using {@link
  * CompletionStage#thenComposeAsync}, however the overhead of the thread pool submissions may be
  * high and may cause unnecessary context switching.

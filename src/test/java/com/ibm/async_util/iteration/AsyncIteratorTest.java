@@ -93,7 +93,7 @@ public class AsyncIteratorTest {
 
   @Test
   public void testConcatWithAnEmptyIterator() throws Exception {
-    // try an empty iterator in allOf 3 positions
+    // try an empty iterator in all 3 positions
     for (int i = 0; i < 3; i++) {
       final List<Integer> sizes = new ArrayList<>();
       for (int j = 0; j < 3; j++) {

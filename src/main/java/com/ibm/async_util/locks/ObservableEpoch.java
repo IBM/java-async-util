@@ -24,7 +24,7 @@ public interface ObservableEpoch {
 	/**
 	 * Atomically ends the active epoch, preventing new entrants from
 	 * successfully entering and returning a {@link CompletionStage} that triggers once
-	 * allOf active participants have exited.
+	 * all active participants have exited.
 	 * 
 	 * @return a {@link CompletionStage}, which will complete after the last open
 	 *         {@link EpochToken} has been closed. The value of the future will
@@ -35,7 +35,7 @@ public interface ObservableEpoch {
 
 	/**
 	 * Returns {@code true} if this epoch has been terminated. This boolean does
-	 * <i>not</i> indicate whether allOf active participants have exited the
+	 * <i>not</i> indicate whether all active participants have exited the
 	 * epoch, only whether the {@link #terminate()} method has been called and
 	 * subsequent entrants will be rejected
 	 * 
@@ -45,7 +45,7 @@ public interface ObservableEpoch {
 
 	/**
 	 * Waits for the epoch to complete, returning a future that triggers after
-	 * the epoch has been {@link #terminate() terminated} and allOf participants
+	 * the epoch has been {@link #terminate() terminated} and all participants
 	 * have exited. Note that this method does <i>not</i> terminate the epoch
 	 * itself -- new entrants may enter and exit freely after this method is
 	 * called, and a separate call to {@link #terminate()} must be made before

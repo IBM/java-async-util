@@ -31,7 +31,7 @@ public interface AsyncSemaphore {
 
   /**
    * Acquires the given number of permits from the semaphore, returning a future which will complete
-   * when allOf of the permits are exclusively acquired.
+   * when all of the permits are exclusively acquired.
    * <p>
    * If the permits are available immediately, the returned future may be already complete (but need
    * not be).
@@ -63,7 +63,7 @@ public interface AsyncSemaphore {
 
   /**
    * Attempt to acquire the given number of permits from the semaphore, returning a boolean
-   * indicating whether allOf of the permits were immediately available and have been exclusively
+   * indicating whether all of the permits were immediately available and have been exclusively
    * acquired.
    * <p>
    * Implementations may define precise behavior of this method with respect to competing
@@ -72,14 +72,14 @@ public interface AsyncSemaphore {
    * there are no other acquisitions queued.
    * 
    * @param permits A positive number of permits to acquire from the semaphore
-   * @return true iff allOf of the requested permits are available, and have been immediately acquired
+   * @return true iff all of the requested permits are available, and have been immediately acquired
    * @throws IllegalArgumentException if the requested permits are not positive, or exceed any
    *         restrictions enforced by the given implementation
    */
   boolean tryAcquire(long permits);
 
   /**
-   * Acquires allOf permits that are immediately available.
+   * Acquires all permits that are immediately available.
    * <p>
    * After this call -- provided there are no intermediate {@link #release(long) releases} -- any
    * attempt to {@link #acquire(long) acquire} will queue and any {@link #tryAcquire(long)

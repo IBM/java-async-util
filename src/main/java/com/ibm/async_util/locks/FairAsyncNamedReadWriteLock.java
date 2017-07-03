@@ -68,7 +68,7 @@ public class FairAsyncNamedReadWriteLock<T> implements AsyncNamedReadWriteLock<T
     }
 
     /**
-     * A node with a value of 0 has been released by allOf readers and allOf preceding writers (via
+     * A node with a value of 0 has been released by all readers and all preceding writers (via
      * implicit read-lock release). The last releaser is tasked with removing this node from the map
      * and thus is only accessible briefly; readers and writers that encounter such a node may not
      * acquire it and must attempt inserting a new head node in the map

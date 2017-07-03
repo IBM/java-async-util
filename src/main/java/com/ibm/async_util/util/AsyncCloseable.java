@@ -30,7 +30,7 @@ import java.util.function.Function;
  * <p>Examples of such resources are manually managed memory, open file handles, socket descriptors
  * etc. While similar to {@link AutoCloseable}, this interface should be used when the resource
  * release operation may possibly be async. For example, if an object is thread-safe and has many
- * consumers, an implementation may require allOf current ongoing operations to complete before
+ * consumers, an implementation may require all current ongoing operations to complete before
  * resources are relinquished. A common way to implement this pattern for a thread-safe object with
  * asynchronous methods is by using an {@link com.ibm.async_util.locks.ObservableEpoch}.
  *

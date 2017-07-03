@@ -34,7 +34,7 @@ public class FairAsyncReadWriteLock implements AsyncReadWriteLock {
    * is acquired, which terminates the epoch. Using the epoch mechanism ensures the following
    * properties: 1) exactly 1 writer can acquire a node for writing, sending other writers to the
    * queue 2) new readers can be rejected by nodes after the write lock acquisition, sending them to
-   * the next queued node 3) the acquiring writer has a means of being signaled when allOf readers
+   * the next queued node 3) the acquiring writer has a means of being signaled when all readers
    * before him have released.
    * 
    * When a writer acquires a write lock, first it terminates the epoch which will reject subsequent
@@ -63,7 +63,7 @@ public class FairAsyncReadWriteLock implements AsyncReadWriteLock {
    * read future. The read future is triggered by the preceding writer's release.
    * 
    * Writer acquisition terminates the epoch, forcing subsequent readers to re-read the head. The
-   * writer future is triggered on the epoch's clearing i.e. when allOf readers have exited (including
+   * writer future is triggered on the epoch's clearing i.e. when all readers have exited (including
    * the preceding writer's implicit read lock)
    */
   @SuppressWarnings("serial")
@@ -130,7 +130,7 @@ public class FairAsyncReadWriteLock implements AsyncReadWriteLock {
     @Override
     final void onCleared() {
       /*
-       * When allOf the readers have left a terminated node, the writer may proceed; specifically by
+       * When all the readers have left a terminated node, the writer may proceed; specifically by
        * completing the write future. Unbounded recursion needs to be prevented, however, so
        * completing the future isn't so simple.
        * 

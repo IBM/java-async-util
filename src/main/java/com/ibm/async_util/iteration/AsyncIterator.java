@@ -88,7 +88,7 @@ import java.util.stream.Stream;
  * terminal operation will also be exceptional. The exception will short-circuit the terminal
  * operation. For example, a terminal operation such as {@link #forEach(Consumer)} will not to
  * continue to run on subsequent elements of the iterator and instead immediately complete it's
- * returned stage with the error. Unless otherwise noted, this behavior holds for allOf terminal
+ * returned stage with the error. Unless otherwise noted, this behavior holds for all terminal
  * methods but may not documented explicitly.
  *
  * <p>The exception propagation scheme should be familiar to users of {@link CompletionStage},
@@ -101,7 +101,7 @@ import java.util.stream.Stream;
  * in the chain has produced an exception.
  *
  * <p>The behavior of an AsyncIterator if {@link #nextFuture()} is called after the end of iteration
- * marker is returned is left to the implementation. You may ensure that allOf subsequent calls
+ * marker is returned is left to the implementation. You may ensure that all subsequent calls
  * always return the end marker by using {@link #fuse()}.
  *
  * <p>This interface extends {@link AsyncCloseable}, if there are resources associated with {@code
@@ -453,9 +453,9 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * Optional} cannot hold a null values, this method cannot be used to map to an iterator of
    * possibly null types.
    *
-   * @param fn a conditional transformation from T to U. If fn produces empty, this result will not
+   * @param fn a conditional transformation from {@code T} to {@code U}. If fn produces empty, this result will not
    *     be included in the new iterator
-   * @return An AsyncIterator of allOf the Us that were present
+   * @return An AsyncIterator of all the {@code U}s that were present
    */
   default <U> AsyncIterator<U> filterApply(final Function<T, Optional<U>> fn) {
     return this.thenApply(fn).filter(Optional::isPresent).thenApply(Optional::get);
@@ -467,7 +467,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    *
    * @param fn an asynchronous conditional transformation from T to U. If fn produces empty, this
    *     result will not be included in the new iterator
-   * @return An AsyncIterator of allOf the Us that were present
+   * @return An AsyncIterator of all the {@code U}s that were present
    */
   default <U> AsyncIterator<U> filterCompose(final Function<T, CompletionStage<Optional<U>>> fn) {
     return this.thenCompose(fn).filter(Optional::isPresent).thenApply(Optional::get);
@@ -478,7 +478,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * AsyncIterator.
    *
    * @param n the maximum number of elements to take from this iterator
-   * @return an AsyncIterator which will return n elements or less.
+   * @return an AsyncIterator which will return {@code n} elements or less.
    */
   default AsyncIterator<T> take(final long n) {
     return new AsyncIterator<T>() {
@@ -1080,7 +1080,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    */
   static <T, U, V> AsyncIterator<V> zipWith(
       final AsyncIterator<T> tIt, final AsyncIterator<U> uIt, final BiFunction<T, U, V> fn) {
-    // once allOf futures are complete, if allOf are nonempty, then apply fn to the arg
+    // once all futures are complete, if all are nonempty, then apply fn to the arg
     return new AsyncIterator<V>() {
       @Override
       public CompletionStage<Either<End, V>> nextFuture() {
@@ -1154,7 +1154,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   }
 
   /**
-   * Creates an AsyncIterator for which allOf downstream operations will be completed with an
+   * Creates an AsyncIterator for which all downstream operations will be completed with an
    * exception.
    *
    * @param ex the exception which the {@link CompletionStage CompletionStages} of the returned

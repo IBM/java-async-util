@@ -38,7 +38,7 @@ import java.util.Optional;
  * that provides backpressure, see {@link BoundedAsyncChannel}.
  *
  * <p>This channel can be terminated by someone calling {@link #terminate()}, it can be called by
- * consumers or senders. It is strongly recommended that allOf instances of this class eventually be
+ * consumers or senders. It is strongly recommended that all instances of this class eventually be
  * terminated. Mose terminal operations on {@link AsyncIterator} return {@link
  * java.util.concurrent.CompletionStage CompletionStages} that whose stage will not complete until
  * the channel is terminated. After the channel is terminated, subsequent {@link #send}s are
@@ -68,7 +68,7 @@ import java.util.Optional;
  * channel
  *   // lazily map numbers to send
  *   .thenCompose(number -> sendToServer(number))
- *   // consume allOf values
+ *   // consume all values
  *   .consume()
  *   // iteration stopped (meaning channel was terminated)
  *   .thenAccept(ig -> sendToServer("no more numbers!");
@@ -82,7 +82,7 @@ import java.util.Optional;
  * <p>It is also convenient to use a channel to merge many {@link AsyncIterator}s together. Think if
  * we were the destination server in the previous example, and we had many compute servers sending
  * us numbers they were computing. If we used {@link AsyncIterator#concat} in the following example,
- * we would wait until we got allOf the work from the first iterator to move onto the next. With a
+ * we would wait until we got all the work from the first iterator to move onto the next. With a
  * channel we process each number as soon as it becomes available.
  *
  * <pre>{@code
@@ -105,10 +105,10 @@ import java.util.Optional;
  *  // prints each number returned by servers as they arrive
  *  channel
  *    .forEach(num -> System.out.println(num))
- *    .thenAccept(ig -> System.out.println("finished getting allOf numbers")));
+ *    .thenAccept(ig -> System.out.println("finished getting all numbers")));
  * }</pre>
  *
- * <p>A reminder, allOf topics addressed in the documentation of {@link AsyncIterator} apply to this
+ * <p>A reminder, all topics addressed in the documentation of {@link AsyncIterator} apply to this
  * interface as well. Most importantly this means:
  *
  * <ul>
@@ -140,7 +140,7 @@ public interface AsyncChannel<T> extends AsyncIterator<T> {
   /**
    * Terminates the channel, disabling {@link #send}.
    *
-   * <p>After the channel is terminated allOf subsequent sends will be rejected, returning false.
+   * <p>After the channel is terminated all subsequent sends will be rejected, returning false.
    * After the consumer consumes whatever was sent before the terminate, the consumer will receive
    * an end of iteration notification.
    *
@@ -154,7 +154,7 @@ public interface AsyncChannel<T> extends AsyncIterator<T> {
    *
    * <p>This method consumes parts of the channel, so like the consumption methods on {@link
    * AsyncIterator}, this method is not thread-safe should be used in a single threaded fashion.
-   * After {@link #terminate()} is called and allOf outstanding results are consumed, poll will always
+   * After {@link #terminate()} is called and all outstanding results are consumed, poll will always
    * return empty. This method <b> should not </b> be used if there are null values in the channel.
    * <br>
    * Notice that the channel being closed is indistinguishable from the channel being transiently
