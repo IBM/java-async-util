@@ -101,8 +101,8 @@ import java.util.stream.Stream;
  * in the chain has produced an exception.
  *
  * <p>The behavior of an AsyncIterator if {@link #nextFuture()} is called after the end of iteration
- * marker is returned is left to the implementation. You may ensure that all subsequent calls
- * always return the end marker by using {@link #fuse()}.
+ * marker is returned is left to the implementation. You may ensure that all subsequent calls always
+ * return the end marker by using {@link #fuse()}.
  *
  * <p>This interface extends {@link AsyncCloseable}, if there are resources associated with {@code
  * this} iterator that must be relinquished after iteration is complete, the {@link #close()} method
@@ -171,15 +171,15 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    *
    * <pre>{@code
    * class SocketBackedIterator implements AsyncIterator<byte[]> {
-   * ...
-   * @Override CompletionStage<Void> close() { return socket.close(); }
+   *  ...
+   *  {@literal @Override}
+   *  CompletionStage<Void> close() { return socket.close(); }
    * }
    * AsyncIterator<byte[]> it = new SocketBackedIterator(socket);
    * AsyncCloseable.tryComposeWith(new SocketBackedIterator(socket), socketIt -> socketIt
    *  .thenCompose(this::deserialize)
    *  .filter(this::isRelevantMessage)
-   *  .forEach(message -> System.out.println(message)))
-   *
+   *  .forEach(message -> System.out.println(message)));
    * }</pre>
    *
    * Intermediate methods will pass calls to close to their upstream iterators, so it is safe to
@@ -192,7 +192,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * transformed.close() // will close on original
    * }</pre>
    *
-   * @return a {@link CompletionStage} that completes when any resources associated with this
+   * @return a {@link CompletionStage} that completes when all resources associated with this
    *     iterator have been relinquished.
    */
   @Override
@@ -209,7 +209,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    *     .thenApply(Integer::toString)
    * </pre>
    *
-   * returns an AsyncIterator of "1","2","3"...
+   * returns an AsyncIterator of "1","2","3"... This is an intermediate method
    *
    * @param fn A function which produces a U from the given T
    * @return A new AsyncIterator which produces stages of fn applied to the result of the stages
@@ -330,10 +330,10 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * Composes fn with the stages of {@code this} iterator to produce new AsyncIterators, and
    * flattens the resulting iterator of iterators.
    *
-   * <pre>
+   * <pre>{@code
    *  AsyncIterator.infiniteRange(1,1) // 1,2,3,...
    *     .thenFlatten(i -> AsyncIterators.range(0, i))
-   * </pre>
+   * }</pre>
    *
    * returns an AsyncIterator of {@code 0, 0, 1, 0, 1, 2, 0, 1, 2, 3....}
    *
@@ -453,8 +453,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * Optional} cannot hold a null values, this method cannot be used to map to an iterator of
    * possibly null types.
    *
-   * @param fn a conditional transformation from {@code T} to {@code U}. If fn produces empty, this result will not
-   *     be included in the new iterator
+   * @param fn a conditional transformation from {@code T} to {@code U}. If fn produces empty, this
+   *     result will not be included in the new iterator
    * @return An AsyncIterator of all the {@code U}s that were present
    */
   default <U> AsyncIterator<U> filterApply(final Function<T, Optional<U>> fn) {
