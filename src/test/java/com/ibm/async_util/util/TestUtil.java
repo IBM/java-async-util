@@ -1,6 +1,5 @@
 package com.ibm.async_util.util;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
@@ -20,11 +19,4 @@ public class TestUtil {
       throw new CompletionException(e);
     }
   }
-  
-  public static <T> CompletableFuture<T> errorFuture(final Throwable ex) {
-    final CompletableFuture<T> fut = new CompletableFuture<>();
-    fut.completeExceptionally(ex);
-    return fut;
-  }
-
 }

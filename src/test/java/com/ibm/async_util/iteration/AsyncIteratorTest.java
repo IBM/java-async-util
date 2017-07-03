@@ -26,13 +26,13 @@ import com.ibm.async_util.util.TestUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
@@ -43,10 +43,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -58,38 +56,7 @@ public class AsyncIteratorTest {
   public void testConcat() throws Exception {
     final List<Integer> sizes = Arrays.asList(5, 3, 6);
     verifySorted(AsyncIterator.concat(sortedIts(sizes)), 14);
-    verifySorted(AsyncIterator.concat(AsyncIterator.fromIterator(sortedIts(sizes).iterator())), 14);
-  }
-
-  private List<AsyncIterator<Integer>> sortedIts(final List<Integer> sizes) {
-    final List<AsyncIterator<Integer>> iterators = new ArrayList<>();
-    int count = 0;
-    for (final int size : sizes) {
-      final List<Integer> ints = new ArrayList<>();
-      for (int i = 0; i < size; i++) {
-        ints.add(count);
-        count++;
-      }
-      iterators.add(AsyncIterator.fromIterator(ints.iterator()));
-    }
-    return iterators;
-  }
-
-  // assert the iterator is the ascending range from 0 to expected size
-  private void verifySorted(final AsyncIterator<Integer> concat, final int expectedSize)
-      throws Exception {
-    Either<End, Integer> curr = TestUtil.join(concat.nextFuture());
-    int i = 0;
-    while (curr.isRight()) {
-      Assert.assertEquals(i, curr.right().get().intValue());
-      i++;
-      curr = TestUtil.join(concat.nextFuture());
-    }
-    Assert.assertEquals(expectedSize, i);
-  }
-
-  private long size(final AsyncIterator<Integer> it) throws Exception {
-    return TestUtil.join(it.collect(Collectors.counting()));
+    verifySorted(AsyncIterator.concat(AsyncIterator.fromIterator(sortedIts(sizes))), 14);
   }
 
   @Test
@@ -100,7 +67,7 @@ public class AsyncIteratorTest {
 
     // iterator throws assertion error if nextFuture is called after iterator empties
 
-    final AsyncIterator<Integer> touchyIterator = touchyIterator(1);
+    final AsyncIterator<Integer> touchyIterator = mustRespectEndIterator(1);
     final CompletionStage<List<Integer>> collect =
         AsyncIterator.concat(
                 AsyncIterator.fromIterator(
@@ -112,7 +79,7 @@ public class AsyncIteratorTest {
   @Test
   public void testConcatNoIterators() throws Exception {
     final AsyncIterator<Integer> concat =
-        AsyncIterator.concat(Collections.<AsyncIterator<Integer>>emptyList());
+        AsyncIterator.concat(Collections.<AsyncIterator<Integer>>emptyIterator());
     Assert.assertEquals(0, size(concat));
     Assert.assertEquals(0, size(AsyncIterator.concat(AsyncIterator.empty())));
   }
@@ -121,7 +88,7 @@ public class AsyncIteratorTest {
   public void testConcatWithAnEmptyIterator2() throws Exception {
     final List<AsyncIterator<Integer>> lis =
         Arrays.asList(AsyncIterator.empty(), AsyncIterator.empty());
-    TestUtil.join(AsyncIterator.concat(lis).consume());
+    TestUtil.join(AsyncIterator.concat(lis.iterator()).consume());
   }
 
   @Test
@@ -134,7 +101,7 @@ public class AsyncIteratorTest {
       }
       verifySorted(AsyncIterator.concat(sortedIts(sizes)), 2 * 10);
       verifySorted(
-          AsyncIterator.concat(AsyncIterator.fromIterator(sortedIts(sizes).iterator())), 2 * 10);
+          AsyncIterator.concat(AsyncIterator.fromIterator(sortedIts(sizes))), 2 * 10);
     }
   }
 
@@ -152,7 +119,7 @@ public class AsyncIteratorTest {
           }
           return iterators;
         };
-    AsyncIterator<Integer> concat = AsyncIterator.concat(it.get());
+    AsyncIterator<Integer> concat = AsyncIterator.concat(it.get().iterator());
     verifyExceptionThrown(concat);
 
     concat = AsyncIterator.concat(AsyncIterator.fromIterator(it.get().iterator()));
@@ -180,7 +147,7 @@ public class AsyncIteratorTest {
     for (int i = 0; i < 100000; i++) {
       iterators.add(AsyncIterator.empty());
     }
-    TestUtil.join(AsyncIterator.concat(iterators).consume());
+    TestUtil.join(AsyncIterator.concat(iterators.iterator()).consume());
 
     final AsyncIterator<AsyncIterator<Integer>> iteratorIterator =
         AsyncIterator.fromIterator(iterators.iterator());
@@ -222,12 +189,6 @@ public class AsyncIteratorTest {
               results.add(t);
             });
     Assert.assertEquals(100, results.size());
-  }
-
-  @Test(expected = CompletionException.class)
-  public void testConsumeException() {
-    final AsyncIterator<Integer> iterator = AsyncIterator.error(new IOException("test"));
-    TestUtil.join(iterator.consume());
   }
 
   @Test
@@ -408,51 +369,6 @@ public class AsyncIteratorTest {
   }
 
   @Test
-  public void testFlatMapIsLazy() {
-    final AtomicBoolean called = new AtomicBoolean();
-    final AsyncIterator<Integer> x = intIterator(10);
-    final AsyncIterator<Integer> y =
-        x.thenFlatten(
-            c -> {
-              called.set(true);
-              return repeat(c, c);
-            });
-    Assert.assertFalse(called.get());
-    TestUtil.join(y.nextFuture());
-    Assert.assertTrue(called.get());
-  }
-
-  @Test
-  public void testMapIsLazy() {
-    final AtomicBoolean called = new AtomicBoolean();
-    final AsyncIterator<Integer> x = intIterator(10);
-    final AsyncIterator<Object> y =
-        x.thenCompose(
-            i -> {
-              called.set(true);
-              return CompletableFuture.completedFuture(i);
-            });
-    Assert.assertFalse(called.get());
-    TestUtil.join(y.nextFuture());
-    Assert.assertTrue(called.get());
-  }
-
-  @Test
-  public void testConvertIsLazy() {
-    final AtomicBoolean called = new AtomicBoolean();
-    final AsyncIterator<Integer> x = intIterator(10);
-    final AsyncIterator<Object> y =
-        x.thenApply(
-            i -> {
-              called.set(true);
-              return i;
-            });
-    Assert.assertFalse(called.get());
-    TestUtil.join(y.nextFuture());
-    Assert.assertTrue(called.get());
-  }
-
-  @Test
   public void testFilter() {
     final int count = 100000;
     final Predicate<Integer> filterFun = i -> i % 2 == 0 && i > (count / 2);
@@ -480,17 +396,6 @@ public class AsyncIteratorTest {
     final int actual = TestUtil.join(it.fold((a, b) -> a + b, 0));
     final int expected = (count * (count - 1)) / 2;
     Assert.assertEquals(expected, actual);
-  }
-
-  @Test(expected = CompletionException.class)
-  public void testFoldFunctionThrows() {
-    final int count = 100000;
-    final AsyncIterator<Integer> it = intIterator(count);
-    BiFunction<Integer, Integer, Integer> folder =
-        (a, b) -> {
-          throw new IllegalStateException();
-        };
-    TestUtil.join(it.fold(folder, 0));
   }
 
   @Test
@@ -782,7 +687,7 @@ public class AsyncIteratorTest {
 
   @Test
   public void testFuse() {
-    AsyncIterator<Integer> it = touchyIterator(1).fuse();
+    AsyncIterator<Integer> it = mustRespectEndIterator(1).fuse();
     Assert.assertEquals(0, it.nextFuture().toCompletableFuture().join().right().get().intValue());
     Assert.assertTrue(it.nextFuture().toCompletableFuture().join().isLeft());
     Assert.assertTrue(it.nextFuture().toCompletableFuture().join().isLeft());
@@ -790,8 +695,8 @@ public class AsyncIteratorTest {
   }
 
   @Test
-  public void testTouchyIteratorAhead() {
-    List<Integer> list = touchyIterator(2)
+  public void testAheadRespectsEnd() {
+    List<Integer> list = mustRespectEndIterator(2)
             .thenComposeAhead(i -> CompletableFuture.supplyAsync(() -> {
               try {
                 Thread.sleep(100);
@@ -806,7 +711,7 @@ public class AsyncIteratorTest {
   }
 
   // throws exceptions when iterated past end of iteration
-  AsyncIterator<Integer> touchyIterator(int numElements) {
+  AsyncIterator<Integer> mustRespectEndIterator(int numElements) {
     final AtomicInteger count = new AtomicInteger(numElements);
     return AsyncIterator.supply(
         () -> {
@@ -828,4 +733,36 @@ public class AsyncIteratorTest {
   AsyncIterator<Integer> repeat(final int n, final int size) {
     return AsyncIterator.repeat(n).take(size);
   }
+
+  private Iterator<AsyncIterator<Integer>> sortedIts(final List<Integer> sizes) {
+    final List<AsyncIterator<Integer>> iterators = new ArrayList<>();
+    int count = 0;
+    for (final int size : sizes) {
+      final List<Integer> ints = new ArrayList<>();
+      for (int i = 0; i < size; i++) {
+        ints.add(count);
+        count++;
+      }
+      iterators.add(AsyncIterator.fromIterator(ints.iterator()));
+    }
+    return iterators.iterator();
+  }
+
+  // assert the iterator is the ascending range from 0 to expected size
+  private void verifySorted(final AsyncIterator<Integer> concat, final int expectedSize)
+          throws Exception {
+    Either<End, Integer> curr = TestUtil.join(concat.nextFuture());
+    int i = 0;
+    while (curr.isRight()) {
+      Assert.assertEquals(i, curr.right().get().intValue());
+      i++;
+      curr = TestUtil.join(concat.nextFuture());
+    }
+    Assert.assertEquals(expectedSize, i);
+  }
+
+  private long size(final AsyncIterator<Integer> it) throws Exception {
+    return TestUtil.join(it.collect(Collectors.counting()));
+  }
+
 }

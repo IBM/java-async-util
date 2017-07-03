@@ -19,6 +19,7 @@
 
 package com.ibm.async_util.util;
 
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 
@@ -33,9 +34,9 @@ import java.util.function.Function;
  * resources are relinquished. A common way to implement this pattern for a thread-safe object with
  * asynchronous methods is by using an {@link com.ibm.async_util.locks.ObservableEpoch}.
  *
- * <p>May be used with the methods {@link FutureSupport#tryWithStagedClose(CompletionStage,
- * Function)}, {@link FutureSupport#tryComposeWithStagedClose(CompletionStage, Function)} to emulate
- * the behavior of a try with resources block.
+ * <p>May be used with the methods {@link AsyncCloseable#tryWith(CompletionStage,
+ * Function)}, {@link AsyncCloseable#tryComposeWith(CompletionStage, Function)} to emulate the
+ * behavior of a try with resources block.
  */
 @FunctionalInterface
 public interface AsyncCloseable {
@@ -46,4 +47,44 @@ public interface AsyncCloseable {
    *     have been released, or with an exception if the resources cannot be released.
    */
   CompletionStage<Void> close();
+
+  static <T, R extends AsyncCloseable> CompletionStage<T> tryComposeWith(
+      final CompletionStage<? extends R> resource,
+      final Function<? super R, ? extends CompletionStage<T>> actionUnderResource) {
+
+    return resource.thenCompose(
+        r ->
+            actionUnderResource
+                .apply(r)
+                .thenApply(Either::<Throwable, T>right)
+                .exceptionally(Either::<Throwable, T>left)
+                .thenCompose(
+                    either ->
+                        r.close()
+                            .thenApply(
+                                ig ->
+                                    either.fold(
+                                        ex -> {
+                                          throw new CompletionException(ex);
+                                        },
+                                        t -> t))));
+  }
+
+  static <T, R extends AsyncCloseable> CompletionStage<T> tryWith(
+      final CompletionStage<? extends R> resource,
+      final Function<? super R, ? extends T> actionUnderResource) {
+    return resource.thenCompose(
+        r -> {
+          try {
+            T t = actionUnderResource.apply(r);
+            return r.close().thenApply(ig -> t);
+          } catch (Throwable e) {
+            return r.close()
+                .handleAsync(
+                    (t, ex) -> {
+                      throw new CompletionException(e);
+                    });
+          }
+        });
+  }
 }

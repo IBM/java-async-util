@@ -3,6 +3,7 @@ package com.ibm.async_util.util;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public class FutureSupport {
@@ -86,43 +87,20 @@ public class FutureSupport {
                     }));
   }
 
-  public static <T, R extends AsyncCloseable> CompletionStage<T> tryWithStagedClose(
-      final CompletionStage<? extends R> resource,
-      final Function<? super R, ? extends T> actionUnderResource) {
-    return resource.thenCompose(
-        r -> {
-          try {
-            T t = actionUnderResource.apply(r);
-            return r.close().thenApply(ig -> t);
-          } catch (Throwable e) {
-            return r.close()
-                .handleAsync(
-                    (t, ex) -> {
-                      throw new CompletionException(e);
-                    });
-          }
-        });
-  }
-
-  public static <T, R extends AsyncCloseable> CompletionStage<T> tryComposeWithStagedClose(
-      final CompletionStage<? extends R> resource,
-      final Function<? super R, ? extends CompletionStage<T>> actionUnderResource) {
-
-    return resource.thenCompose(
-        r ->
-            actionUnderResource
-                .apply(r)
-                .thenApply(Either::<Throwable, T>right)
-                .exceptionally(Either::<Throwable, T>left)
-                .thenCompose(
-                    either ->
-                        r.close()
-                            .thenApply(
-                                ig ->
-                                    either.fold(
-                                        ex -> {
-                                          throw new CompletionException(ex);
-                                        },
-                                        t -> t))));
+    public static <T, U> CompletionStage<U> thenComposeOrRecover(final CompletionStage<T> stage, final BiFunction<T, Throwable, CompletionStage<U>> fn) {
+    final CompletableFuture<U> ret = new CompletableFuture<>();
+    stage.whenComplete((t, throwable) -> {
+        try {
+            fn.apply(t, throwable).whenComplete((u, ex2) -> {
+                if (ex2 != null) {
+                    ret.completeExceptionally(ex2);
+                }
+                ret.complete(u);
+            });
+        } catch (Throwable e) {
+            ret.completeExceptionally(e);
+        }
+    });
+    return ret;
   }
 }
