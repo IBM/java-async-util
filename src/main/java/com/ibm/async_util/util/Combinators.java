@@ -84,7 +84,7 @@ public class Combinators {
    *     the values returned by the CompletionStages in {@code stageMap}
    */
   public static <K, V> CompletionStage<Map<K, V>> keyedAll(
-      final Map<K, CompletionStage<V>> stageMap) {
+      final Map<K, ? extends CompletionStage<V>> stageMap) {
     return CompletableFuture.allOf(stageMap.values().stream().toArray(CompletableFuture[]::new))
         .thenApply(
             ignore ->
@@ -115,7 +115,7 @@ public class Combinators {
    */
   @SuppressWarnings("unchecked")
   public static <T, A, R> CompletionStage<R> collect(
-      final Collection<CompletionStage<T>> stages, final Collector<T, A, R> collector) {
+      final Collection<? extends CompletionStage<T>> stages, final Collector<? super T, A, R> collector) {
     @SuppressWarnings("rawtypes")
     CompletableFuture[] arr =
         stages.stream().map(CompletionStage::toCompletableFuture).toArray(CompletableFuture[]::new);

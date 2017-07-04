@@ -87,20 +87,25 @@ public class FutureSupport {
                     }));
   }
 
-    public static <T, U> CompletionStage<U> thenComposeOrRecover(final CompletionStage<T> stage, final BiFunction<T, Throwable, CompletionStage<U>> fn) {
+  public static <T, U> CompletionStage<U> thenComposeOrRecover(
+      final CompletionStage<T> stage,
+      final BiFunction<? super T, Throwable, ? extends CompletionStage<U>> fn) {
     final CompletableFuture<U> ret = new CompletableFuture<>();
-    stage.whenComplete((t, throwable) -> {
-        try {
-            fn.apply(t, throwable).whenComplete((u, ex2) -> {
-                if (ex2 != null) {
-                    ret.completeExceptionally(ex2);
-                }
-                ret.complete(u);
-            });
-        } catch (Throwable e) {
+    stage.whenComplete(
+        (t, throwable) -> {
+          try {
+            fn.apply(t, throwable)
+                .whenComplete(
+                    (u, ex2) -> {
+                      if (ex2 != null) {
+                        ret.completeExceptionally(ex2);
+                      }
+                      ret.complete(u);
+                    });
+          } catch (Throwable e) {
             ret.completeExceptionally(e);
-        }
-    });
+          }
+        });
     return ret;
   }
 }

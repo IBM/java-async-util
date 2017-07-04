@@ -278,7 +278,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * @return A new AsyncIterator which produces stages of fn composed with the result of the stages
    *     from {@code this} iterator
    */
-  default <U> AsyncIterator<U> thenCompose(final Function<T, CompletionStage<U>> fn) {
+  default <U> AsyncIterator<U> thenCompose(final Function<? super T, ? extends CompletionStage<U>> fn) {
     return AsyncIterators.thenComposeImpl(this, fn, null);
   }
 
@@ -299,7 +299,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * @return A new AsyncIterator which produces stages of fn composed with the result of the stages
    *     from {@code this} iterator
    */
-  default <U> AsyncIterator<U> thenComposeAsync(final Function<T, CompletionStage<U>> fn) {
+  default <U> AsyncIterator<U> thenComposeAsync(final Function<? super T, ? extends CompletionStage<U>> fn) {
     return AsyncIterators.thenComposeImpl(this, fn, ForkJoinPool.commonPool());
   }
 
@@ -321,7 +321,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    *     from {@code this} iterator
    */
   default <U> AsyncIterator<U> thenComposeAsync(
-      final Function<T, CompletionStage<U>> fn, final Executor executor) {
+      final Function<? super T, ? extends CompletionStage<U>> fn, final Executor executor) {
     Objects.requireNonNull(executor);
     return AsyncIterators.thenComposeImpl(this, fn, executor);
   }
@@ -349,7 +349,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * @return A new AsyncIterator consisting of flattened iterators from applying fn to elements of
    *     {@code this}
    */
-  default <U> AsyncIterator<U> thenFlatten(final Function<T, AsyncIterator<U>> fn) {
+  default <U> AsyncIterator<U> thenFlatten(final Function<? super T, ? extends AsyncIterator<U>> fn) {
     return AsyncIterator.concat(this.thenApply(fn));
   }
 
@@ -376,7 +376,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * @see #thenFlatten(Function)
    */
   default <U> AsyncIterator<U> thenFlattenAhead(
-      final Function<T, AsyncIterator<U>> fn, final int executeAhead) {
+      final Function<? super T, ? extends AsyncIterator<U>> fn, final int executeAhead) {
     final Function<Either<End, T>, CompletionStage<Either<End, AsyncIterator<U>>>> eitherF =
         nt ->
             nt.fold(
@@ -407,7 +407,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * @see #thenCompose(Function)
    */
   default <U> AsyncIterator<U> thenComposeAhead(
-      final Function<T, CompletionStage<U>> f, final int executeAhead) {
+      final Function<? super T, ? extends CompletionStage<U>> f, final int executeAhead) {
     // apply user function and wrap future result in a Either
     final Function<Either<End, T>, CompletionStage<Either<End, U>>> eitherF =
         nt -> nt.fold(stop -> AsyncIterators.endFuture(), t -> f.apply(t).thenApply(Either::right));
@@ -423,7 +423,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    *     iterator, and false otherwise
    * @return a new AsyncIterator which will only return results that match predicate
    */
-  default AsyncIterator<T> filter(final Predicate<T> predicate) {
+  default AsyncIterator<T> filter(final Predicate<? super T> predicate) {
 
     // keep looping looking for a value that satisfies predicate as long as the current value
     // doesn't, and we're not out of elements
@@ -457,7 +457,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    *     result will not be included in the new iterator
    * @return An AsyncIterator of all the {@code U}s that were present
    */
-  default <U> AsyncIterator<U> filterApply(final Function<T, Optional<U>> fn) {
+  default <U> AsyncIterator<U> filterApply(final Function<? super T, Optional<U>> fn) {
     return this.thenApply(fn).filter(Optional::isPresent).thenApply(Optional::get);
   }
 
@@ -469,7 +469,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    *     result will not be included in the new iterator
    * @return An AsyncIterator of all the {@code U}s that were present
    */
-  default <U> AsyncIterator<U> filterCompose(final Function<T, CompletionStage<Optional<U>>> fn) {
+  default <U> AsyncIterator<U> filterCompose(final Function<? super T, ? extends CompletionStage<Optional<U>>> fn) {
     return this.thenCompose(fn).filter(Optional::isPresent).thenApply(Optional::get);
   }
 
@@ -508,7 +508,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    *     from the iterator, and {@code false otherwise}
    * @return A new AsyncIterator that will return T's until the predicate fails
    */
-  default AsyncIterator<T> takeWhile(final Predicate<T> predicate) {
+  default AsyncIterator<T> takeWhile(final Predicate<? super T> predicate) {
     return new AsyncIterator<T>() {
       boolean predicateFailed = false;
 
@@ -547,7 +547,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * @return a new AsyncIterator where exceptions from this iterator have been converted using
    *     {@code fn}
    */
-  default AsyncIterator<T> exceptionally(Function<Throwable, T> fn) {
+  default AsyncIterator<T> exceptionally(Function<Throwable, ? extends T> fn) {
     return new AsyncIterator<T>() {
       @Override
       public CompletionStage<Either<End, T>> nextFuture() {
@@ -792,7 +792,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * @return a {@link CompletionStage} containing the resulting U from repeated application of
    *     accumulator
    */
-  default <U> CompletionStage<U> fold(final BiFunction<U, T, U> accumulator, final U identity) {
+  default <U> CompletionStage<U> fold(final BiFunction<U, ? super T, U> accumulator, final U identity) {
     @SuppressWarnings("unchecked")
     U[] uarr = (U[]) new Object[] {identity};
     return this.collect(() -> uarr, (u, t) -> uarr[0] = accumulator.apply(uarr[0], t))
@@ -876,7 +876,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * @return a {@link CompletionStage} that returns when there are no elements left to apply action
    *     to, or an exception has been encountered.
    */
-  default CompletionStage<Void> forEach(final Consumer<T> action) {
+  default CompletionStage<Void> forEach(final Consumer<? super T> action) {
     return AsyncTrampoline.asyncWhile(
         () ->
             nextFuture()
@@ -894,7 +894,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * @return a {@link CompletionStage} that completes with the first T to satisfy predicate, or
    *     empty if no such T exists
    */
-  default CompletionStage<Optional<T>> find(final Predicate<T> predicate) {
+  default CompletionStage<Optional<T>> find(final Predicate<? super T> predicate) {
     return AsyncIterators.convertSynchronousException(this.filter(predicate)::nextFuture)
         .thenApply(Either::<End, T>right);
   }
@@ -1079,7 +1079,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * @return AsyncIterator of fn applied to elements of tIt and uIt
    */
   static <T, U, V> AsyncIterator<V> zipWith(
-      final AsyncIterator<T> tIt, final AsyncIterator<U> uIt, final BiFunction<T, U, V> fn) {
+      final AsyncIterator<T> tIt, final AsyncIterator<U> uIt, final BiFunction<? super T, ? super U, V> fn) {
     // once all futures are complete, if all are nonempty, then apply fn to the arg
     return new AsyncIterator<V>() {
       @Override
@@ -1117,7 +1117,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * @param iterator an {@link Iterator} of T elements
    * @return A new AsyncIterator which will yield the elements of {@code iterator}
    */
-  static <T> AsyncIterator<T> fromIterator(final Iterator<T> iterator) {
+  static <T> AsyncIterator<T> fromIterator(final Iterator<? extends T> iterator) {
     return () ->
         CompletableFuture.completedFuture(
             iterator.hasNext() ? Either.right(iterator.next()) : AsyncIterators.end());
@@ -1129,7 +1129,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * @param stage a {@link CompletionStage} stage that produces an AsyncIterator
    * @return a new AsyncIterator which will yield the elements of the produced iterator
    */
-  static <T> AsyncIterator<T> fromIteratorStage(final CompletionStage<AsyncIterator<T>> stage) {
+  static <T> AsyncIterator<T> fromIteratorStage(final CompletionStage<? extends AsyncIterator<T>> stage) {
     return () -> stage.thenCompose(AsyncIterator::nextFuture);
   }
 
@@ -1271,7 +1271,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * @param supplier supplies stages for elements to be yielded by the returned iterator
    * @return AsyncIterator returning values generated from {@code supplier}
    */
-  static <T> AsyncIterator<T> generate(final Supplier<CompletionStage<T>> supplier) {
+  static <T> AsyncIterator<T> generate(final Supplier<? extends CompletionStage<T>> supplier) {
     return () -> supplier.get().thenApply(Either::right);
   }
 
@@ -1282,7 +1282,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    *     iteration with {@link End}
    * @return An AsyncIterator that produces the values generated by the {@code supplier}
    */
-  static <T> AsyncIterator<T> supply(final Supplier<CompletionStage<Either<End, T>>> supplier) {
+  static <T> AsyncIterator<T> supply(final Supplier<? extends CompletionStage<Either<End, T>>> supplier) {
     return supplier::get;
   }
 
@@ -1302,7 +1302,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * @see Stream#iterate(Object, java.util.function.UnaryOperator)
    */
   static <T> AsyncIterator<T> unfold(
-      final T seed, final Function<T, CompletionStage<Either<End, T>>> f) {
+      final T seed, final Function<? super T, ? extends CompletionStage<Either<End, T>>> f) {
     return new AsyncIterator<T>() {
       CompletionStage<Either<End, T>> prev = CompletableFuture.completedFuture(Either.right(seed));
 

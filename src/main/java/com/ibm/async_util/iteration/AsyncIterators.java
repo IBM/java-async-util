@@ -101,7 +101,7 @@ class AsyncIterators {
   }
 
   static <T> CompletionStage<T> convertSynchronousException(
-      final Supplier<CompletionStage<T>> supplier) {
+      final Supplier<? extends CompletionStage<T>> supplier) {
     try {
       return supplier.get();
     } catch (Throwable e) {
@@ -113,7 +113,7 @@ class AsyncIterators {
   static <T, U, V> Either<AsyncIterator.End, V> zipWith(
       Either<AsyncIterator.End, T> et,
       Either<AsyncIterator.End, U> eu,
-      final BiFunction<T, U, V> f) {
+      final BiFunction<? super T, ? super U, V> f) {
     return et.fold(end -> end(), t -> eu.fold(end -> end(), u -> Either.right(f.apply(t, u))));
   }
 
@@ -135,7 +135,7 @@ class AsyncIterators {
   }
 
   static <T, U> AsyncIterator<U> thenComposeImpl(
-      final AsyncIterator<T> it, Function<T, CompletionStage<U>> f, final Executor e) {
+      final AsyncIterator<T> it, Function<? super T, ? extends CompletionStage<U>> f, final Executor e) {
     return new AsyncIterator<U>() {
       @Override
       public CompletionStage<Either<End, U>> nextFuture() {

@@ -68,12 +68,12 @@ public final class AsyncTrampoline {
 
   private static class TrampolineInternal<T> extends CompletableFuture<T> {
 
-    private final Predicate<T> shouldContinue;
-    private final Function<T, CompletionStage<T>> f;
+    private final Predicate<? super T> shouldContinue;
+    private final Function<? super T, ? extends CompletionStage<T>> f;
 
     private TrampolineInternal(
-        final Predicate<T> shouldContinue,
-        final Function<T, CompletionStage<T>> f,
+        final Predicate<? super T> shouldContinue,
+        final Function<? super T, ? extends CompletionStage<T>> f,
         final T initialValue) {
       this.shouldContinue = shouldContinue;
       this.f = f;
@@ -159,10 +159,10 @@ public final class AsyncTrampoline {
    *     shouldContinue.test(T) == false}, or with an exception if one was thrown.
    */
   public static <T> CompletionStage<T> asyncWhile(
-      final Predicate<T> shouldContinue,
-      final Function<T, CompletionStage<T>> fn,
+      final Predicate<? super T> shouldContinue,
+      final Function<? super T, ? extends CompletionStage<T>> fn,
       final T initialValue) {
-    return new TrampolineInternal<>(shouldContinue, fn, initialValue);
+    return new TrampolineInternal<T>(shouldContinue, fn, initialValue);
   }
 
   /**
@@ -177,7 +177,7 @@ public final class AsyncTrampoline {
    * @return a {@link CompletionStage} that is complete when a stage produced by {@code fn} has
    *     returned {@code false}, or with an exception if one was thrown
    */
-  public static CompletionStage<Void> asyncWhile(final Supplier<CompletionStage<Boolean>> fn) {
+  public static CompletionStage<Void> asyncWhile(final Supplier<? extends CompletionStage<Boolean>> fn) {
     return FutureSupport.voided(AsyncTrampoline.asyncWhile(b -> b, b -> fn.get(), true));
   }
 
@@ -215,9 +215,9 @@ public final class AsyncTrampoline {
    *     shouldContinue.test(T) == false}, or with an exception if one was thrown.
    */
   public static <T> CompletionStage<T> asyncDoWhile(
-      final Function<T, CompletionStage<T>> fn,
+      final Function<? super T, ? extends CompletionStage<T>> fn,
       final T initialValue,
-      final Predicate<T> shouldContinue) {
+      final Predicate<? super T> shouldContinue) {
     return fn.apply(initialValue)
         .thenCompose(t -> AsyncTrampoline.asyncWhile(shouldContinue, fn, t));
   }
