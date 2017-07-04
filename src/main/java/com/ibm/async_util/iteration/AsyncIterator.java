@@ -62,8 +62,41 @@ import java.util.stream.Stream;
  * created with the static constructor methods on this interface ({@link #fromIterator(Iterator)},
  * {@link #unfold(Object, Function)}, etc)), followed by zero or more intermediate operations (such
  * as {@link #filter(Predicate)}, {@link #thenApply(Function)}), and completed with a terminal
- * operation which returns a {@link CompletionStage} such as {@link #forEach(Consumer)} or {@link
- * #fold(BinaryOperator, Object)}.
+ * operation which returns a {@link CompletionStage} (such as {@link #forEach(Consumer)} or {@link
+ * #fold(BinaryOperator, Object)}). For example, suppose we wanted to accomplish the following
+ * (blocking) procedure:
+ *
+ * <pre>{@code
+ * // request and lookup records one by one until we get 10 relevant records
+ * List<Record> records = new ArrayList<>()
+ * while (records.length() < 10) {
+ *     // ask for a record identifier from a remote service (blocking)
+ *     RecordId response = requestIdFromIdServer();
+ *     // get the actual record from another service (blocking)
+ *     Record record = getRecordFromRecordServer(recordIdentifier);
+ *     // only add relevant records
+ *     if (isRelevant(record)) {
+ *        records.add(record);
+ *     }
+ * }
+ * }</pre>
+ *
+ * If we wanted to do it without doing any blocking, we can use a pipeline and return a {@link
+ * CompletionStage} of the desired record list. Like the blocking version only one request will be
+ * made at a time.
+ *
+ * <pre>{@code
+ * CompletionStage<RecordId> requestIdFromIdServer();
+ * CompletionStage<Record> getRecordFromRecordServer(RecordId recordId);
+ *
+ * CompletionStage<List<Response>> responses =
+ *   AsyncIterator.generate(this::requestIdFromIdServer) // source iterator
+ *  .thenCompose(this::getRecordFromRecordServer)        // intermediate transformation
+ *  .filter(record -> isRelevant(record))                // intermediate transformation
+ *  .take(10)                                            // intermediate transformation
+ *  .collect(Collectors.toList());                       // terminal operation
+ *
+ * }</pre>
  *
  * <p><b>Intermediate methods</b> - All methods which return {@link AsyncIterator AsyncIterators}
  * are intermediate methods. They can further be broken down into lazy and partially eager methods.
