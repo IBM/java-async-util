@@ -47,14 +47,13 @@ import java.util.stream.Stream;
  * concurrently, and even stronger, that nextFuture won't be called again until the previous future
  * returned by nextFuture has completed.
  *
- * <p>You can still accomplish parallelization using the ahead methods described below. The
- * difference is that the parallelization in that case is from <b>producing</b> values in parallel,
- * <b>not consuming</b> values in parallel. This means the choice to work in parallel is generally
- * made by the library returning the AsyncIterator, not by the user of it.
+ * <p>Parallelization may still be accomplished using the <i>partially eager</i> methods described
+ * below. The difference is that the parallelization in that case is from <b>producing</b> values in
+ * parallel, <b>not consuming</b> values in parallel.
  *
  * <p>To implement an AsyncIterator you must only implement the {@link #nextFuture()} method-
- * however, it is recommended that you avoid actually using nextFuture to consume the results of
- * iteration. On top of being tedious, it can also be error prone. It is easy to cause a stack
+ * however, it is recommended that users avoid actually using nextFuture to consume the results of
+ * iteration. It is less expressive and it can also be error prone; it is easy to cause a stack
  * overflow by incorrectly recursing on calls to nextFuture. You should prefer to use the other
  * higher level methods on this interface.
  *
@@ -70,35 +69,39 @@ import java.util.stream.Stream;
  * are intermediate methods. They can further be broken down into lazy and partially eager methods.
  * Methods that end with the suffix <i>ahead</i> are partially eager, the rest are lazy. A lazy
  * intermediate transformation will not be evaluated until some downstream eager operation is
- * called.
+ * called. Furthermore, only what is needed to satisfy the eager operation will be evaluated from
+ * the previous iterator in the chain. When only requesting a single element from the transformed
+ * iterator, only a single element may be evaluated from the previous iterator (ex: {@link
+ * #thenApply(Function)}), or potentially many elements (ex: {@link #filter(Predicate)}).
  *
  * <p>Methods ending with the suffix <i> ahead </i>, are partially eager. They can be used when
  * there is an expensive transformation step that should be performed in parallel. They will eagerly
  * consume from their upstream iterator up to a specified amount (still sequentially!) and eagerly
  * apply the transformation step.
  *
- * <p>Intermediate transformations will propagate exceptions similarly to {@link CompletionStage}, a
+ * <p>Intermediate methods will propagate exceptions similarly to {@link CompletionStage}, a
  * dependent AsyncIterator will return exceptional stages if the upstream iterator generated
  * exceptional elements.
  *
- * <p><b>Terminal operations</b> Methods that return a {@link CompletionStage} instead of another
- * AsyncIterator consume the iterator. After a terminal operation is called, the iterator is
- * considered consumed and should not be used further. If any of the stages in the chain that
- * comprise {@code this} iterator were exceptional, the {@link CompletionStage} returned by a
- * terminal operation will also be exceptional. The exception will short-circuit the terminal
- * operation. For example, a terminal operation such as {@link #forEach(Consumer)} will not to
- * continue to run on subsequent elements of the iterator and instead immediately complete it's
- * returned stage with the error. Unless otherwise noted, this behavior holds for all terminal
- * methods but may not documented explicitly.
+ * <p><b>Terminal methods</b> - Terminal methods consume the iterator and return a {@link
+ * CompletionStage}. After a terminal operation is called, the iterator is considered consumed and
+ * should not be used further. If any of the stages in the chain that comprise {@code this} iterator
+ * were exceptional, the {@link CompletionStage} returned by a terminal operation will also be
+ * exceptional. The exception will short-circuit the terminal operation. For example, a terminal
+ * operation such as {@link #forEach(Consumer)} will not to continue to run on subsequent elements
+ * of the iterator and instead immediately complete it's returned stage with the error. Unless
+ * otherwise noted, this behavior holds for all terminal methods but may not documented explicitly.
  *
  * <p>The exception propagation scheme should be familiar to users of {@link CompletionStage},
  * upstream errors will appear wherever the AsyncIterator is consumed and the result is observed
  * (with {@link CompletableFuture#join()} for instance). Exceptions at any stage in the pipeline can
  * be recovered from by using {@link #exceptionally(Function)}, however this won't recover
  * exceptions that are produced downstream. A daring user may have applications where they wish to
- * manually iterate past exceptions without converting them. This is not forbidden, you may use
- * {@link #nextFuture()} directly in which case you are free to continue iterating after an iterator
- * in the chain has produced an exception.
+ * manually iterate past exceptions without converting them. This can be accomplished by using
+ * {@link #nextFuture()} directly, see the docs there for more details.
+ *
+ * <p>Unless otherwise noted, methods on this interface are free to throw {@link
+ * NullPointerException} if any of the provided arguments are {@code null}.
  *
  * <p>The behavior of an AsyncIterator if {@link #nextFuture()} is called after the end of iteration
  * marker is returned is left to the implementation. You may ensure that all subsequent calls always
@@ -125,12 +128,12 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   interface End {}
 
   /**
-   * Returns a future representing the next element of the iterator. This is not a terminal method,
-   * it can be safely called multiple times. This method is unique in that it can continue to be
-   * called even after a returned stage completes exceptionally. However, this method is not thread
-   * safe, and should only be called in a single-threaded fashion. Moreover, after a call another
-   * call should not be made until the {@link CompletionStage} returned by the previous call has
-   * completed. That is to say,
+   * Returns a future representing the next element of the iterator.
+   *
+   * <p>This is not a terminal method, it can be safely called multiple times. However, This this
+   * method is <b>not thread safe</b>, and should only be called in a single-threaded fashion.
+   * Moreover, after a call another call should not be made until the {@link CompletionStage}
+   * returned by the previous call has completed. That is to say,
    *
    * <pre>{@code
    * // illegal
@@ -151,8 +154,19 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * #nextFuture()} returns {@link End}, the iterator has no more elements. After an iterator emits
    * an {@link End} indicator, the result of subsequent calls to nextFuture is undefined.
    *
-   * @return A {@link CompletionStage} of the next element for iteration, or an instance of {@link
-   *     End}, indicating the end of iteration.
+   * <p>An AsyncIterator may be capable of producing normally completing stages after having
+   * producing exceptionally completed stages. nextFuture is unique in that it can safely continue
+   * to be called even after a returned stage completes exceptionally, whereas all terminal
+   * operations short circuit when encountering an exception. If a user wishes to continue iteration
+   * after exception, they must use {@link #nextFuture()} directly, or install exception recovery
+   * with {@link #exceptionally(Function)}. While all intermediate methods will not be affected by
+   * processing an exceptional stage, some asynchronous sources may choose to always return an
+   * exceptional stage once an exception has been encountered. This is valid behavior, so care has
+   * to be taken to avoid infinite looping when using {@link #nextFuture()} in this fashion.
+   *
+   * @return A {@link CompletionStage} of the next element for iteration held in the {@link
+   *     Either#right()} position, or an instance of {@link End} held in the {@link Either#left()}
+   *     position indicating the end of iteration.
    */
   CompletionStage<Either<End, T>> nextFuture();
 
@@ -160,14 +174,14 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * Relinquishes any resources associated with this iterator.
    *
    * <p>This method should be overriden if manual resource management is required, the default
-   * implmentation does nothing.This method is <b>not</b> thread safe, and must not be called
+   * implmentation does nothing. This method is <b>not</b> thread safe, and must not be called
    * concurrently with calls to {@link #nextFuture()}. This method is not automatically called by
    * terminal methods, and must be explicitly called after iteration is complete if the underlying
    * iterator has resources to release. Similar to the situation with {@link Stream#close()},
    * because the common case requires no resources the user should only call close if it is possible
    * that the {@link AsyncIterator} has resources. Special care needs to be taken to call {@link
    * #close()} even in the case of an exception, {@link
-   * AsyncCloseable#tryComposeWith(CompletionStage, Function)} can make this more convenient.
+   * AsyncCloseable#tryComposeWith(AsyncCloseable, Function)} can make this more convenient.
    *
    * <pre>{@code
    * class SocketBackedIterator implements AsyncIterator<byte[]> {
@@ -202,14 +216,16 @@ public interface AsyncIterator<T> extends AsyncCloseable {
 
   /**
    * Transforms {@code this} this into a new AsyncIterator that iterates over the results of {@code
-   * fn} applied to the outcomes of stages in this iterator when they complete normally.
+   * fn} applied to the outcomes of stages in this iterator when they complete normally. When stages
+   * in {@code this} iterator complete exceptionally the returned iterator will emit an exceptional
+   * stage without applying {@code fn}.
    *
-   * <pre>
+   * <pre>{@code
    * intIterator // 1,2,3,...
-   *     .thenApply(Integer::toString)
-   * </pre>
+   *     .thenApply(Integer::toString) //"1","2","3"...
+   * }</pre>
    *
-   * returns an AsyncIterator of "1","2","3"... This is an intermediate method
+   * This is a lazy <i> intermediate </i> method.
    *
    * @param fn A function which produces a U from the given T
    * @return A new AsyncIterator which produces stages of fn applied to the result of the stages
@@ -221,15 +237,17 @@ public interface AsyncIterator<T> extends AsyncCloseable {
 
   /**
    * Transforms {@code this} into a new AsyncIterator that iterates over the results of {@code fn}
-   * applied to the outcomes of stages in this iterator when they complete normally. {@code fn} is
-   * executed with the previous stage's default asynchronous execution facility.
+   * applied to the outcomes of stages in this iterator when they complete normally. When stages in
+   * {@code this} iterator complete exceptionally the returned iterator will emit an exceptional
+   * stage without applying {@code fn}. {@code fn} is executed with the previous stage's default
+   * asynchronous execution facility.
    *
-   * <pre>
+   * <pre>{@code
    * intIterator // 1,2,3,...
-   *     .thenApply(Integer::toString)
-   * </pre>
+   *     .thenApplyAsync(Integer::toString) //"1","2","3"...
+   * }</pre>
    *
-   * returns an AsyncIterator of "1","2","3"...
+   * This is a lazy <i> intermediate </i> method.
    *
    * @param fn A function which produces a U from the given T
    * @return A new AsyncIterator which produces stages of fn applied to the result of the stages
@@ -241,18 +259,19 @@ public interface AsyncIterator<T> extends AsyncCloseable {
 
   /**
    * Transforms {@code this} into a new AsyncIterator that iterates over the results of {@code fn}
-   * applied to the outcomes of stages in this iterator when they complete normally. {@code fn} is
-   * executed with the provided Executor.
+   * applied to the outcomes of stages in this iterator when they complete normally. When stages in
+   * {@code this} iterator complete exceptionally the returned iterator will emit an exceptional
+   * stage without applying {@code fn}. {@code fn} is executed with the provided Executor.
    *
-   * <pre>
+   * <pre>{@code
    * intIterator // 1,2,3,...
-   *     .thenApply(Integer::toString, ex)
-   * </pre>
+   *     .thenApplyAsync(Integer::toString, executor) //"1","2","3"...
+   * }</pre>
    *
-   * returns an AsyncIterator of "1","2","3"...
+   * This is a lazy <i> intermediate </i> method.
    *
    * @param fn A function which produces a U from the given T
-   * @param executor A {@link Executor} where the function {@code fn} should run
+   * @param executor a {@link Executor} where the function {@code fn} should run
    * @return A new AsyncIterator which produces stages of fn applied to the result of the stages
    *     from {@code this} iterator
    */
@@ -264,59 +283,67 @@ public interface AsyncIterator<T> extends AsyncCloseable {
 
   /**
    * Transforms {@code this} into a new AsyncIterator using the produced stages of {@code fn}
-   * applied to the output from the stages of {@code this}.
+   * applied to the output from the stages of {@code this}. When stages in {@code this} iterator
+   * complete exceptionally the returned iterator will emit an exceptional stage without applying
+   * {@code fn}.
    *
    * <pre>{@code
    * CompletableFuture<String> asyncToString(final int i);
    * intIterator // 1, 2, 3
-   *   .thenCompose(this::asyncToString);
+   *   .thenCompose(this::asyncToString); //"1", "2", "3"...
    * }</pre>
    *
-   * returns an AsyncIterator of "1", "2", "3"...
+   * This is a lazy <i> intermediate </i> method.
    *
-   * @param fn A function which produces a new CompletionStage from a T
+   * @param fn A function which produces a new {@link CompletionStage} from a T
    * @return A new AsyncIterator which produces stages of fn composed with the result of the stages
    *     from {@code this} iterator
    */
-  default <U> AsyncIterator<U> thenCompose(final Function<? super T, ? extends CompletionStage<U>> fn) {
+  default <U> AsyncIterator<U> thenCompose(
+      final Function<? super T, ? extends CompletionStage<U>> fn) {
     return AsyncIterators.thenComposeImpl(this, fn, null);
   }
 
   /**
    * Transforms {@code this} into a new AsyncIterator using the produced stages of {@code fn}
-   * applied to the output from the stages of {@code this}. {@code fn} will be run on the default
-   * asynchronous execution facility of the stages of {@code this}.
+   * applied to the output from the stages of {@code this}. When stages in {@code this} iterator
+   * complete exceptionally the returned iterator will emit an exceptional stage without applying
+   * {@code fn}. {@code fn} will be run on the default asynchronous execution facility of the stages
+   * of {@code this}.
    *
    * <pre>{@code
    * CompletableFuture<String> asyncToString(final int i);
    * intIterator // 1, 2, 3
-   *   .thenCompose(this::asyncToString);
+   *   .thenComposeAsync(this::asyncToString); //"1", "2", "3"...
    * }</pre>
    *
-   * returns an AsyncIterator of "1", "2", "3"...
+   * This is a lazy <i> intermediate </i> method.
    *
-   * @param fn A function which produces a new CompletionStage from a T
+   * @param fn A function which produces a new {@link CompletionStage} from a T
    * @return A new AsyncIterator which produces stages of fn composed with the result of the stages
    *     from {@code this} iterator
    */
-  default <U> AsyncIterator<U> thenComposeAsync(final Function<? super T, ? extends CompletionStage<U>> fn) {
+  default <U> AsyncIterator<U> thenComposeAsync(
+      final Function<? super T, ? extends CompletionStage<U>> fn) {
     return AsyncIterators.thenComposeImpl(this, fn, ForkJoinPool.commonPool());
   }
 
   /**
    * Transforms {@code this} into a new AsyncIterator using the produced stages of {@code fn}
-   * applied to the output from the stages of {@code this}. {@code fn} will be run on the supplied
-   * executor.
+   * applied to the output from the stages of {@code this}. When stages in {@code this} iterator
+   * complete exceptionally the returned iterator will emit an exceptional stage without applying
+   * {@code fn}. {@code fn} will be run on the supplied executor.
    *
    * <pre>{@code
    * CompletableFuture<String> asyncToString(final int i);
    * intIterator // 1, 2, 3
-   *   .thenCompose(this::asyncToString, executor);
+   *   .thenComposeAsync(this::asyncToString, executor); //"1", "2", "3"...
    * }</pre>
    *
-   * returns an AsyncIterator of "1", "2", "3"...
+   * This is a lazy <i> intermediate </i> method.
    *
-   * @param fn A function which produces a new CompletionStage from a T
+   * @param fn A function which produces a new {@link CompletionStage} from a T
+   * @param executor a {@link Executor} where the function {@code fn} should run
    * @return A new AsyncIterator which produces stages of fn composed with the result of the stages
    *     from {@code this} iterator
    */
@@ -330,26 +357,35 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * Composes fn with the stages of {@code this} iterator to produce new AsyncIterators, and
    * flattens the resulting iterator of iterators.
    *
-   * <pre>{@code
-   *  AsyncIterator.infiniteRange(1,1) // 1,2,3,...
-   *     .thenFlatten(i -> AsyncIterators.range(0, i))
-   * }</pre>
+   * <p>Suppose we were making requests for locations with an x coordinate and a y coordinate.
    *
-   * returns an AsyncIterator of {@code 0, 0, 1, 0, 1, 2, 0, 1, 2, 3....}
+   * <pre>{@code
+   * CompletableFuture<Z> lookupCoord(int x, int y);
+   * AsyncIterator<Z> zs = AsyncIterator.range(0, xmax, 1)
+   *  .thenFlatten(x -> AsyncIterator.range(0, ymax, 1)
+   *    .thenCompose(y -> lookupCoord(x, y)));
+   *
+   * // would print z result for (0, 0), (0, 1), (0, 2) ....
+   * zs.forEach(z ->  print(z)).toCompletableFuture().join();
+   * }</pre>
    *
    * <p>Once all elements from an AsyncIterator produced by {@code fn} have been consumed, {@link
    * #close()} is called on that iterator. If {@link #close()} produces an exception, an exceptional
-   * stage will be produced in the handled iterator. If {@link #close()} exceptions should be
-   * ignored, they should either be squashed in the input iterators or the consumer may use manual
-   * {@link #nextFuture()} iteration to continue past exceptions. It is still necessary to {@link
-   * #close()} the returned iterator, as the last AsyncIterator produced by {@code fn} may have only
-   * been partially consumed.
+   * stage will be produced in the returned iterator. If {@link #close()} exceptions should be
+   * ignored, they should either be squashed in the iterators produced by {@code fn}, or the
+   * consumer may use manual {@link #nextFuture()} iteration to continue past exceptions on the
+   * returned iterator. It is still necessary to {@link #close()} the returned iterator, as the last
+   * AsyncIterator produced by {@code fn} may have only been partially consumed and would not be
+   * closed.
+   *
+   * <p>This is a lazy <i> intermediate </i> method.
    *
    * @param fn A function which produces a new AsyncIterator
-   * @return A new AsyncIterator consisting of flattened iterators from applying fn to elements of
-   *     {@code this}
+   * @return A new AsyncIterator consisting of flattened iterators from applying {@code fn} to
+   *     elements of {@code this}
    */
-  default <U> AsyncIterator<U> thenFlatten(final Function<? super T, ? extends AsyncIterator<U>> fn) {
+  default <U> AsyncIterator<U> thenFlatten(
+      final Function<? super T, ? extends AsyncIterator<U>> fn) {
     return AsyncIterator.concat(this.thenApply(fn));
   }
 
@@ -367,6 +403,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * {@link #nextFuture()} iteration to continue past exceptions. It is still necessary to {@link
    * #close()} the returned iterator; this will close {@code this} iterator as well as the up to
    * {@code executeAhead} iterators that have been eagerly produced by {@code fn}.
+   *
+   * <p>This is a partially eager <i> intermediate </i> method.
    *
    * @param fn A function which produces a new AsyncIterator
    * @param executeAhead An integer indicating the number of allowable calls to {@code fn} that can
@@ -395,22 +433,25 @@ public interface AsyncIterator<T> extends AsyncCloseable {
 
   /**
    * Applies a transformation to {@code this} iterator with parallelism. This method will consume
-   * results from {@code this} sequentially, but will apply the mapping function {@code f} in
+   * results from {@code this} sequentially, but will apply the mapping function {@code fn} in
    * parallel. The resulting iterator will retain the order of {@code this}. Up to {@code
    * executeAhead} asynchronous operations past what the consumer of the new iterator has already
    * consumed can be started in parallel.
    *
-   * @param f A function which produces a new CompletionStage
-   * @param executeAhead An integer indicating the number of allowable calls to f that can be made
+   * <p>This is a partially eager <i> intermediate </i> method.
+   *
+   * @param fn A function which produces a new CompletionStage
+   * @param executeAhead An integer indicating the number of allowable calls to fn that can be made
    *     ahead of the user has already consumed
    * @return A transformed AsyncIterator
    * @see #thenCompose(Function)
    */
   default <U> AsyncIterator<U> thenComposeAhead(
-      final Function<? super T, ? extends CompletionStage<U>> f, final int executeAhead) {
+      final Function<? super T, ? extends CompletionStage<U>> fn, final int executeAhead) {
     // apply user function and wrap future result in a Either
     final Function<Either<End, T>, CompletionStage<Either<End, U>>> eitherF =
-        nt -> nt.fold(stop -> AsyncIterators.endFuture(), t -> f.apply(t).thenApply(Either::right));
+        nt ->
+            nt.fold(stop -> AsyncIterators.endFuture(), t -> fn.apply(t).thenApply(Either::right));
 
     return new AsyncIterators.PartiallyEagerAsyncIterator<>(this, executeAhead, eitherF, null);
   }
@@ -418,6 +459,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   /**
    * Transforms the AsyncIterator into one which will only produce results that match {@code
    * predicate}.
+   *
+   * <p>This is a lazy <i> intermediate </i> method.
    *
    * @param predicate A function that takes a T and returns true if it should be returned by the new
    *     iterator, and false otherwise
@@ -453,6 +496,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * Optional} cannot hold a null values, this method cannot be used to map to an iterator of
    * possibly null types.
    *
+   * <p>This is a lazy <i> intermediate </i> method.
+   *
    * @param fn a conditional transformation from {@code T} to {@code U}. If fn produces empty, this
    *     result will not be included in the new iterator
    * @return An AsyncIterator of all the {@code U}s that were present
@@ -465,17 +510,22 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * Composes and filters an AsyncIterator at the same time. Since {@link Optional} cannot hold a
    * null values, this method cannot be used to map to an iterator of possibly null types.
    *
+   * <p>This is a lazy <i> intermediate </i> method.
+   *
    * @param fn an asynchronous conditional transformation from T to U. If fn produces empty, this
    *     result will not be included in the new iterator
    * @return An AsyncIterator of all the {@code U}s that were present
    */
-  default <U> AsyncIterator<U> filterCompose(final Function<? super T, ? extends CompletionStage<Optional<U>>> fn) {
+  default <U> AsyncIterator<U> filterCompose(
+      final Function<? super T, ? extends CompletionStage<Optional<U>>> fn) {
     return this.thenCompose(fn).filter(Optional::isPresent).thenApply(Optional::get);
   }
 
   /**
    * Returns an AsyncIterator that will return only the first n elements of {@code this}
    * AsyncIterator.
+   *
+   * <p>This is a lazy <i> intermediate </i> method.
    *
    * @param n the maximum number of elements to take from this iterator
    * @return an AsyncIterator which will return {@code n} elements or less.
@@ -503,6 +553,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   /**
    * Returns an AsyncIterator that returns elements from the backing iterator until coming across an
    * element that does not satisfy the predicate.
+   *
+   * <p>This is a lazy <i> intermediate </i> method.
    *
    * @param predicate a predicate which returns {@code true} if we can continue returning values
    *     from the iterator, and {@code false otherwise}
@@ -542,6 +594,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * Returns an AsyncIterator where any exception produced by {@code this} iterator will be
    * transformed with the provided function.
    *
+   * <p>This is a lazy <i> intermediate </i> method.
+   *
    * @param fn the Function used to convert an error from this iterator into a T. If {@code fn}
    *     itself throws an exception, that exception will be emitted in the resulting iterator.
    * @return a new AsyncIterator where exceptions from this iterator have been converted using
@@ -566,6 +620,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * Fuses the iterator to the {@link End} result after iteration has stopped. It is normally
    * undefined behavior to call {@link #nextFuture()} after {@link End} has already been returned.
    * On a fused iterator, nextFuture will just continue to return End.
+   *
+   * <p>This is a lazy <i> intermediate </i> method.
    *
    * @return An iterator where it is safe to call {@link #nextFuture()} after {@link End} has
    *     already been returned
@@ -601,6 +657,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    *
    * <p>This may be useful for performing bulk operations on many elements, rather than on one
    * element at a time.
+   *
+   * <p>This is a lazy <i> intermediate </i> method.
    *
    * @param collector a {@link Collector} used to collect the elements of this iterator into
    *     individual batches. Each batch will be created by invoking the collector's {@link
@@ -679,6 +737,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    *
    * <p>Each batch will be as large as the given {@code batchSize} except possibly the last one,
    * which may be smaller due to exhausting the underlying iterator.
+   *
+   * <p>This is a lazy <i> intermediate </i> method.
    *
    * @see #batch(Collector, BiPredicate)
    */
@@ -786,13 +846,16 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * {@link #collect}. For example, to sum the lengths of Strings in an AsyncIterator, {@code
    * stringIt.fold((acc, s) -> acc + s.length(), 0)}.
    *
+   * <p>This is a <i>terminal method</i>.
+   *
    * @param accumulator a function that produces a new accumulation from an existing accumulation
    *     and a new element
    * @param identity a starting U value
    * @return a {@link CompletionStage} containing the resulting U from repeated application of
    *     accumulator
    */
-  default <U> CompletionStage<U> fold(final BiFunction<U, ? super T, U> accumulator, final U identity) {
+  default <U> CompletionStage<U> fold(
+      final BiFunction<U, ? super T, U> accumulator, final U identity) {
     @SuppressWarnings("unchecked")
     U[] uarr = (U[]) new Object[] {identity};
     return this.collect(() -> uarr, (u, t) -> uarr[0] = accumulator.apply(uarr[0], t))
@@ -804,6 +867,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * provides an immutable style terminal reduction operation as opposed to the mutable style
    * supported by {@link #collect}. For example, to sum an iterator of ints, {@code intIt.fold((acc,
    * i) -> acc + i, 0)}.
+   *
+   * <p>This is a <i>terminal method</i>.
    *
    * @param accumulator a function that takes the current accumulated value and a value to fold in
    *     (in that order), and produces a new accumulated value.
@@ -829,6 +894,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * Force the eager evaluation of the entire iterator, stopping only when {@code this} iterator is
    * out of elements or an exception is encountered.
    *
+   * <p>This is a <i>terminal method</i>.
+   *
    * @return a {@link CompletionStage} that is completed when consumption is finished
    */
   default CompletionStage<Void> consume() {
@@ -838,6 +905,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   /**
    * Perform a mutable reduction operation using collector and return a CompletionStage of the
    * result.
+   *
+   * <p>This is a <i>terminal method</i>.
    *
    * @param collector a {@link Collector} which will sequentially collect the contents of this
    *     iterator into an {@code R}
@@ -858,6 +927,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * mutable reduction is one where the accumulator has mutable state and additional elements are
    * incorporated by updating that state.
    *
+   * <p>This is a <i>terminal method</i>.
+   *
    * @param supplier a supplier for a stateful accumulator
    * @param accumulator a function which can incorporate T elements into a stateful accumulation
    * @return a {@link CompletionStage} which will complete with the accumulated value
@@ -872,9 +943,11 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   /**
    * Performs the side effecting action until the end of iteration is reached
    *
+   * <p>This is a <i>terminal method</i>.
+   *
    * @param action a side-effecting action that takes a T
-   * @return a {@link CompletionStage} that returns when there are no elements left to apply action
-   *     to, or an exception has been encountered.
+   * @return a {@link CompletionStage} that returns when there are no elements left to apply {@code
+   *     action} to, or an exception has been encountered.
    */
   default CompletionStage<Void> forEach(final Consumer<? super T> action) {
     return AsyncTrampoline.asyncWhile(
@@ -889,6 +962,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
 
   /**
    * Gets the first element that satisfies predicate, or empty if no such element exists
+   *
+   * <p>This is a <i>terminal method</i>.
    *
    * @param predicate the predicate that returns true for the desired element
    * @return a {@link CompletionStage} that completes with the first T to satisfy predicate, or
@@ -1079,7 +1154,9 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * @return AsyncIterator of fn applied to elements of tIt and uIt
    */
   static <T, U, V> AsyncIterator<V> zipWith(
-      final AsyncIterator<T> tIt, final AsyncIterator<U> uIt, final BiFunction<? super T, ? super U, V> fn) {
+      final AsyncIterator<T> tIt,
+      final AsyncIterator<U> uIt,
+      final BiFunction<? super T, ? super U, V> fn) {
     // once all futures are complete, if all are nonempty, then apply fn to the arg
     return new AsyncIterator<V>() {
       @Override
@@ -1129,7 +1206,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * @param stage a {@link CompletionStage} stage that produces an AsyncIterator
    * @return a new AsyncIterator which will yield the elements of the produced iterator
    */
-  static <T> AsyncIterator<T> fromIteratorStage(final CompletionStage<? extends AsyncIterator<T>> stage) {
+  static <T> AsyncIterator<T> fromIteratorStage(
+      final CompletionStage<? extends AsyncIterator<T>> stage) {
     return () -> stage.thenCompose(AsyncIterator::nextFuture);
   }
 
@@ -1282,7 +1360,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    *     iteration with {@link End}
    * @return An AsyncIterator that produces the values generated by the {@code supplier}
    */
-  static <T> AsyncIterator<T> supply(final Supplier<? extends CompletionStage<Either<End, T>>> supplier) {
+  static <T> AsyncIterator<T> supply(
+      final Supplier<? extends CompletionStage<Either<End, T>>> supplier) {
     return supplier::get;
   }
 

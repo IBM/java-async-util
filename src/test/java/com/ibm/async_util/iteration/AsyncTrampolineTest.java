@@ -17,7 +17,7 @@
 // Date: Nov 18, 2015
 // ---------------------
 
-package com.ibm.async_util.util;
+package com.ibm.async_util.iteration;
 
 import com.ibm.async_util.iteration.AsyncTrampoline;
 import org.junit.Assert;

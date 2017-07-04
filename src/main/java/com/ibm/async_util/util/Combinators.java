@@ -72,7 +72,7 @@ public class Combinators {
    * Map<Student, Double> studentGpas = keyedAll(gpaFutures).toCompletableFuture().join();
    * }</pre>
    *
-   * If value in {@code stageMap} completes exceptionally, so too will the CompletionStage returned
+   * If a value in {@code stageMap} completes exceptionally, so too will the CompletionStage returned
    * by this method.
    *
    * @param stageMap a Map with keys of type K and {@link CompletionStage CompletionStages} of type
