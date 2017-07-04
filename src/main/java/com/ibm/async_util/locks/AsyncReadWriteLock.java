@@ -62,7 +62,7 @@ public interface AsyncReadWriteLock {
    * The {@link WriteLockToken} held by the returned future is used to release the write lock after
    * it has been acquired and the write-lock-protected action has completed.
    */
-  public CompletionStage<WriteLockToken> acquireWriteLock();
+  CompletionStage<WriteLockToken> acquireWriteLock();
 
   /**
    * Attempt to immediately acquire the write lock, returning a populated {@link Optional} if the
@@ -71,14 +71,14 @@ public interface AsyncReadWriteLock {
    * @return An {@link Optional} holding a {@link WriteLockToken} if the lock is not held by a
    *         writer or any readers; otherwise an empty Optional
    */
-  public Optional<WriteLockToken> tryWriteLock();
+  Optional<WriteLockToken> tryWriteLock();
 
   /**
    * A lock token indicating that the associated lock has been acquired for reader access. Once the
    * protected action is completed, the lock may be released by calling
    * {@link ReadLockToken#releaseReadLock()}
    */
-  public interface ReadLockToken {
+  interface ReadLockToken {
     /**
      * Release this read lock, possibly allowing writers to enter once all read locks have been
      * released.
@@ -91,7 +91,7 @@ public interface AsyncReadWriteLock {
    * access. Once the protected action is completed, the lock may be released by calling
    * {@link WriteLockToken#releaseWriteLock()}
    */
-  public interface WriteLockToken {
+  interface WriteLockToken {
     /**
      * Release this write lock, allowing readers or other writers to acquire it.
      */
@@ -109,5 +109,27 @@ public interface AsyncReadWriteLock {
      * @return a ReadLockToken representing read lock exclusivity on the lock
      */
     ReadLockToken downgradeLock();
+  }
+
+  /**
+   * Creates an {@link AsyncReadWriteLock}
+   *
+   * <p>The returned lock is only guaranteed to meet the requirements of {@link AsyncReadWriteLock}; in
+   * particular, no guarantee of fairness is provided.
+   *
+   * @return a new {@link AsyncReadWriteLock}
+   */
+  static AsyncReadWriteLock create() {
+    // fair for now, may be swapped with a more performant unfair version later
+    return new FairAsyncReadWriteLock();
+  }
+
+  /**
+   * Creates a fair {@link AsyncReadWriteLock}
+   *
+   * @return a new {@link AsyncReadWriteLock} with a fair implementation
+   */
+  static AsyncReadWriteLock createFair() {
+    return new FairAsyncReadWriteLock();
   }
 }

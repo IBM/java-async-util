@@ -50,7 +50,7 @@ public interface AsyncNamedReadWriteLock<T> {
    * The {@link AsyncReadWriteLock.ReadLockToken} held by the returned future is used to release the read lock after it
    * has been acquired and the read-lock-protected action has completed.
    */
-  public CompletionStage<AsyncReadWriteLock.ReadLockToken> acquireReadLock(T name);
+  CompletionStage<AsyncReadWriteLock.ReadLockToken> acquireReadLock(T name);
 
   /**
    * Exclusively acquire the write-lock associated with the given name. If the associated write-lock
@@ -61,7 +61,7 @@ public interface AsyncNamedReadWriteLock<T> {
    * The {@link AsyncReadWriteLock.WriteLockToken} held by the returned future is used to release the write lock after
    * it has been acquired and the write-lock-protected action has completed.
    */
-  public CompletionStage<AsyncReadWriteLock.WriteLockToken> acquireWriteLock(T name);
+  CompletionStage<AsyncReadWriteLock.WriteLockToken> acquireWriteLock(T name);
 
   /**
    * Attempt to acquire the read-lock associated with the given name. If the associated write-lock
@@ -71,7 +71,7 @@ public interface AsyncNamedReadWriteLock<T> {
    * The {@link AsyncReadWriteLock.ReadLockToken} held by the returned optional is used to release the read lock after
    * it has been acquired and the read-lock-protected action has completed.
    */
-  public Optional<AsyncReadWriteLock.ReadLockToken> tryReadLock(T name);
+  Optional<AsyncReadWriteLock.ReadLockToken> tryReadLock(T name);
 
   /**
    * Attempt to acquire the write-lock associated with the given name. If the associated write-lock
@@ -81,5 +81,27 @@ public interface AsyncNamedReadWriteLock<T> {
    * The {@link AsyncReadWriteLock.WriteLockToken} held by the returned future is used to release the write lock after
    * it has been acquired and the write-lock-protected action has completed.
    */
-  public Optional<AsyncReadWriteLock.WriteLockToken> tryWriteLock(T name);
+  Optional<AsyncReadWriteLock.WriteLockToken> tryWriteLock(T name);
+
+  /**
+   * Creates an {@link AsyncNamedReadWriteLock}
+   *
+   * <p>The returned lock is only guaranteed to meet the requirements of {@link AsyncNamedReadWriteLock}; in
+   * particular, no guarantee of fairness is provided.
+   *
+   * @return a new {@link AsyncNamedReadWriteLock}
+   */
+  static AsyncNamedReadWriteLock create() {
+    // fair for now, may be swapped with a more performant unfair version later
+    return new FairAsyncNamedReadWriteLock<>();
+  }
+
+  /**
+   * Creates a fair {@link AsyncNamedReadWriteLock}
+   *
+   * @return a new {@link AsyncNamedReadWriteLock} with a fair implementation
+   */
+  static AsyncNamedReadWriteLock createFair() {
+    return new FairAsyncNamedReadWriteLock<>();
+  }
 }

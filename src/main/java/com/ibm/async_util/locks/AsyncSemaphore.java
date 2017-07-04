@@ -140,5 +140,4 @@ public interface AsyncSemaphore {
   default boolean tryAcquire() {
     return tryAcquire(1L);
   }
-
 }

@@ -103,7 +103,7 @@ public interface AsyncStampedLock extends AsyncReadWriteLock {
    *
    * @see AsyncStampedLock#tryOptimisticRead()
    */
-  public interface Stamp {
+  interface Stamp {
 
     /**
      * Check whether the associated lock's write mode has been acquired in the time after this stamp
@@ -113,5 +113,27 @@ public interface AsyncStampedLock extends AsyncReadWriteLock {
      *     stamp was issued
      */
     boolean validate();
+  }
+
+  /**
+   * Creates an {@link AsyncStampedLock}
+   *
+   * <p>The returned lock is only guaranteed to meet the requirements of {@link AsyncStampedLock}; in
+   * particular, no guarantee of fairness is provided.
+   *
+   * @return a new {@link AsyncStampedLock}
+   */
+  static AsyncStampedLock create() {
+    // fair for now, may be swapped with a more performant unfair version later
+    return new FairAsyncStampedLock();
+  }
+
+  /**
+   * Creates a fair {@link AsyncStampedLock}
+   *
+   * @return a new {@link AsyncStampedLock} with a fair implementation
+   */
+  static AsyncStampedLock createFair() {
+    return new FairAsyncStampedLock();
   }
 }
