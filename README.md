@@ -4,9 +4,9 @@
 async-util is a library for working with Java 8 [CompletionStages](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletionStage.html). Its primary goal is to provide tools for asynchronous coordination, including iterative production/consumption of CompletionStages and lock-free asynchronous mutual exclusion support.
 
 The library is broken up into three packages:
-* [Locks](#Locks)
-* [Iteration](#Iteration)
-* [Util](#Util)
+* [Locks](#locks)
+* [Iteration](#iteration)
+* [Util](#util)
 
 Working with plain CompletableFutures becomes more difficult when much of the chained work happens far removed from the source of asynchronity. Because of the care that needs to be taken to avoid blocking on certain thread pools, either user code must lose abstraction and be cognizant of where a computation is running, or be forced to spin up more threads and incur additional thread pool submission costs. Likewise, chained computations need to carefully manage the stack when asynchronous calls happen to complete synchronously to avoid StackOverflows. These tools make it easy to write high level asynchronous code that avoids explicitly dealing with these problems.
 
