@@ -69,7 +69,7 @@ import java.util.stream.Stream;
  * <pre>{@code
  * // request and lookup records one by one until we get 10 relevant records
  * List<Record> records = new ArrayList<>()
- * while (records.length() < 10) {
+ * while (records.size() < 10) {
  *     // ask for a record identifier from a remote service (blocking)
  *     RecordId response = requestIdFromIdServer();
  *     // get the actual record from another service (blocking)
