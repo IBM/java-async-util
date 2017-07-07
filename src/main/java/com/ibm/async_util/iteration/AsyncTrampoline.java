@@ -162,7 +162,7 @@ public final class AsyncTrampoline {
       final Predicate<? super T> shouldContinue,
       final Function<? super T, ? extends CompletionStage<T>> fn,
       final T initialValue) {
-    return new TrampolineInternal<T>(shouldContinue, fn, initialValue);
+    return new TrampolineInternal<>(shouldContinue, fn, initialValue);
   }
 
   /**

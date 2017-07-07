@@ -161,7 +161,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   interface End {}
 
   /**
-   * Returns a future representing the next element of the iterator.
+   * Returns a stage that will be completed with the next element of {@code this} iterator when it
+   * becomes available.
    *
    * <p>This is not a terminal method, it can be safely called multiple times. However, This this
    * method is <b>not thread safe</b>, and should only be called in a single-threaded fashion.
@@ -170,7 +171,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    *
    * <pre>{@code
    * // illegal
-   * pool.exeucte(() -> nextFuture())
+   * pool.execute(() -> nextFuture())
    * pool.execute(() -> nextFuture())
    *
    * // just as illegal
@@ -182,20 +183,16 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * }</pre>
    *
    * Though this is not a terminal method, if a terminal method has been called it is no longer safe
-   * to call this method. In general this method should be avoided in favor of the higher level
-   * methods on this interface unless some unique feature of this method is required. When {@link
-   * #nextFuture()} returns {@link End}, the iterator has no more elements. After an iterator emits
-   * an {@link End} indicator, the result of subsequent calls to nextFuture is undefined.
+   * to call this method. When nextFuture returns {@link End}, the iterator has no more elements.
+   * After an iterator emits an {@link End} indicator, the result of subsequent calls to nextFuture
+   * is undefined.
    *
    * <p>An AsyncIterator may be capable of producing normally completing stages after having
    * producing exceptionally completed stages. nextFuture is unique in that it can safely continue
    * to be called even after a returned stage completes exceptionally, whereas all terminal
    * operations short circuit when encountering an exception. If a user wishes to continue iteration
-   * after exception, they must use {@link #nextFuture()} directly, or install exception recovery
-   * with {@link #exceptionally(Function)}. While all intermediate methods will not be affected by
-   * processing an exceptional stage, some asynchronous sources may choose to always return an
-   * exceptional stage once an exception has been encountered. This is valid behavior, so care has
-   * to be taken to avoid infinite looping when using {@link #nextFuture()} in this fashion.
+   * after exception, they must use nextFuture directly, or install exception recovery with {@link
+   * #exceptionally(Function)}.
    *
    * @return A {@link CompletionStage} of the next element for iteration held in the {@link
    *     Either#right()} position, or an instance of {@link End} held in the {@link Either#left()}
@@ -207,14 +204,14 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * Relinquishes any resources associated with this iterator.
    *
    * <p>This method should be overriden if manual resource management is required, the default
-   * implmentation does nothing. This method is <b>not</b> thread safe, and must not be called
+   * implementation does nothing. This method is <b>not</b> thread safe, and must not be called
    * concurrently with calls to {@link #nextFuture()}. This method is not automatically called by
    * terminal methods, and must be explicitly called after iteration is complete if the underlying
    * iterator has resources to release. Similar to the situation with {@link Stream#close()},
    * because the common case requires no resources the user should only call close if it is possible
-   * that the {@link AsyncIterator} has resources. Special care needs to be taken to call {@link
-   * #close()} even in the case of an exception, {@link
-   * AsyncCloseable#tryComposeWith(AsyncCloseable, Function)} can make this more convenient.
+   * that the {@link AsyncIterator} has resources. Special care needs to be taken to call close even
+   * in the case of an exception, {@link AsyncCloseable#tryComposeWith(AsyncCloseable, Function)}
+   * can make this more convenient.
    *
    * <pre>{@code
    * class SocketBackedIterator implements AsyncIterator<byte[]> {
@@ -1179,7 +1176,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * iterator returns an exception, an exceptional result will be emitted by the returned iterator.
    * In the case of an exception, a single result will still be consumed from both iterators.
    *
-   * <p>When the returned iterator is {@link #close() closed}, both
+   * <p>When the returned iterator is {@link #close() closed}, the stage returned by close will be
+   * complete when both {@code tIt} and {@code uIt} have been closed.
    *
    * @param tIt an AsyncIterator of Ts
    * @param uIt an AsyncIterator of Us
@@ -1324,11 +1322,6 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   /**
    * Create an infinite AsyncIterator for a range.
    *
-   * <p>If you try to consume this entire iterator (perhaps by using a 'terminal' operation like
-   * {@link AsyncIterator#fold}), it will infinite loop.
-   *
-   * <p>The futures returned by nextFuture will be already completed.
-   *
    * @param start the start point of iteration (inclusive)
    * @param delta the increment/decrement for each iteration (may be negative)
    * @return an AsyncIterator that will return a integers starting with start incremented by delta
@@ -1350,18 +1343,18 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   }
 
   /**
-   * Create an AsyncIterator from a collection of future. As each future completes, the returned
+   * Create an AsyncIterator from a collection of {@link CompletionStage CompletionStages}. When a stage completes, the returned
    * iterator yields a value. As the name implies, the order in which values are returned does not
-   * reflect the original order of the collection of futures.
+   * reflect the original order of the collection of stages.
    *
-   * @param futures a Collection of futures that will be emitted in the returned iterator as they
+   * @param stages a Collection of {@link CompletionStage CompletionStages} that will be emitted in the returned iterator as they
    *     complete
-   * @return AsyncIterator of values produced by futures in order of completion
+   * @return AsyncIterator of values produced by stages in order of completion
    */
-  static <T> AsyncIterator<T> unordered(final Collection<? extends CompletionStage<T>> futures) {
-    final AtomicInteger size = new AtomicInteger(futures.size());
+  static <T> AsyncIterator<T> unordered(final Collection<? extends CompletionStage<T>> stages) {
+    final AtomicInteger size = new AtomicInteger(stages.size());
     final AsyncChannel<Either<Throwable, T>> channel = AsyncChannels.unbounded();
-    for (CompletionStage<T> future : futures) {
+    for (CompletionStage<T> future : stages) {
       future.whenComplete(
           (t, ex) -> {
             Either<Throwable, T> toSend = t != null ? Either.right(t) : Either.left(ex);

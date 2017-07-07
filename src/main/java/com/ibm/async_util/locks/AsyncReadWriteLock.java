@@ -38,7 +38,7 @@ public interface AsyncReadWriteLock {
    * The {@link ReadLockToken} held by the returned future is used to release the read lock after it
    * has been acquired and the read-lock-protected action has completed.
    */
-  public CompletionStage<ReadLockToken> acquireReadLock();
+  CompletionStage<ReadLockToken> acquireReadLock();
 
   /**
    * Attempt to immediately acquire the read lock, returning a populated {@link Optional} if the
@@ -51,7 +51,7 @@ public interface AsyncReadWriteLock {
    * @return An {@link Optional} holding a {@link ReadLockToken} if the lock is not held by a
    *         writer; otherwise an empty Optional
    */
-  public Optional<ReadLockToken> tryReadLock();
+  Optional<ReadLockToken> tryReadLock();
 
 
   /**

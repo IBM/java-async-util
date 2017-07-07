@@ -78,7 +78,7 @@ public class AsyncFunnel<T> {
       if (oldFuture != null) {
         return oldFuture;
       }
-    } while (!this.current.compareAndSet(null, newFuture = new CompletableFuture<T>()));
+    } while (!this.current.compareAndSet(null, newFuture = new CompletableFuture<>()));
 
     final CompletableFuture<T> finalRef = newFuture;
     return action
