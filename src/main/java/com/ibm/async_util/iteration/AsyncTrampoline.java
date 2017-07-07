@@ -9,7 +9,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /**
- * Static methods for asynchronous looping prodcedures without blowing the stack.
+ * Static methods for asynchronous looping procedures without blowing the stack.
  *
  * <p>When working with {@link CompletionStage}, it's often desirable to have a loop like construct
  * which keeps producing stages until some condition is met. Because continuations are asynchronous,
