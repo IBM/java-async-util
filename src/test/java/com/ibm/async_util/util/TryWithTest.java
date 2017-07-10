@@ -12,12 +12,13 @@ import java.util.function.Function;
 
 @RunWith(Enclosed.class)
 public class TryWithTest {
+  @SuppressWarnings("serial")
   private static class CloseException extends Exception {
   }
-
+  @SuppressWarnings("serial")
   private static class CloseRuntimeException extends RuntimeException {
   }
-
+  @SuppressWarnings("serial")
   private static class ActionException extends RuntimeException {
   }
 

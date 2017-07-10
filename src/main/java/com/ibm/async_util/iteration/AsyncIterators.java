@@ -257,12 +257,14 @@ class AsyncIterators {
           epoch.terminate(),
           (b, epochError) -> {
             // call closeFn on all extra eagerly evaluated results
+            @SuppressWarnings({"rawtypes"})
             CompletableFuture[] closeFutures =
                 pendingResults
                     .stream()
-                    .map(
-                        f -> f.thenCompose(
-                            either -> either.fold(end -> FutureSupport.voidFuture(), closeFn)))
+                    .map(f -> f.thenCompose(
+                        either -> either.fold(
+                            end -> FutureSupport.voidFuture(),
+                            closeFn)))
                     .map(CompletionStage::toCompletableFuture)
                     .toArray(CompletableFuture[]::new);
 

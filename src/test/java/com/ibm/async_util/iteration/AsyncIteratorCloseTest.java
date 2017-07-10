@@ -14,8 +14,9 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CountDownLatch;
 
 public class AsyncIteratorCloseTest {
+  @SuppressWarnings("serial")
   private static class TestException extends RuntimeException {
-  };
+  }
 
   private static RuntimeException testException = new TestException();
 

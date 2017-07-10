@@ -93,7 +93,7 @@ public interface AsyncNamedReadWriteLock<T> {
    *
    * @return a new {@link AsyncNamedReadWriteLock}
    */
-  static AsyncNamedReadWriteLock create() {
+  static <T> AsyncNamedReadWriteLock<T> create() {
     // fair for now, may be swapped with a more performant unfair version later
     return new FairAsyncNamedReadWriteLock<>();
   }
@@ -103,7 +103,7 @@ public interface AsyncNamedReadWriteLock<T> {
    *
    * @return a new {@link AsyncNamedReadWriteLock} with a fair implementation
    */
-  static AsyncNamedReadWriteLock createFair() {
+  static <T> AsyncNamedReadWriteLock<T> createFair() {
     return new FairAsyncNamedReadWriteLock<>();
   }
 }

@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 
 @RunWith(Enclosed.class)
 public class AsyncIteratorParameterizedTest {
+  @SuppressWarnings("serial")
   private static class TestException extends RuntimeException {
   }
 
@@ -426,7 +427,7 @@ public class AsyncIteratorParameterizedTest {
                     AsyncIterator.repeat(1).take(3))
                     .iterator());
         terminal
-            .apply(intermediate.apply(AsyncIterator.error(testException)))
+            .apply(intermediate.apply(concat))
             .toCompletableFuture()
             .join();
       } catch (CompletionException e) {

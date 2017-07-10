@@ -1,9 +1,5 @@
 package com.ibm.async_util.iteration;
 
-import com.ibm.async_util.util.AsyncCloseable;
-import com.ibm.async_util.util.Either;
-import com.ibm.async_util.util.FutureSupport;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -26,6 +22,10 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collector;
 import java.util.stream.Stream;
+
+import com.ibm.async_util.util.AsyncCloseable;
+import com.ibm.async_util.util.Either;
+import com.ibm.async_util.util.FutureSupport;
 
 /**
  * A mechanism for asynchronously generating and consuming values
@@ -1072,8 +1072,9 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    *         empty if no such T exists
    */
   default CompletionStage<Optional<T>> find(final Predicate<? super T> predicate) {
-    return AsyncIterators.convertSynchronousException(this.filter(predicate)::nextFuture)
-        .thenApply(Either::<End, T>right);
+    CompletionStage<Either<End, T>> future = AsyncIterators
+        .convertSynchronousException(this.filter(predicate)::nextFuture);
+    return future.thenApply((Either<End, T> e) -> e.right());
   }
 
   /**
@@ -1276,8 +1277,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
       @Override
       public CompletionStage<Void> close() {
         return CompletableFuture.allOf(
-            AsyncIterators.convertSynchronousException(tIt::<Void>close).toCompletableFuture(),
-            AsyncIterators.convertSynchronousException(uIt::<Void>close).toCompletableFuture());
+            AsyncIterators.convertSynchronousException(tIt::close).toCompletableFuture(),
+            AsyncIterators.convertSynchronousException(uIt::close).toCompletableFuture());
       }
     };
   }

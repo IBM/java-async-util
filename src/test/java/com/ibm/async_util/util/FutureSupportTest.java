@@ -8,6 +8,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 
 public class FutureSupportTest {
+  @SuppressWarnings("serial")
   private static class TestException extends RuntimeException {
   }
 

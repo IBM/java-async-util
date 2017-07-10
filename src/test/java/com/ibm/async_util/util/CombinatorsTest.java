@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class CombinatorsTest {
+  @SuppressWarnings("serial")
   private static class TestException extends RuntimeException {
   }
 
@@ -25,6 +26,7 @@ public class CombinatorsTest {
   @SuppressWarnings("unchecked")
   public void testAllOf() {
     final List<Integer> results = Arrays.asList(1, 2, 3);
+    @SuppressWarnings("rawtypes")
     final CompletableFuture[] arr =
         results.stream().map(CompletableFuture::completedFuture).toArray(CompletableFuture[]::new);
     final List<CompletableFuture<Integer>> collect =

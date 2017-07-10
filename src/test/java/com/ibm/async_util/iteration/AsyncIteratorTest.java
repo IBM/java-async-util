@@ -309,7 +309,7 @@ public class AsyncIteratorTest {
 
   private void testThenComposeAhead(
       final int count, final int ahead, final Supplier<Long> sleepMillis, final long finishInMillis)
-      throws InterruptedException {
+      throws InterruptedException, TimeoutException {
     final ForkJoinPool fjp = new ForkJoinPool(ahead);
     final AsyncIterator<Integer> it = intIterator(count);
 

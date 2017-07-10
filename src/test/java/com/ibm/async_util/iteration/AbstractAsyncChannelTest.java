@@ -143,18 +143,17 @@ public abstract class AbstractAsyncChannelTest {
 
 
   @Test
-  public void multiProducerTest() throws InterruptedException {
+  public void multiProducerTest() {
     multiProducer(this::normalConsumer);
   }
 
   @Test
-  public void multiProducerPollTest() throws InterruptedException {
+  public void multiProducerPollTest() {
     multiProducer(this::pollConsumer);
   }
 
   private void multiProducer(
-      final Supplier<CompletionStage<List<Integer>>> consumer)
-      throws InterruptedException {
+      final Supplier<CompletionStage<List<Integer>>> consumer) {
     final CompletionStage<List<Integer>> future = consumer.get();
     final List<Queue<Integer>> chunks = chunk();
     final List<CompletableFuture<Void>> futures = new ArrayList<>();

@@ -82,6 +82,8 @@ public class FairAsyncLock implements AsyncLock {
     return oldHead;
   }
 
+  // Node is AutoCloseable, but here is not acquired so should not be released
+  @SuppressWarnings("resource")
   @Override
   public Optional<LockToken> tryLock() {
     final Node oldHead = this.head;

@@ -35,13 +35,12 @@ import org.junit.Test;
 
 public class AsyncFunnelTest {
 
+  @SuppressWarnings("serial")
   private static class TestException extends Exception {
-    private static final long serialVersionUID = 1L;
     private final int i;
 
     public TestException(final int i) {
       this.i = i;
-
     }
 
     public int get() {

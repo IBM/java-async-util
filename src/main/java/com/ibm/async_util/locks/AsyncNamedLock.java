@@ -74,7 +74,7 @@ public interface AsyncNamedLock<T> {
    *
    * @return a new {@link AsyncNamedLock}
    */
-  static AsyncNamedLock create() {
+  static <T> AsyncNamedLock<T> create() {
     // fair for now, may be swapped with a more performant unfair version later
     return new FairAsyncNamedLock<>();
   }
@@ -84,7 +84,7 @@ public interface AsyncNamedLock<T> {
    *
    * @return a new {@link AsyncNamedLock} with a fair implementation
    */
-  static AsyncNamedLock createFair() {
+  static <T> AsyncNamedLock<T> createFair() {
     return new FairAsyncNamedLock<>();
   }
 }
