@@ -84,14 +84,14 @@ import java.util.concurrent.CompletionStage;
  * });
  *}
  * </pre>
- * 
+ *
  * Senders of course can be implemented without blocking while still respecting backpressure:
- * 
+ *
  * <pre>
  * {@code
  * AsyncIterator<Integer> produce() {
  *   final AsyncChannel<Integer> channel = AsyncChannels.bounded();
- *   
+ *
  *   // alternative approach to sending: async sender
  *   AsyncIterators
  *       .iterate(i -> i + 1)

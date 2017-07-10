@@ -57,8 +57,9 @@ public interface Either<L, R> {
   /**
    * Applies exactly one of the two provided functions to produce a value of type {@code V}. For
    * example, applying an int function or defaulting to zero on error:
+   * 
    * <pre>
-   * {@code 
+   * {@code
    * {
    *   Either<Exception, Integer> either = tryGetInteger();
    *   int halvedOrZero = either.fold(e -> 0, i -> i / 2);

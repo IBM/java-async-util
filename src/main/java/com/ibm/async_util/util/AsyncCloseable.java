@@ -100,7 +100,7 @@ public interface AsyncCloseable {
               ret.complete(t);
             }
           });
-        } catch (Throwable closeEx) {
+        } catch (final Throwable closeEx) {
           if (ex != null) {
             ex.addSuppressed(closeEx);
             ret.completeExceptionally(ex);
@@ -110,7 +110,7 @@ public interface AsyncCloseable {
         }
       });
       return ret;
-    } catch (Throwable ex) {
+    } catch (final Throwable ex) {
       final CompletableFuture<T> ret = new CompletableFuture<>();
       try {
         resource.close().whenComplete((ig, closeEx) -> {
@@ -119,7 +119,7 @@ public interface AsyncCloseable {
           }
           ret.completeExceptionally(ex);
         });
-      } catch (Throwable closeEx) {
+      } catch (final Throwable closeEx) {
         ex.addSuppressed(closeEx);
         ret.completeExceptionally(ex);
       }
@@ -158,13 +158,13 @@ public interface AsyncCloseable {
       final R resource, final Function<? super R, ? extends T> actionUnderResource) {
 
     try {
-      T t = actionUnderResource.apply(resource);
+      final T t = actionUnderResource.apply(resource);
       try {
         return resource.close().thenApply(ig -> t);
-      } catch (Throwable ex) {
+      } catch (final Throwable ex) {
         return FutureSupport.errorStage(ex);
       }
-    } catch (Throwable ex) {
+    } catch (final Throwable ex) {
       try {
         return resource
             .close()
@@ -174,7 +174,7 @@ public interface AsyncCloseable {
               }
               throw ex;
             });
-      } catch (Throwable closeEx) {
+      } catch (final Throwable closeEx) {
         ex.addSuppressed(closeEx);
         return FutureSupport.errorStage(ex);
       }

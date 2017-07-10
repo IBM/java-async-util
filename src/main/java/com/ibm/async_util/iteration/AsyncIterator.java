@@ -499,7 +499,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
             stop -> AsyncIterators.endFuture(),
             t -> CompletableFuture.completedFuture(Either.right(fn.apply(t))));
 
-    AsyncIterator<AsyncIterator<U>> nestedAsyncIterator =
+    final AsyncIterator<AsyncIterator<U>> nestedAsyncIterator =
         new AsyncIterators.PartiallyEagerAsyncIterator<>(
             this,
             executeAhead,
@@ -686,7 +686,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * @return a new AsyncIterator where exceptions from this iterator have been converted using
    *         {@code fn}
    */
-  default AsyncIterator<T> exceptionally(Function<Throwable, ? extends T> fn) {
+  default AsyncIterator<T> exceptionally(final Function<Throwable, ? extends T> fn) {
     return new AsyncIterator<T>() {
       @Override
       public CompletionStage<Either<End, T>> nextFuture() {
@@ -951,7 +951,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   default <U> CompletionStage<U> fold(
       final BiFunction<U, ? super T, U> accumulator, final U identity) {
     @SuppressWarnings("unchecked")
-    U[] uarr = (U[]) new Object[] {identity};
+    final U[] uarr = (U[]) new Object[] {identity};
     return this.collect(() -> uarr, (u, t) -> uarr[0] = accumulator.apply(uarr[0], t))
         .thenApply(arr -> arr[0]);
   }
@@ -1072,9 +1072,9 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    *         empty if no such T exists
    */
   default CompletionStage<Optional<T>> find(final Predicate<? super T> predicate) {
-    CompletionStage<Either<End, T>> future = AsyncIterators
+    final CompletionStage<Either<End, T>> future = AsyncIterators
         .convertSynchronousException(this.filter(predicate)::nextFuture);
-    return future.thenApply((Either<End, T> e) -> e.right());
+    return future.thenApply((final Either<End, T> e) -> e.right());
   }
 
   /**
@@ -1226,6 +1226,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
             this.curr.nextFuture());
       }
 
+      @Override
       public CompletionStage<Void> close() {
         if (this.curr == null) {
           return asyncIterators.close();
@@ -1267,9 +1268,9 @@ public interface AsyncIterator<T> extends AsyncCloseable {
       @Override
       public CompletionStage<Either<End, V>> nextFuture() {
         // call nextFuture before checking for an exception
-        CompletionStage<Either<End, T>> tFuture =
+        final CompletionStage<Either<End, T>> tFuture =
             AsyncIterators.convertSynchronousException(tIt::nextFuture);
-        CompletionStage<Either<End, U>> uFuture =
+        final CompletionStage<Either<End, U>> uFuture =
             AsyncIterators.convertSynchronousException(uIt::nextFuture);
         return tFuture.thenCombine(uFuture, (et, eu) -> AsyncIterators.zipWith(et, eu, fn));
       }
@@ -1328,7 +1329,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
 
       @Override
       public CompletionStage<Either<End, T>> nextFuture() {
-        Either<End, T> prev = curr;
+        final Either<End, T> prev = curr;
         curr = AsyncIterators.end();
         return CompletableFuture.completedFuture(prev);
       }
@@ -1344,7 +1345,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * @return an AsyncIterator that produces exceptional CompletionStages
    */
   static <T> AsyncIterator<T> error(final Throwable ex) {
-    CompletionStage<Either<End, T>> stage = FutureSupport.errorStage(ex);
+    final CompletionStage<Either<End, T>> stage = FutureSupport.errorStage(ex);
     return () -> stage;
   }
 
@@ -1355,7 +1356,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * @return An AsyncIterator that will always return {@code t}
    */
   static <T> AsyncIterator<T> repeat(final T t) {
-    CompletableFuture<Either<End, T>> ret = CompletableFuture.completedFuture(Either.right(t));
+    final CompletableFuture<Either<End, T>> ret =
+        CompletableFuture.completedFuture(Either.right(t));
     return () -> ret;
   }
 
@@ -1384,7 +1386,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
       @Override
       public CompletionStage<Either<End, Integer>> nextFuture() {
         if ((delta > 0 && counter < end) || (delta < 0 && counter > end)) {
-          int ret = counter;
+          final int ret = counter;
           counter += delta;
           return CompletableFuture.completedFuture(Either.right(ret));
         } else {
@@ -1410,7 +1412,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
 
       @Override
       public CompletionStage<Either<End, Integer>> nextFuture() {
-        int old = counter;
+        final int old = counter;
         counter += delta;
         return CompletableFuture.completedFuture(Either.right(old));
       }
@@ -1429,9 +1431,9 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   static <T> AsyncIterator<T> unordered(final Collection<? extends CompletionStage<T>> stages) {
     final AtomicInteger size = new AtomicInteger(stages.size());
     final AsyncChannel<Either<Throwable, T>> channel = AsyncChannels.unbounded();
-    for (CompletionStage<T> future : stages) {
+    for (final CompletionStage<T> future : stages) {
       future.whenComplete((t, ex) -> {
-        Either<Throwable, T> toSend = t != null ? Either.right(t) : Either.left(ex);
+        final Either<Throwable, T> toSend = t != null ? Either.right(t) : Either.left(ex);
         channel.send(toSend);
         if (size.decrementAndGet() == 0) {
           // terminate the channel
@@ -1490,7 +1492,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
       @Override
       public CompletionStage<Either<End, T>> nextFuture() {
         // if there was a value, apply f to it
-        CompletionStage<Either<End, T>> ret = prev;
+        final CompletionStage<Either<End, T>> ret = prev;
         this.prev = this.prev.thenCompose(nxt -> nxt.fold(end -> AsyncIterators.endFuture(), f));
         return ret;
       }

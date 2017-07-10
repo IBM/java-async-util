@@ -41,7 +41,7 @@ public interface AsyncSemaphore {
    * are implementation specific and will be defined by the given implementing class. The returned
    * future will complete when sufficient permits have been {@link #release(long) released} and
    * assigned to this acquisition by the governing queue policy.
-   * 
+   *
    * @param permits A positive number of permits to acquire from the semaphore
    * @throws IllegalArgumentException if the requested permits are not positive, or exceed any
    *         restrictions enforced by the given implementation
@@ -54,7 +54,7 @@ public interface AsyncSemaphore {
    * If there are unfulfilled acquires pending, this method will release permits to the waiting
    * acquisitions based on the implementation's release and acquire policies. Consequently, this
    * method may complete a number of waiting futures and execute the corresponding observers.
-   * 
+   *
    * @param permits A positive number of permits to release to the semaphore
    * @throws IllegalArgumentException if the released permits are not positive, or exceed any
    *         restrictions enforced by the given implementation
@@ -70,7 +70,7 @@ public interface AsyncSemaphore {
    * acquisitions, e.g. whether permits may be acquired while other acquisitions are waiting. This
    * interface only requires that this method will succeed when the given permits are available and
    * there are no other acquisitions queued.
-   * 
+   *
    * @param permits A positive number of permits to acquire from the semaphore
    * @return true iff all of the requested permits are available, and have been immediately acquired
    * @throws IllegalArgumentException if the requested permits are not positive, or exceed any
@@ -84,7 +84,7 @@ public interface AsyncSemaphore {
    * After this call -- provided there are no intermediate {@link #release(long) releases} -- any
    * attempt to {@link #acquire(long) acquire} will queue and any {@link #tryAcquire(long)
    * tryAcquire} will fail.
-   * 
+   *
    * @return the number of permits that were available and have been drained
    */
   long drainPermits();
@@ -114,7 +114,7 @@ public interface AsyncSemaphore {
   /**
    * Acquires 1 permit from the semaphore as if by calling {@link #acquire(long)} with an argument
    * of 1.
-   * 
+   *
    * @see #acquire(long)
    */
   default CompletionStage<Void> acquire() {
@@ -124,7 +124,7 @@ public interface AsyncSemaphore {
   /**
    * Releases 1 permit from the semaphore as if by calling {@link #release(long)} with an argument
    * of 1.
-   * 
+   *
    * @see #release(long)
    */
   default void release() {
@@ -134,7 +134,7 @@ public interface AsyncSemaphore {
   /**
    * Attempts to acquire 1 permit from the semaphore as if by calling {@link #tryAcquire(long)} with
    * an argument of 1.
-   * 
+   *
    * @see #tryAcquire(long)
    */
   default boolean tryAcquire() {

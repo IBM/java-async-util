@@ -36,7 +36,7 @@ public class FairAsyncReadWriteLock implements AsyncReadWriteLock {
    * queue 2) new readers can be rejected by nodes after the write lock acquisition, sending them to
    * the next queued node 3) the acquiring writer has a means of being signaled when all readers
    * before him have released.
-   * 
+   *
    * When a writer acquires a write lock, first it terminates the epoch which will reject subsequent
    * readers and writers. The terminating writer must then push a new epoch node to the head of the
    * queue, and link as its predecessor, for subsequent locks to enter. The terminating writer
@@ -61,7 +61,7 @@ public class FairAsyncReadWriteLock implements AsyncReadWriteLock {
   /**
    * If the epoch has not been terminated, it's available for readers to acquire and wait on the
    * read future. The read future is triggered by the preceding writer's release.
-   * 
+   *
    * Writer acquisition terminates the epoch, forcing subsequent readers to re-read the head. The
    * writer future is triggered on the epoch's clearing i.e. when all readers have exited (including
    * the preceding writer's implicit read lock)
@@ -69,6 +69,10 @@ public class FairAsyncReadWriteLock implements AsyncReadWriteLock {
   @SuppressWarnings("serial")
   static class Node extends AbstractSimpleEpoch
       implements ReadLockToken, WriteLockToken, AsyncStampedLock.Stamp {
+    /**
+     *
+     */
+    private static final long serialVersionUID = 2082395072514665800L;
     final CompletableFuture<ReadLockToken> readFuture;
     final CompletableFuture<WriteLockToken> writeFuture;
     Node next;
@@ -133,7 +137,7 @@ public class FairAsyncReadWriteLock implements AsyncReadWriteLock {
        * When all the readers have left a terminated node, the writer may proceed; specifically by
        * completing the write future. Unbounded recursion needs to be prevented, however, so
        * completing the future isn't so simple.
-       * 
+       *
        * To prevent stack growth in recursion we use stack unrolling. The principle mechanism is
        * this: before a release triggers the potential recursion (completing the write future), the
        * triggering node will record its current thread; if nested calls find that their thread is
@@ -142,15 +146,15 @@ public class FairAsyncReadWriteLock implements AsyncReadWriteLock {
        * to unroll by unlinking its predecessor from the queue, taking the place of the triggering
        * node. The triggering method finds that its predecessor's 'next' has been re-linked (i.e.
        * replaced in the queue) so it begins a new trigger on that new node.
-       * 
+       *
        * You may think it's strange that none of this unrolling code uses conventional thread-safety
        * mechanisms -- access to prev could span threads! That's true, but it's correct: there are 2
        * fields of `this.prev` that are potentially accessed externally, `releaseThread` and `next`.
-       * 
+       *
        * - Non-null values of releaseThread are only relevant if it's equal to Thread.current(), so
        * if we read a value that's out of date, we don't care unless it's from the current thread --
        * but the current thread can't be out of date with itself!
-       * 
+       *
        * - prev's next is only modified under the condition that prev's releaseThread equals
        * Thread.current() -- so the predecessor is on the same thread, there's no thread-safety
        * issue

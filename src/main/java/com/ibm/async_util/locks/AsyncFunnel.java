@@ -89,7 +89,7 @@ public class AsyncFunnel<T> {
         .get()
         .whenComplete(
             (t, ex) -> {
-              current.set(null);
+              this.current.set(null);
               if (t != null) {
                 finalRef.complete(t);
               } else {

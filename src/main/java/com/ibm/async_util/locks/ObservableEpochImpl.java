@@ -1,10 +1,10 @@
 package com.ibm.async_util.locks;
 
-import com.ibm.async_util.util.FutureSupport;
-
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+
+import com.ibm.async_util.util.FutureSupport;
 
 
 /**
@@ -12,6 +12,10 @@ import java.util.concurrent.CompletionStage;
  */
 @SuppressWarnings("serial")
 class ObservableEpochImpl extends AbstractSimpleEpoch implements ObservableEpoch {
+  /**
+   *
+   */
+  private static final long serialVersionUID = -3263030267313569994L;
   private final CompletableFuture<Boolean> future = new CompletableFuture<>();
 
   @Override

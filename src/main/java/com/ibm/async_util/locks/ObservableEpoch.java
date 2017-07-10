@@ -13,7 +13,7 @@ public interface ObservableEpoch {
 
   /**
    * Attempt to secure a position in the active epoch, failing if it has already been terminated.
-   * 
+   *
    * @return an {@link Optional} populated with an {@link EpochToken} associated with the active
    *         epoch if it has not been terminated. Otherwise, returns an empty Optional
    */
@@ -22,7 +22,7 @@ public interface ObservableEpoch {
   /**
    * Atomically ends the active epoch, preventing new entrants from successfully entering and
    * returning a {@link CompletionStage} that triggers once all active participants have exited.
-   * 
+   *
    * @return a {@link CompletionStage}, which will complete after the last open {@link EpochToken}
    *         has been closed. The value of the future will be {@code false} if this epoch was
    *         already terminated, otherwise {@code true} for the single call that terminates this
@@ -34,7 +34,7 @@ public interface ObservableEpoch {
    * Returns {@code true} if this epoch has been terminated. This boolean does <i>not</i> indicate
    * whether all active participants have exited the epoch, only whether the {@link #terminate()}
    * method has been called and subsequent entrants will be rejected
-   * 
+   *
    * @return true iff this epoch has been terminated
    */
   boolean isTerminated();
@@ -45,7 +45,7 @@ public interface ObservableEpoch {
    * <i>not</i> terminate the epoch itself -- new entrants may enter and exit freely after this
    * method is called, and a separate call to {@link #terminate()} must be made before this returned
    * future completes
-   * 
+   *
    * @return a {@link CompletionStage} which will complete after a call to {@link #terminate()} has
    *         been made, and the last open {@link EpochToken} has been closed.
    */
@@ -70,7 +70,7 @@ public interface ObservableEpoch {
   /**
    * A token signifying successful entry in the active epoch. This token must be
    * {@link EpochToken#close() closed} when its work has completed in order to exit the epoch.
-   * 
+   *
    * @see ObservableEpoch
    */
   public interface EpochToken extends AutoCloseable {

@@ -10,6 +10,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 abstract class AbstractSimpleEpoch
     // opportunistically extend AtomicInteger for state
     extends AtomicInteger implements ObservableEpoch.EpochToken {
+  /**
+   *
+   */
+  private static final long serialVersionUID = -6988892107222944382L;
   /*
    * Epoch state is maintained by an atomically adjusted integer. Termination sets the high bit of
    * the state; any participants attempting to enter will fail if they find the high bit is set.

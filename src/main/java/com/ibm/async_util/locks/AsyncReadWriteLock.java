@@ -47,7 +47,7 @@ public interface AsyncReadWriteLock {
    * Implementations may define whether this attempt can succeed while a writer is waiting to
    * acquire ("barging"). This interface only requires that the attempt will succeed if all writers
    * have released and no new writers are acquiring.
-   * 
+   *
    * @return An {@link Optional} holding a {@link ReadLockToken} if the lock is not held by a
    *         writer; otherwise an empty Optional
    */
@@ -67,7 +67,7 @@ public interface AsyncReadWriteLock {
   /**
    * Attempt to immediately acquire the write lock, returning a populated {@link Optional} if the
    * lock is not currently held by a writer or any readers.
-   * 
+   *
    * @return An {@link Optional} holding a {@link WriteLockToken} if the lock is not held by a
    *         writer or any readers; otherwise an empty Optional
    */
@@ -105,7 +105,7 @@ public interface AsyncReadWriteLock {
      * <p>
      * The returned {@link ReadLockToken} becomes the principle token for this acquisition; this
      * calling WriteLockToken should not be released afterwards, and may be abandoned freely.
-     * 
+     *
      * @return a ReadLockToken representing read lock exclusivity on the lock
      */
     ReadLockToken downgradeLock();

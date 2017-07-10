@@ -19,14 +19,14 @@
 
 package com.ibm.async_util.iteration;
 
-import com.ibm.async_util.locks.AsyncSemaphore;
-import com.ibm.async_util.locks.FairAsyncSemaphore;
-import com.ibm.async_util.util.Either;
-
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
+import com.ibm.async_util.locks.AsyncSemaphore;
+import com.ibm.async_util.locks.FairAsyncSemaphore;
+import com.ibm.async_util.util.Either;
 
 /**
  * Methods to construct various multi-producer-single-consumer (mpsc) AsyncChannels.
@@ -170,9 +170,10 @@ public final class AsyncChannels {
       });
     }
 
+    @Override
     public Optional<T> poll() {
       // head can never complete exceptionally so this should never throw
-      Either<End, T> currentResult = this.head.getNow(null);
+      final Either<End, T> currentResult = this.head.getNow(null);
       if (currentResult != null) {
         // we're going to consume a value, move the header pointer forward
         this.head = this.head.next;
@@ -288,7 +289,7 @@ public final class AsyncChannels {
 
     @Override
     public Optional<T> poll() {
-      Optional<T> poll = this.backingChannel.poll();
+      final Optional<T> poll = this.backingChannel.poll();
       // if we got a result, we should release a permit
       poll.ifPresent(ig -> this.sendThrottle.release());
       return poll;

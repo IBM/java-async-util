@@ -36,11 +36,11 @@ public class FairAsyncStampedLock extends FairAsyncReadWriteLock implements Asyn
    * Circumventing this limitation may be possible, but would likely involve changes to the
    * underlying lock structure, at which point an independent implementation would likely be more
    * practical than piggy-backing the existing rwlock.
-   * 
+   *
    * Such a hypothetical improvement would allow optimistic reads to proceed even with queued
    * writers, which would be favorable particularly when full read-locks are held for a relatively
    * long time, possibly creating many queued writers.
-   * 
+   *
    * As it stands, this implementation is fairly effective when writer acquisition is rare, which in
    * general is a cause for looking into optimistic read strategies to begin with.
    */

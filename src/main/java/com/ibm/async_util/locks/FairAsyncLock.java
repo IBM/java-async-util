@@ -16,7 +16,7 @@ public class FairAsyncLock implements AsyncLock {
    * a new node to the head and claims the node that was just replaced by this process. Each node
    * holds a future which is triggered when the preceding node's `releaseLock` method has been
    * called (excluding the initial node, whose future is complete during construction of the lock).
-   * 
+   *
    * The current holder of the lock -- the assignee of the node with a complete future and not yet
    * called `releaseLock` -- holds the implicit tail of the queue. When release is called on this
    * node, the node unlinks itself from the queue and triggers its successor's future, allowing the

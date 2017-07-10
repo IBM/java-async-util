@@ -1,11 +1,11 @@
 package com.ibm.async_util.util;
 
-import org.junit.Assert;
-import org.junit.Test;
-
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+
+import org.junit.Assert;
+import org.junit.Test;
 
 public class FutureSupportTest {
   @SuppressWarnings("serial")

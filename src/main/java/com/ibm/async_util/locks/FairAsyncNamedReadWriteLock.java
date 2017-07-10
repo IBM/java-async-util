@@ -38,7 +38,7 @@ public class FairAsyncNamedReadWriteLock<T> implements AsyncNamedReadWriteLock<T
    * Locks are maintained as a linked list (with each link representing a write-lock acquisition),
    * in the same manner as the non-named FairAsyncReadWriteLock implementation, with atomically
    * swapped references to the head in the name map.
-   * 
+   *
    * Nodes can be removed from the map when their internal count reaches zero; they are always
    * initialized with non-zero state. Any acquisition that encounters a zero node in the map must
    * wait for this node to be removed (where the release that brings the node to zero is tasked with
@@ -49,6 +49,10 @@ public class FairAsyncNamedReadWriteLock<T> implements AsyncNamedReadWriteLock<T
   @SuppressWarnings("serial")
   private final class NamedNode
       extends FairAsyncReadWriteLock.Node {
+    /**
+     *
+     */
+    private static final long serialVersionUID = -4539914522341330733L;
     private final T name;
 
     /**

@@ -119,7 +119,7 @@ public class Combinators {
       final Collection<? extends CompletionStage<T>> stages,
       final Collector<? super T, A, R> collector) {
     @SuppressWarnings("rawtypes")
-    CompletableFuture[] arr =
+    final CompletableFuture[] arr =
         stages.stream().map(CompletionStage::toCompletableFuture).toArray(CompletableFuture[]::new);
     return CompletableFuture.allOf(arr).thenApply(ignored -> {
       return Stream.of((CompletableFuture<T>[]) arr)

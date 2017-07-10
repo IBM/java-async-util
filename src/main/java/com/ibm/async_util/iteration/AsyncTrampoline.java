@@ -1,12 +1,12 @@
 package com.ibm.async_util.iteration;
 
-import com.ibm.async_util.util.FutureSupport;
-
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+
+import com.ibm.async_util.util.FutureSupport;
 
 /**
  * Static methods for asynchronous looping procedures without blowing the stack.
@@ -103,17 +103,17 @@ public final class AsyncTrampoline {
             if (this.shouldContinue.test(c)) {
               this.f.apply(c).whenComplete((next, ex) -> {
                 if (ex != null) {
-                  this.completeExceptionally(ex);
+                  completeExceptionally(ex);
                 } else {
                   unroll(next, currentThread, currentPassBack);
                 }
               });
             } else {
-              this.complete(c);
+              complete(c);
               return;
             }
-          } catch (Throwable e) {
-            this.completeExceptionally(e);
+          } catch (final Throwable e) {
+            completeExceptionally(e);
             return;
           }
         } while ((c = currentPassBack.poll()) != null);

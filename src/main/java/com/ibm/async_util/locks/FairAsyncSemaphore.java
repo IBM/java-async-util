@@ -19,13 +19,13 @@
 
 package com.ibm.async_util.locks;
 
-import com.ibm.async_util.util.FutureSupport;
-
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
+import com.ibm.async_util.util.FutureSupport;
 
 /**
  * An {@link AsyncSemaphore} implementation which is strictly fair: if the permits requested by an
@@ -45,7 +45,7 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
    * This AsyncSemaphore's implementation consists of a series of linked nodes which each hold some
    * count of permits. The sum of the permits across the nodes denotes the (possibly negative) count
    * of permits in the semaphore.
-   * 
+   *
    * Initially, the semaphore begins with 1 node, populated with the value given by the constructor
    * parameter. This node is set as the head and tail for the internal FIFO queue. If the semaphore
    * has positive permits, there can only be 1 valid (non-marked-zero, see below) node within the
@@ -53,7 +53,7 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
    * must be fulfilled before positive permits may sit idle. If such a positive node has enough
    * permits to satisfy an incoming acquisition, that acquisition will atomically subtract its
    * request from the node's permits and return a complete future.
-   * 
+   *
    * In general, acquisitions begin at the tail of the queue. If the tail node does not have
    * sufficient permits to satisfy an incoming acquisition, the acquisition will atomically subtract
    * its permits (yielding a negative permit count) and set a mark bit on the node's permit value.
@@ -63,15 +63,15 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
    * the acquisition must then insert a new (unmarked) zero-value node onto the tail for subsequent
    * acquisitions and releases to process. Consequently, a marked node must have a successor; this
    * observations raises 2 points:
-   * 
+   *
    * 1) an acquisition may find the tail node is marked, because marking and inserting a successor
    * are not performed atomically. This acquisition may spin in wait for the new node to be
    * installed as successor to the marked node
-   * 
+   *
    * 2) a release cannot restore the permit count of a marked node above zero, because there must be
    * a successor (though possibly not a marked one). To enforce fairness, the release's permits must
    * continue to fulfill any remaining nodes in the queue after bringing a marked node up to zero.
-   * 
+   *
    * Releases begin traversal at the head of the queue. If a marked node is encountered, the
    * releaser adds from its permits to the node's permit deficit (up to zero, as mentioned in (2)).
    * Any remaining permits are used to continue traversal from the successor node. If a node's value
@@ -79,11 +79,11 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
    * Marked nodes with zero permits, or ones brought up to zero, are removed from the queue by
    * advancing the head beyond that node. If an unmarked node is encountered, its permits may be
    * incremented freely as it cannot have any successors and traversal may end.
-   * 
+   *
    * The head and tail references are not required to be strictly maintained. A number of steps may
    * be necessary to reach the first relevant node in the direction of traversal from head or tail,
    * similar to ConcurrentLinkedQueue. Likewise, it is possible for tail to lag behind head.
-   * 
+   *
    * Marking a node's value is accomplished by setting the high bit of the long. In order to express
    * permits of both positive and negative values in the lower 63 bits, an encoding process is used
    * to translate the range [0, 9223372036854775807] into a corresponding range with negative
@@ -97,7 +97,7 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
    * without any intermediate decoding. Similarly, comparing encoded values against one another is
    * equivalent to comparing their non-encoded counterparts (disregarding the marked bit). This is
    * useful in comparing against the encoded value of zero.
-   * 
+   *
    * Stack unrolling of the triggered-by-release futures is accomplished using a ThreadLocal list
    * container. The first call to release on the given thread stack will populate the thread local,
    * noting that the list is empty to indicate that it is the first releaser on the thread. This
@@ -138,7 +138,7 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
    * Creates a new asynchronous semaphore with the given initial number of permits. This value may
    * be negative in order to require {@link #release(long) releases} before {@link #acquire(long)
    * acquisitions}
-   * 
+   *
    * @param initialPermits The initial number of permits available in the semaphore. This value must
    *        be within the interval [{@link #MIN_PERMITS}, {@link #MAX_PERMITS}]
    */
@@ -202,7 +202,7 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
    * all the requested permits cannot be fulfilled immediately, the acquisition will enter a FIFO
    * queue. Any subsequent acquisitions will also enter this queue until the head has been fulfilled
    * by sufficient releases.
-   * 
+   *
    * @param permits The number of permits to acquire. This value must be greater than {@code 0} and
    *        no greater than {@link #MAX_PERMITS}
    * @see AsyncSemaphore#acquire(long)
@@ -344,7 +344,7 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
    * Note that this differs from the behavior of
    * {@link java.util.concurrent.Semaphore#tryAcquire(int)} with a fairness policy. This method will
    * <i>not</i> barge ahead of other waiters.
-   * 
+   *
    * @param permits The number of permits to acquire. This value must be greater than {@code 0} and
    *        no greater than {@link #MAX_PERMITS}
    * @see AsyncSemaphore#tryAcquire(long)
@@ -426,6 +426,10 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
 
   @SuppressWarnings("serial")
   private static final class Node extends AtomicLong {
+    /**
+     *
+     */
+    private static final long serialVersionUID = -6812682839787807417L;
     private final CompletableFuture<Void> future = new CompletableFuture<>();
     private volatile Node next;
 

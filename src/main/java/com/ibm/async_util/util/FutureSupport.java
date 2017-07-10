@@ -51,7 +51,7 @@ public class FutureSupport {
    * @return a {@link CompletionStage} that has already been completed exceptionally with {@code ex}
    */
   public static <T> CompletionStage<T> errorStage(final Throwable ex) {
-    CompletableFuture<T> fut = new CompletableFuture<>();
+    final CompletableFuture<T> fut = new CompletableFuture<>();
     fut.completeExceptionally(ex);
     return fut;
   }
@@ -92,9 +92,9 @@ public class FutureSupport {
         try (R rtemp = r) {
           return actionUnderResource.apply(r);
         }
-      } catch (RuntimeException rte) {
+      } catch (final RuntimeException rte) {
         throw rte;
-      } catch (Throwable ex) {
+      } catch (final Throwable ex) {
         throw new CompletionException(ex);
       }
     });
@@ -146,7 +146,7 @@ public class FutureSupport {
             } else {
               ret.completeExceptionally(actionEx);
             }
-          } catch (Exception closeEx) {
+          } catch (final Exception closeEx) {
             if (actionEx != null) {
               actionEx.addSuppressed(closeEx);
               ret.completeExceptionally(actionEx);
@@ -155,10 +155,10 @@ public class FutureSupport {
             }
           }
         });
-      } catch (Throwable actionException) {
+      } catch (final Throwable actionException) {
         try {
           r.close();
-        } catch (Exception closeException) {
+        } catch (final Exception closeException) {
           actionException.addSuppressed(closeException);
         }
         ret.completeExceptionally(actionException);
@@ -213,7 +213,7 @@ public class FutureSupport {
           }
           ret.complete(u);
         });
-      } catch (Throwable e) {
+      } catch (final Throwable e) {
         ret.completeExceptionally(e);
       }
     });
