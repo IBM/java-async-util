@@ -35,9 +35,19 @@ public interface AsyncLock {
    * protected action is completed, the lock may be released by calling {@link
    * LockToken#releaseLock()}
    */
-  interface LockToken {
+  interface LockToken extends AutoCloseable {
     /** Release this lock, allowing others to acquire it. */
     void releaseLock();
+
+    /**
+     * Release this lock, allowing others to acquire it.
+     *
+     * <p>{@inheritDoc}
+     */
+    @Override
+    default void close() {
+      releaseLock();
+    }
   }
 
   /**
