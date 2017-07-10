@@ -9,13 +9,15 @@ import java.util.function.Function;
  * can be constructed with {@link #left() Either.left(value)}, a right with {@link #right()
  * Either.right(value)}.
  *
- * <p>By convention, if using this class to represent a result that may an error or a success, the
+ * <p>
+ * By convention, if using this class to represent a result that may an error or a success, the
  * error type should be in the left position and the success type should be in the right position
  * (mnemonic: "right" also means correct). As a result, this class implements monadic methods
  * (similar to those on {@link Optional}, {@link java.util.stream.Stream}, etc) for working on the R
  * type.
  *
- * <pre>{@code
+ * <pre>
+ * {@code
  * Either<Exception, String> tryGetString();
  * Either<Exception, Integer> tryParse(String s);
  * Double convert(Integer i);
@@ -25,11 +27,12 @@ import java.util.function.Function;
  *  .flatMap(tryParse) // Either<Exception, Integer>
  *  .map(convert); // Either<Exception, Double>
  *
- * }</pre>
+ * }
+ * </pre>
  *
  * @param <L> The left type, by convention the error type if being used to represent possible errors
  * @param <R> The right type, by convention the success type if being used to represent possible
- *     errors
+ *        errors
  */
 public interface Either<L, R> {
 
@@ -54,19 +57,21 @@ public interface Either<L, R> {
   /**
    * Applies exactly one of the two provided functions to produce a value of type {@code V}. For
    * example, applying an int function or defaulting to zero on error:
-   *
-   * <pre>{@code
-   * Either<Exception, Integer> either = tryGetInteger();
-   * int halvedOrZero = either.fold(e -> 0, i -> i / 2);
-   * }</pre>
+   * <pre>
+   * {@code 
+   * {
+   *   Either<Exception, Integer> either = tryGetInteger();
+   *   int halvedOrZero = either.fold(e -> 0, i -> i / 2);
+   * }}
+   * </pre>
    *
    * @param leftFn a function the produces a V from an L, only applied if {@code this} contains an L
-   *     type
+   *        type
    * @param rightFn a function the produces a V from an R, only applied if {@code this} contains an
-   *     R type
+   *        R type
    * @param <V> the return type
    * @return a {@code V} value produced by {@code leftFn} if {@code this} contained an L, produced
-   *     by {@code rightFn} otherwise.
+   *         by {@code rightFn} otherwise.
    * @throws NullPointerException if the function to be applied is null
    */
   <V> V fold(
@@ -77,9 +82,9 @@ public interface Either<L, R> {
    * Calls exactly one of the two provided functions with an L or an R
    *
    * @param leftConsumer a function that consumes an L, only applied if {@code this} contains an L
-   *     type
+   *        type
    * @param rightConsumer a function the consumes an R, only applied if {@code this} contains an R
-   *     type
+   *        type
    * @throws NullPointerException if the function to be applied is null
    */
   default void forEach(
@@ -99,19 +104,21 @@ public interface Either<L, R> {
    * Creates a new Either possibly of two new and distinct types, by applying the provided
    * transformation functions.
    *
-   * <pre>{@code
+   * <pre>
+   * {@code
    * Either<Double, Integer> result;
    * Either<String, Boolean> x = result.map(d -> d.toString(), i -> i % 2 == 0)
-   * }</pre>
+   * }
+   * </pre>
    *
    * @param leftFn a function that takes an L and produces an A, to be applied if {@code this}
-   *     contains an L
+   *        contains an L
    * @param rightFn a function that takes an R and produces and B, to be applied if {@code this}
-   *     contains an R
+   *        contains an R
    * @param <A> the left type of the returned Either
    * @param <B> the right type of the returned Either
    * @return a new Either, containing an A resulting from the application of leftFn if {@code this}
-   *     contained an L, or containing a B resulting from the application of rightFn otherwise
+   *         contained an L, or containing a B resulting from the application of rightFn otherwise
    * @throws NullPointerException if the function to be applied is null
    */
   default <A, B> Either<A, B> map(
@@ -127,16 +134,18 @@ public interface Either<L, R> {
    * if we have either a Double or an error, convert it into an Integer if it's a Double, then
    * convert it to a String if it's an Integer:
    *
-   * <pre>{@code
+   * <pre>
+   * {@code
    * Either<Exception, Double> eitherDouble;
    * Either<Exception, String> = eitherString = eitherInt.map(Double::intValue).map(Integer::toString);
-   * }</pre>
+   * }
+   * </pre>
    *
    * @param fn function that takes an R value and produces a V value, to be applied if {@code this}
-   *     contains an R
+   *        contains an R
    * @param <V> the right type of the returned Either
    * @return an Either containing the transformed value produced by {@code fn} if {@code this}
-   *     contained an R, or the original L value otherwise.
+   *         contained an R, or the original L value otherwise.
    */
   default <V> Either<L, V> map(final Function<? super R, ? extends V> fn) {
     return fold(Either::left, r -> Either.right(fn.apply(r)));
@@ -148,7 +157,8 @@ public interface Either<L, R> {
    * example, if we have either a String or an error, attempt to parse into an Integer (which could
    * potentially itself produce an error):
    *
-   * <pre>{@code
+   * <pre>
+   * {@code
    * Either<Exception, Integer> tryParse(String s);
    * Either<Exception, String> eitherString;
    *
@@ -156,13 +166,15 @@ public interface Either<L, R> {
    * // or if tryParse failed, otherwise will be an Integer
    * Either<Exception, Integer> eitherString.flatMap(tryParse);
    *
-   * }</pre>
+   * }
+   * </pre>
    *
    * @param f a function that takes an R value and produces an Either of a L value or a V value
    * @param <V> the right type of the returned Either
    * @return an Either containing the right value produced by {@code f} if both {@code this} and the
-   *     produced Either were right, the left value of the produced Either if {@code this} was right
-   *     but the produced value wasn't, or the original left value if {@code this} was left.
+   *         produced Either were right, the left value of the produced Either if {@code this} was
+   *         right but the produced value wasn't, or the original left value if {@code this} was
+   *         left.
    */
   default <V> Either<L, V> flatMap(final Function<? super R, ? extends Either<L, V>> f) {
     return fold(Either::left, f);
@@ -172,7 +184,7 @@ public interface Either<L, R> {
    * Optionally gets the left value of {@code this} if it exists
    *
    * @return a present {@link Optional} of an L if {@code this} contains an L, an empty one
-   *     otherwise.
+   *         otherwise.
    * @throws NullPointerException if the left value of {@code this} is present and null
    */
   default Optional<L> left() {
@@ -183,7 +195,7 @@ public interface Either<L, R> {
    * Optionally gets the right value of {@code this} if it exists
    *
    * @return a present {@link Optional} of an R if {@code this} contains an R, an empty one
-   *     otherwise.
+   *         otherwise.
    * @throws NullPointerException if the right value of {@code this} is present and null
    */
   default Optional<R> right() {

@@ -14,7 +14,8 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CountDownLatch;
 
 public class AsyncIteratorCloseTest {
-  private static class TestException extends RuntimeException {};
+  private static class TestException extends RuntimeException {
+  };
 
   private static RuntimeException testException = new TestException();
 
@@ -120,9 +121,11 @@ public class AsyncIteratorCloseTest {
               return ret;
             });
 
-    for (int i = 0; i < 4; i++) flattend.nextFuture().toCompletableFuture().join();
+    for (int i = 0; i < 4; i++)
+      flattend.nextFuture().toCompletableFuture().join();
     Assert.assertTrue(closeables.get(0).closed);
-    for (int i = 0; i < 3; i++) flattend.nextFuture().toCompletableFuture().join();
+    for (int i = 0; i < 3; i++)
+      flattend.nextFuture().toCompletableFuture().join();
     Assert.assertTrue(closeables.get(1).closed);
 
     flattend.close().toCompletableFuture().join();
@@ -133,23 +136,25 @@ public class AsyncIteratorCloseTest {
 
   @Test
   public void testZipWithClose() {
-      for (boolean it1Failed : new Boolean[]{false, true}) {
-        for (boolean it2Failed : new Boolean[]{false, true}) {
-          CloseableIterator it1 = new CloseableIterator(AsyncIterator.range(0, 3, 1), it1Failed ? testException : null);
-          CloseableIterator it2 = new CloseableIterator(AsyncIterator.range(0, 3, 1), it2Failed ? testException : null);
-          AsyncIterator<Integer> zipped = AsyncIterator.zipWith(it1, it2, (i, j) -> i + j);
-          zipped.nextFuture().toCompletableFuture().join();
-          boolean expectFailure = it1Failed || it2Failed;
-          try {
-            zipped.close().toCompletableFuture().join();
-            Assert.assertFalse("expected exception", expectFailure);
-          } catch (CompletionException e) {
-            Assert.assertTrue("unexpected exception " + e, expectFailure);
-          }
-          // both should be closed no matter what
-          Assert.assertTrue(it1.closed && it2.closed);
+    for (boolean it1Failed : new Boolean[] {false, true}) {
+      for (boolean it2Failed : new Boolean[] {false, true}) {
+        CloseableIterator it1 =
+            new CloseableIterator(AsyncIterator.range(0, 3, 1), it1Failed ? testException : null);
+        CloseableIterator it2 =
+            new CloseableIterator(AsyncIterator.range(0, 3, 1), it2Failed ? testException : null);
+        AsyncIterator<Integer> zipped = AsyncIterator.zipWith(it1, it2, (i, j) -> i + j);
+        zipped.nextFuture().toCompletableFuture().join();
+        boolean expectFailure = it1Failed || it2Failed;
+        try {
+          zipped.close().toCompletableFuture().join();
+          Assert.assertFalse("expected exception", expectFailure);
+        } catch (CompletionException e) {
+          Assert.assertTrue("unexpected exception " + e, expectFailure);
         }
+        // both should be closed no matter what
+        Assert.assertTrue(it1.closed && it2.closed);
       }
+    }
   }
 
   @Test
@@ -173,7 +178,8 @@ public class AsyncIteratorCloseTest {
     Assert.assertEquals(0, first.toCompletableFuture().join().right().get().intValue());
 
     // if we consume the first iterator we generated (3 elements) it should be closed
-    for (int i = 0; i < 3; i++) ahead.nextFuture().toCompletableFuture().join();
+    for (int i = 0; i < 3; i++)
+      ahead.nextFuture().toCompletableFuture().join();
     Assert.assertTrue(closeables.getFirst().closed);
 
     // close and make sure eagerly evaluated iterators are closed

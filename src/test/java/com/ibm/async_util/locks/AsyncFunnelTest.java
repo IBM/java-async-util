@@ -90,7 +90,7 @@ public class AsyncFunnelTest {
     CompletableFuture<Integer> fail =
         c.doOrGet(() -> CompletableFuture.completedFuture(-1)).toCompletableFuture();
     Assert.assertFalse(fail.isDone());
-    
+
     // let the first future finish
     latch1.countDown();
     Assert.assertEquals(1, fail.get(1, TimeUnit.SECONDS).intValue());
@@ -100,7 +100,7 @@ public class AsyncFunnelTest {
         c.doOrGet(() -> CompletableFuture.completedFuture(2)).toCompletableFuture();
     Assert.assertTrue(second.isDone());
     Assert.assertEquals(2, second.join().intValue());
-    
+
     // so can this
     CompletableFuture<Integer> third =
         c.doOrGet(() -> {
@@ -113,7 +113,8 @@ public class AsyncFunnelTest {
   }
 
   @Test
-  public void concurrentFunnelTest() throws InterruptedException, ExecutionException, TimeoutException {
+  public void concurrentFunnelTest()
+      throws InterruptedException, ExecutionException, TimeoutException {
     final int NUM_THREADS = 3;
     final AsyncFunnel<Integer> c = new AsyncFunnel<>();
     final AtomicInteger count = new AtomicInteger(0);
@@ -145,7 +146,7 @@ public class AsyncFunnelTest {
         }
       });
     }).toArray(CompletableFuture[]::new);
-    
+
     Assert.assertEquals(count.get(), 1);
     CompletableFuture<Integer> first =
         c.doOrGet(() -> CompletableFuture.completedFuture(-1)).toCompletableFuture();

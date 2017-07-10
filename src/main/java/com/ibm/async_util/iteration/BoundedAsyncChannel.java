@@ -25,7 +25,8 @@ import java.util.concurrent.CompletionStage;
 /**
  * A version of {@link AsyncChannel} that provides a mechanism for backpressure.
  *
- * <p>The documentation from {@link AsyncChannel} largely applies here. Backpressure refers to the
+ * <p>
+ * The documentation from {@link AsyncChannel} largely applies here. Backpressure refers to the
  * signal sent to senders that the channel is "full" and the sender should stop sending values for
  * some period of time. Typically a channel becomes "full" because values are being sent into the
  * channel faster than the consumer is capable of consuming them. Without backpressure, the senders
@@ -33,64 +34,83 @@ import java.util.concurrent.CompletionStage;
  * channel. Users are expected to respect backpressure by refraining from making a subsequent call
  * to {@link #send} until the {@link CompletionStage} returned by the previous call completes.
  *
- * <p>Currently you can produce a bounded channel with {@link AsyncChannels#bounded()} or {@link
- * AsyncChannels#buffered(int)}.
+ * <p>
+ * Currently you can produce a bounded channel with {@link AsyncChannels#bounded()} or
+ * {@link AsyncChannels#buffered(int)}.
  *
- * <p>Consider this example implemented without backpressure
+ * <p>
+ * Consider this example implemented without backpressure
  *
- * <pre>{@code
- * AsyncChannel channel = AsyncChannels.unbounded();
- * pool.submit(() -> {
- *   while(keepGoing) {
- *     channel.send(i++);
- *   }
- *   channel.terminate();
- * });
- * channel.forEach(i -> {
+ * <pre>
+ * {@code
+ * AsyncIterator<Integer> produce() {
+ *   AsyncChannel channel = AsyncChannels.unbounded();
+ *   pool.submit(() -> {
+ *     while (keepGoing) {
+ *       channel.send(i++);
+ *     }
+ *     channel.terminate();
+ *   });
+ * }
+ * produce().forEach(i -> {
  *   slowWriteToDisk(i);
  * });
- * }</pre>
+ * }
+ * </pre>
  *
  * Because generating work is a cheap in memory operation but consuming it is a slow IO operation,
  * the sender will dramatically outpace the consumer in this case. Soon, the process will run out of
  * memory, as the sender continues to queue ints for the consumer to write. Instead we can use a
  * bounded channel:
  *
- * <pre>{@code
- * AsyncChannel channel = AsyncChannels.bounded();
+ * <pre>
+ * {@code
+ * AsyncIterator<Integer> produce() {
+ *   final AsyncChannel<Integer> channel = AsyncChannels.bounded();
  *
- * // blocking sender
- * pool.submit(() -> {
- *   while(shouldContinue()) {
- *     channel.send(i++).toCompletableFuture().join();
- *   }
- *   channel.terminate();
- * });
+ *   //blocking sends on pool
+ *   pool.submit(() -> {
+ *     while (shouldContinue()) {
+ *       channel.send(i++).toCompletableFuture().join();
+ *     }
+ *     channel.terminate();
+ *   });
+ *   return channel;
+ *}
  *
- * // alternative: async sender
- * AsyncIterators
- *
- *   // AsyncIterator from 1...infinity
- *  .iterate(i -> i + 1)
- *
- *  // send to channel
- *  .thenApply(i -> channel.send(i))
- *
- *  // consumes futures one by one
- *  .consumeWhile(ig -> shouldContinue())
- *
- *  // finished, terminate channel
- *  .thenRun(() -> channel.terminate());
- *
- *  // consumer doesn't know or care channel is bounded
- * channel.forEach(i -> {
+ *   // consumer doesn't know or care channel is bounded
+ * produce().forEach(i -> {
  *   slowWriteToDisk(i);
  * });
- * }</pre>
+ *}
+ * </pre>
+ * 
+ * Senders of course can be implemented without blocking while still respecting backpressure:
+ * 
+ * <pre>
+ * {@code
+ * AsyncIterator<Integer> produce() {
+ *   final AsyncChannel<Integer> channel = AsyncChannels.bounded();
+ *   
+ *   // alternative approach to sending: async sender
+ *   AsyncIterators
+ *       .iterate(i -> i + 1)
+ *       // send to channel
+ *       .thenApply(i -> channel.send(i))
+ *       // consumes futures one by one
+ *       .consumeWhile(ig -> shouldContinue())
+ *       // finished, terminate channel
+ *       .thenRun(() -> channel.terminate());
  *
- * <p>An important point is that trying to send is the only way to be notified that the queue is
- * full. In practice, this means that if your number of senders is very large you can still consume
- * too much memory even if you are respecting the send interface.
+ *   return channel;
+ *}
+ *}
+ * </pre>
+ *
+ * <p>
+ * An important point is that trying to send is the only way to be notified that the queue is full.
+ * In practice, this means that if your number of senders is very large you can still consume too
+ * much memory even if you are respecting the send interface.
  *
  * @param <T> the type of the items sent and consumed from this channel
  * @see AsyncIterator
@@ -102,18 +122,19 @@ public interface BoundedAsyncChannel<T> extends AsyncIterator<T> {
   /**
    * Send a value into this channel that can be consumed via the {@link AsyncIterator} interface.
    *
-   * <p>This method is thread safe - multiple threads can send values into this channel
-   * concurrently. This channel is bounded, so after a call to {@code send} a {@link
-   * CompletionStage} is returned to the sender. When the stage finishes, consumption has progressed
-   * enough that the channel is again willing to accept messages. The implementation may decide when
-   * a channel is writable, it could require that all outstanding values are consumed by the
-   * consumer, it could allow a certain number of values to be buffered before applying back
-   * pressure, or it could use some out of band metric to decide.
+   * <p>
+   * This method is thread safe - multiple threads can send values into this channel concurrently.
+   * This channel is bounded, so after a call to {@code send} a {@link CompletionStage} is returned
+   * to the sender. When the stage finishes, consumption has progressed enough that the channel is
+   * again willing to accept messages. The implementation may decide when a channel is writable, it
+   * could require that all outstanding values are consumed by the consumer, it could allow a
+   * certain number of values to be buffered before applying back pressure, or it could use some out
+   * of band metric to decide.
    *
    * @param item element to send into the channel
    * @return a {@link CompletionStage} that completes when the channel is ready to accept another
-   *     message. It completes with true if the item was accepted, false if it was rejected because
-   *     the channel has already been terminated.
+   *         message. It completes with true if the item was accepted, false if it was rejected
+   *         because the channel has already been terminated.
    * @see AsyncChannel#send
    */
   CompletionStage<Boolean> send(T item);
@@ -122,16 +143,18 @@ public interface BoundedAsyncChannel<T> extends AsyncIterator<T> {
    * Terminate the channel, after termination subsequent attempts to {@link #send} into the channel
    * will fail.
    *
-   * <p>After the channel is terminated, all subsequent sends will return stages that will complete
+   * <p>
+   * After the channel is terminated, all subsequent sends will return stages that will complete
    * with false. After the consumer consumes whatever was sent before the terminate, the consumer
-   * will receive an {@link com.ibm.async_util.iteration.AsyncIterator.End} marker. When the {@link
-   * CompletionStage} returned by this method completes, no more messages will ever make it into the
-   * channel. Equivalently, all stages generated by {@link #send} that will complete with {@code
+   * will receive an {@link com.ibm.async_util.iteration.AsyncIterator.End} marker. When the
+   * {@link CompletionStage} returned by this method completes, no more messages will ever make it
+   * into the channel. Equivalently, all stages generated by {@link #send} that will complete with
+   * {@code
    * true} generated by calls to {@link #send} will have been completed by the time the returned
    * stage completes.
    *
    * @return a {@link CompletionStage} that indicates when all sends that were sent before the
-   *     terminate have made it into the channel
+   *         terminate have made it into the channel
    * @see AsyncChannel#terminate()
    */
   CompletionStage<Void> terminate();
@@ -139,11 +162,12 @@ public interface BoundedAsyncChannel<T> extends AsyncIterator<T> {
   /**
    * Gets a result from the channel if there is one ready right now.
    *
-   * <p>This method consumes parts of the channel, so like the consumption methods on {@link
-   * AsyncIterator}, this method is not thread-safe should be used in a single threaded fashion.
-   * After {@link #terminate()} is called and all outstanding results are consumed, poll will always
-   * return empty. This method <b> should not </b> be used if there are null values in the channel.
-   * <br>
+   * <p>
+   * This method consumes parts of the channel, so like the consumption methods on
+   * {@link AsyncIterator}, this method is not thread-safe should be used in a single threaded
+   * fashion. After {@link #terminate()} is called and all outstanding results are consumed, poll
+   * will always return empty. This method <b> should not </b> be used if there are null values in
+   * the channel. <br>
    * Notice that the channel being closed is indistinguishable from the channel being transiently
    * empty. To discover that no more results will ever be available, you must use the normal means
    * on {@link AsyncIterator}: either calling {@link #nextFuture()} and seeing if the result
@@ -152,7 +176,7 @@ public interface BoundedAsyncChannel<T> extends AsyncIterator<T> {
    *
    * @throws NullPointerException if the polled result is null
    * @return a present T value if there was one immediately available in the channel, empty if the
-   *     channel is currently empty
+   *         channel is currently empty
    * @see AsyncChannel#poll()
    */
   Optional<T> poll();

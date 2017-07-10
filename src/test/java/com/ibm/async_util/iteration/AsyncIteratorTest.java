@@ -70,8 +70,8 @@ public class AsyncIteratorTest {
     final AsyncIterator<Integer> touchyIterator = mustRespectEndIterator(1);
     final CompletionStage<List<Integer>> collect =
         AsyncIterator.concat(
-                AsyncIterator.fromIterator(
-                    Arrays.asList(touchyIterator, AsyncIterator.once(1)).iterator()))
+            AsyncIterator.fromIterator(
+                Arrays.asList(touchyIterator, AsyncIterator.once(1)).iterator()))
             .collect(Collectors.toList());
     Assert.assertEquals(2, TestUtil.join(collect).size());
   }
@@ -208,10 +208,10 @@ public class AsyncIteratorTest {
     final AsyncIterator<Integer> x = intIterator(1000);
     long currentThread = Thread.currentThread().getId();
     final AsyncIterator<Integer> mapped =
-            x.thenComposeAsync(c -> {
-                Assert.assertNotEquals(Thread.currentThread().getId(), currentThread);
-                return CompletableFuture.completedFuture(c + 1);
-            });
+        x.thenComposeAsync(c -> {
+          Assert.assertNotEquals(Thread.currentThread().getId(), currentThread);
+          return CompletableFuture.completedFuture(c + 1);
+        });
     final List<Integer> list = TestUtil.join(mapped.take(1001).collect(Collectors.toList()));
     Assert.assertEquals(1000, list.size());
     for (int i = 0; i < 1000; i++) {
@@ -235,10 +235,10 @@ public class AsyncIteratorTest {
     final AsyncIterator<Integer> x = intIterator(1000);
     long currentThread = Thread.currentThread().getId();
     final AsyncIterator<Integer> mapped =
-            x.thenApplyAsync(c -> {
-              Assert.assertNotEquals(Thread.currentThread().getId(), currentThread);
-              return c + 1;
-            });
+        x.thenApplyAsync(c -> {
+          Assert.assertNotEquals(Thread.currentThread().getId(), currentThread);
+          return c + 1;
+        });
     final List<Integer> list = TestUtil.join(mapped.take(1001).collect(Collectors.toList()));
     Assert.assertEquals(1000, list.size());
     for (int i = 0; i < 1000; i++) {
@@ -302,7 +302,8 @@ public class AsyncIteratorTest {
   }
 
   @Test
-  public void testThenComposeAheadParallelRandomSleeps() throws TimeoutException, InterruptedException {
+  public void testThenComposeAheadParallelRandomSleeps()
+      throws TimeoutException, InterruptedException {
     testThenComposeAhead(100, 10, () -> ((long) Math.random() * 100), 1900);
   }
 
@@ -438,9 +439,9 @@ public class AsyncIteratorTest {
   public void testZipError() throws Exception {
     TestUtil.join(
         AsyncIterator.zipWith(
-                intIterator(5),
-                AsyncIterator.<Integer>error(new IllegalStateException()),
-                (x, y) -> x + y)
+            intIterator(5),
+            AsyncIterator.<Integer>error(new IllegalStateException()),
+            (x, y) -> x + y)
             .collect(Collectors.toList()));
   }
 
@@ -495,13 +496,12 @@ public class AsyncIteratorTest {
   @Test(expected = CompletionException.class)
   public void testUnorderedError() throws Exception {
     AsyncIterator.unordered(
-            IntStream.range(0, 5)
-                .mapToObj(
-                    i ->
-                        i == 3
-                            ? FutureSupport.<Integer>errorStage(new IllegalStateException())
-                            : CompletableFuture.completedFuture(i))
-                .collect(Collectors.toList()))
+        IntStream.range(0, 5)
+            .mapToObj(
+                i -> i == 3
+                    ? FutureSupport.<Integer>errorStage(new IllegalStateException())
+                    : CompletableFuture.completedFuture(i))
+            .collect(Collectors.toList()))
         .consume()
         .toCompletableFuture()
         .join();
@@ -577,9 +577,9 @@ public class AsyncIteratorTest {
         };
     Assert.assertFalse(
         TestUtil.join(
-                AsyncIterator.empty()
-                    .batch(Collectors.toCollection(supplier), (a, b) -> true)
-                    .nextFuture())
+            AsyncIterator.empty()
+                .batch(Collectors.toCollection(supplier), (a, b) -> true)
+                .nextFuture())
             .isRight());
   }
 
@@ -656,7 +656,7 @@ public class AsyncIteratorTest {
     {
       List<Integer> unfolded =
           AsyncIterator.unfold(
-                  0, i -> CompletableFuture.completedFuture(Either.<End, Integer>right(i + 1)))
+              0, i -> CompletableFuture.completedFuture(Either.<End, Integer>right(i + 1)))
               .take(5)
               .collect(Collectors.toList())
               .toCompletableFuture()
@@ -697,16 +697,16 @@ public class AsyncIteratorTest {
   @Test
   public void testAheadRespectsEnd() {
     List<Integer> list = mustRespectEndIterator(2)
-            .thenComposeAhead(i -> CompletableFuture.supplyAsync(() -> {
-              try {
-                Thread.sleep(100);
-              } catch (InterruptedException e) {
-              }
-              return 0;
-            }), 15)
-            .collect(Collectors.toList())
-            .toCompletableFuture()
-            .join();
+        .thenComposeAhead(i -> CompletableFuture.supplyAsync(() -> {
+          try {
+            Thread.sleep(100);
+          } catch (InterruptedException e) {
+          }
+          return 0;
+        }), 15)
+        .collect(Collectors.toList())
+        .toCompletableFuture()
+        .join();
     Assert.assertEquals(Arrays.asList(0, 0), list);
   }
 
@@ -750,7 +750,7 @@ public class AsyncIteratorTest {
 
   // assert the iterator is the ascending range from 0 to expected size
   private void verifySorted(final AsyncIterator<Integer> concat, final int expectedSize)
-          throws Exception {
+      throws Exception {
     Either<End, Integer> curr = TestUtil.join(concat.nextFuture());
     int i = 0;
     while (curr.isRight()) {

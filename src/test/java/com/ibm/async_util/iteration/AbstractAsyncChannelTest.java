@@ -60,14 +60,15 @@ public abstract class AbstractAsyncChannelTest {
   @Before
   public void before() {
     this.closed = new AtomicBoolean(false);
-    this.consumerThread = new ThreadPoolExecutor(1, 1, 100, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
+    this.consumerThread =
+        new ThreadPoolExecutor(1, 1, 100, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
     final List<Integer> randomItems = new ArrayList<>();
     for (int i = 0; i < NUM_ITEMS; i++) {
       randomItems.add((int) (Math.random() * NUM_ITEMS));
     }
     setupQueue(randomItems);
   }
-  
+
 
   private void setupQueue(final List<Integer> queue) {
     this.validationQueue.clear();
@@ -181,12 +182,14 @@ public abstract class AbstractAsyncChannelTest {
   }
 
   @Test
-  public void multiProducerFairnessTest() throws InterruptedException, ExecutionException, TimeoutException {
+  public void multiProducerFairnessTest()
+      throws InterruptedException, ExecutionException, TimeoutException {
     multiProducerFairness(this::normalConsumer);
   }
 
   @Test
-  public void multiProducerFairnessPollTest() throws InterruptedException, ExecutionException, TimeoutException {
+  public void multiProducerFairnessPollTest()
+      throws InterruptedException, ExecutionException, TimeoutException {
     multiProducerFairness(this::pollConsumer);
   }
 

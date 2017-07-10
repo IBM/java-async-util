@@ -11,11 +11,13 @@ import java.util.function.Supplier;
 /**
  * Static methods for asynchronous looping procedures without blowing the stack.
  *
- * <p>When working with {@link CompletionStage}, it's often desirable to have a loop like construct
+ * <p>
+ * When working with {@link CompletionStage}, it's often desirable to have a loop like construct
  * which keeps producing stages until some condition is met. Because continuations are asynchronous,
  * it's usually easiest to do this with a recursive approach:
  *
- * <pre>{@code
+ * <pre>
+ * {@code
  * CompletionStage<Integer> getNextNumber();
  *
  * CompletionStage<Integer> getFirstOddNumber(int current) {
@@ -26,34 +28,39 @@ import java.util.function.Supplier;
  *     // get the next number and recurse
  *     return getNextNumber().thenCompose(next -> getFirstOddNumber(next));
  * }
- * }</pre>
+ * }
+ * </pre>
  *
  * The problem with this is that if the implementation of getNextNumber happens to be synchronous
  *
- * <pre>{@code
+ * <pre>
+ * {@code
  * CompletionStage<Integer> getNextNumber() {
  *   return CompletableFuture.completedFuture(random.nextInt());
  * }
- * }</pre>
+ * }
+ * </pre>
  *
  * then getFirstOddNumber can easily cause a StackOverflow. This situation often happens when a
  * cache is put under an async API, and all the values are cached and returned immediately. This
- * could be avoided by scheduling the recursive calls back to a thread pool using {@link
- * CompletionStage#thenComposeAsync}, however the overhead of the thread pool submissions may be
- * high and may cause unnecessary context switching.
+ * could be avoided by scheduling the recursive calls back to a thread pool using
+ * {@link CompletionStage#thenComposeAsync}, however the overhead of the thread pool submissions may
+ * be high and may cause unnecessary context switching.
  *
- * <p>The methods on this class ensure that the stack doesn't blow up - if multiple calls happen on
- * the same thread they are queued and run in a loop. You could write the previous example like
- * this:
+ * <p>
+ * The methods on this class ensure that the stack doesn't blow up - if multiple calls happen on the
+ * same thread they are queued and run in a loop. You could write the previous example like this:
  *
- * <pre>{@code
+ * <pre>
+ * {@code
  * CompletionStage<Integer> getFirstOddNumber(int initial) {
  *   return AsyncTrampoline.asyncWhile(
  *    i -> i % 2 == 0,
  *    i -> getNextNumber(),
  *    initial);
  * }
- * }</pre>
+ * }
+ * </pre>
  *
  * Though this class provides efficient methods for a few loop patterns, many are better represented
  * by the more expressive API available on {@link AsyncIterator}, which is also stack safe. For
@@ -94,16 +101,13 @@ public final class AsyncTrampoline {
         do {
           try {
             if (this.shouldContinue.test(c)) {
-              this.f
-                  .apply(c)
-                  .whenComplete(
-                      (next, ex) -> {
-                        if (ex != null) {
-                          this.completeExceptionally(ex);
-                        } else {
-                          unroll(next, currentThread, currentPassBack);
-                        }
-                      });
+              this.f.apply(c).whenComplete((next, ex) -> {
+                if (ex != null) {
+                  this.completeExceptionally(ex);
+                } else {
+                  unroll(next, currentThread, currentPassBack);
+                }
+              });
             } else {
               this.complete(c);
               return;
@@ -133,27 +137,32 @@ public final class AsyncTrampoline {
    * Repeatedly applies an asynchronous function {@code fn} to a value until {@code shouldContinue}
    * returns {@code false}. The asynchronous equivalent of
    *
-   * <pre>{@code
-   * T t = initialValue;
-   * while (shouldContinue.test(t)) {
+   * <pre>
+   * {@code
+   * T loop(Predicate shouldContinue, Function fn, T initialValue) {
+   *   T t = initialValue;
+   *   while (shouldContinue.test(t)) {
    *     t = fn.apply(t);
+   *   }
+   *   return t;
    * }
-   * return t;
-   * }</pre>
+   * }
+   * </pre>
    *
-   * <p>Effectively produces {@code fn(seed).thenCompose(fn).thenCompose(fn)... .thenCompose(fn)}
-   * until an value fails the predicate. Note that predicate will be applied on seed (like a while
-   * loop, the initial value is tested). For a do/while style see {@link #asyncDoWhile(Function,
-   * Object, Predicate)}. If the predicate or fn throw an exception, or the {@link CompletionStage}
-   * returned by fn completes exceptionally, iteration will stop and an exceptional stage will be
-   * returned.
+   * <p>
+   * Effectively produces {@code fn(seed).thenCompose(fn).thenCompose(fn)... .thenCompose(fn)} until
+   * an value fails the predicate. Note that predicate will be applied on seed (like a while loop,
+   * the initial value is tested). For a do/while style see
+   * {@link #asyncDoWhile(Function, Object, Predicate)}. If the predicate or fn throw an exception,
+   * or the {@link CompletionStage} returned by fn completes exceptionally, iteration will stop and
+   * an exceptional stage will be returned.
    *
    * @param shouldContinue a predicate which will be applied to every intermediate T value
-   *     (including the {@code initialValue}) until it fails and looping stops.
+   *        (including the {@code initialValue}) until it fails and looping stops.
    * @param fn the function for the loop body which produces a new {@link CompletionStage} based on
-   *     the result of the previous iteration.
+   *        the result of the previous iteration.
    * @param initialValue the value that will initially be passed to {@code fn}, it will also be
-   *     initially tested by {@code shouldContinue}
+   *        initially tested by {@code shouldContinue}
    * @param <T> the type of elements produced by the loop
    * @return a {@link CompletionStage} that completes with the first value t such that {@code
    *     shouldContinue.test(T) == false}, or with an exception if one was thrown.
@@ -173,11 +182,12 @@ public final class AsyncTrampoline {
    * exceptional stage will be returned.
    *
    * @param fn a {@link Supplier} of a {@link CompletionStage} that indicates whether iteration
-   *     should continue
+   *        should continue
    * @return a {@link CompletionStage} that is complete when a stage produced by {@code fn} has
-   *     returned {@code false}, or with an exception if one was thrown
+   *         returned {@code false}, or with an exception if one was thrown
    */
-  public static CompletionStage<Void> asyncWhile(final Supplier<? extends CompletionStage<Boolean>> fn) {
+  public static CompletionStage<Void> asyncWhile(
+      final Supplier<? extends CompletionStage<Boolean>> fn) {
     return FutureSupport.voided(AsyncTrampoline.asyncWhile(b -> b, b -> fn.get(), true));
   }
 
@@ -186,30 +196,35 @@ public final class AsyncTrampoline {
    * returns {@code false}, unconditionally applying fn to {@code initialValue} on the first
    * iteration. The asynchronous equivalent of
    *
-   * <pre>{@code
-   * T t = initialValue;
-   * do {
-   *     t = fn.apply(t);
-   * } while(shouldContinue.test(t));
-   * return t;
-   * }</pre>
+   * <pre>
+   * {@code
+   * {
+   *    T t = initialValue;
+   *    do {
+   *         t = fn.apply(t);
+   *    } while(shouldContinue.test(t));
+   *    return t;
+   * }
+   * }
+   * </pre>
    *
-   * <p>Effectively produces {@code fn(seed).thenCompose(fn).thenCompose(fn)... .thenCompose(fn)}
-   * until an value fails the predicate. Note that predicate will be applied on seed (like a while
-   * loop,
+   * <p>
+   * Effectively produces {@code fn(seed).thenCompose(fn).thenCompose(fn)... .thenCompose(fn)} until
+   * an value fails the predicate. Note that predicate will be applied on seed (like a while loop,
    *
-   * <p>Effectively produces fn(seed).then(fn).flatMap(fn)... .flatMap(fn) until an value fails the
+   * <p>
+   * Effectively produces fn(seed).then(fn).flatMap(fn)... .flatMap(fn) until an value fails the
    * predicate. Note that predicate will not be applied to {@code initialValue}, for a {@code while}
    * style loop see {@link #asyncWhile(Predicate, Function, Object)} . If the predicate or fn throw
    * an exception, or the {@link CompletionStage} returned by fn completes exceptionally, iteration
    * will stop and an exceptional stage will be returned.
    *
    * @param shouldContinue a predicate which will be applied to intermediate T value other than the
-   *     {@code initialValue} the in until it fails and looping stops.
+   *        {@code initialValue} the in until it fails and looping stops.
    * @param fn the function for the loop body which produces a new {@link CompletionStage} based on
-   *     the result of the previous iteration.
+   *        the result of the previous iteration.
    * @param initialValue the value that will initially be passed to {@code fn}, it will not be
-   *     initially tested by {@code shouldContinue}
+   *        initially tested by {@code shouldContinue}
    * @param <T> the type of elements produced by the loop
    * @return a {@link CompletionStage} that completes with the first value t such that {@code
    *     shouldContinue.test(T) == false}, or with an exception if one was thrown.

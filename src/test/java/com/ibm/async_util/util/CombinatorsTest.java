@@ -18,7 +18,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class CombinatorsTest {
-  private static class TestException extends RuntimeException {}
+  private static class TestException extends RuntimeException {
+  }
 
   @Test
   @SuppressWarnings("unchecked")
@@ -31,7 +32,8 @@ public class CombinatorsTest {
 
     Assert.assertEquals(results, Combinators.allOf(arr).toCompletableFuture().join());
     Assert.assertEquals(results, Combinators.allOf(collect).toCompletableFuture().join());
-    Assert.assertEquals(results, Combinators.collect(collect, Collectors.toList()).toCompletableFuture().join());
+    Assert.assertEquals(results,
+        Combinators.collect(collect, Collectors.toList()).toCompletableFuture().join());
   }
 
   @Test
@@ -76,31 +78,33 @@ public class CombinatorsTest {
         IntStream.range(0, 5)
             .boxed()
             .collect(Collectors.toMap(Function.identity(), CompletableFuture::completedFuture));
-    final Map<Integer, Integer> integerMap = Combinators.keyedAll(stageMap).toCompletableFuture().join();
+    final Map<Integer, Integer> integerMap =
+        Combinators.keyedAll(stageMap).toCompletableFuture().join();
     Assert.assertEquals(5, integerMap.size());
-    Assert.assertTrue(integerMap.entrySet().stream().allMatch(entry -> entry.getKey().equals(entry.getValue())));
+    Assert.assertTrue(
+        integerMap.entrySet().stream().allMatch(entry -> entry.getKey().equals(entry.getValue())));
   }
 
   @Test
   public void testKeyedAllError() {
     final Map<Integer, CompletionStage<Integer>> stageMap =
-            IntStream.range(0, 5)
-                    .boxed()
-                    .collect(Collectors.toMap(Function.identity(), i -> {
-                      if (i == 3) {
-                        return FutureSupport.errorStage(new TestException());
-                      }
-                      return CompletableFuture.completedFuture(i);
-                    }));
+        IntStream.range(0, 5)
+            .boxed()
+            .collect(Collectors.toMap(Function.identity(), i -> {
+              if (i == 3) {
+                return FutureSupport.errorStage(new TestException());
+              }
+              return CompletableFuture.completedFuture(i);
+            }));
     assertError(Combinators.keyedAll(stageMap));
   }
 
   @Test
   public void testKeyedAllErrorNoShortCircuit() {
     final Map<Integer, CompletableFuture<Integer>> stageMap =
-            IntStream.range(0, 5)
-                    .boxed()
-                    .collect(Collectors.toMap(Function.identity(), i -> new CompletableFuture<>()));
+        IntStream.range(0, 5)
+            .boxed()
+            .collect(Collectors.toMap(Function.identity(), i -> new CompletableFuture<>()));
     CompletionStage<Map<Integer, Integer>> fut = Combinators.keyedAll(stageMap);
     int i = 0;
     for (CompletableFuture<Integer> future : stageMap.values()) {

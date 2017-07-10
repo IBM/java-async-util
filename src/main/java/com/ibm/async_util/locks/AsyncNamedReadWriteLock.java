@@ -35,7 +35,8 @@ import java.util.concurrent.CompletionStage;
  * same precautions must be taken regarding mutability of keys (names). Name objects should not
  * change from the time of acquisition to the time of release, with respect to their
  * {@link Object#equals(Object) equality} and {@link Object#hashCode() hash code} semantics. The
- * release methods of the returned {@link AsyncReadWriteLock.ReadLockToken} and {@link AsyncReadWriteLock.WriteLockToken} may throw a
+ * release methods of the returned {@link AsyncReadWriteLock.ReadLockToken} and
+ * {@link AsyncReadWriteLock.WriteLockToken} may throw a
  * {@link java.util.ConcurrentModificationException} if such a modification is detected.
  * 
  * @param <T> the type of named objects used to identify read-write locks
@@ -47,8 +48,8 @@ public interface AsyncNamedReadWriteLock<T> {
    * currently held, the returned future will be immediately complete. Otherwise, the returned
    * future will complete when the lock is no longer exclusively acquired by a writer.
    * <p>
-   * The {@link AsyncReadWriteLock.ReadLockToken} held by the returned future is used to release the read lock after it
-   * has been acquired and the read-lock-protected action has completed.
+   * The {@link AsyncReadWriteLock.ReadLockToken} held by the returned future is used to release the
+   * read lock after it has been acquired and the read-lock-protected action has completed.
    */
   CompletionStage<AsyncReadWriteLock.ReadLockToken> acquireReadLock(T name);
 
@@ -58,8 +59,8 @@ public interface AsyncNamedReadWriteLock<T> {
    * Otherwise, the returned future will complete when the lock is no longer held by any readers or
    * an exclusive writer.
    * <p>
-   * The {@link AsyncReadWriteLock.WriteLockToken} held by the returned future is used to release the write lock after
-   * it has been acquired and the write-lock-protected action has completed.
+   * The {@link AsyncReadWriteLock.WriteLockToken} held by the returned future is used to release
+   * the write lock after it has been acquired and the write-lock-protected action has completed.
    */
   CompletionStage<AsyncReadWriteLock.WriteLockToken> acquireWriteLock(T name);
 
@@ -68,8 +69,8 @@ public interface AsyncNamedReadWriteLock<T> {
    * is not currently held, the returned Optional will hold a ReadLockToken representing this
    * acquisition. Otherwise, the returned Optional will be empty.
    * <p>
-   * The {@link AsyncReadWriteLock.ReadLockToken} held by the returned optional is used to release the read lock after
-   * it has been acquired and the read-lock-protected action has completed.
+   * The {@link AsyncReadWriteLock.ReadLockToken} held by the returned optional is used to release
+   * the read lock after it has been acquired and the read-lock-protected action has completed.
    */
   Optional<AsyncReadWriteLock.ReadLockToken> tryReadLock(T name);
 
@@ -78,16 +79,17 @@ public interface AsyncNamedReadWriteLock<T> {
    * or read-lock is not currently held, the returned Optional will hold a WriteLockToken
    * representing this acquisition. Otherwise, the returned Optional will be empty.
    * <p>
-   * The {@link AsyncReadWriteLock.WriteLockToken} held by the returned future is used to release the write lock after
-   * it has been acquired and the write-lock-protected action has completed.
+   * The {@link AsyncReadWriteLock.WriteLockToken} held by the returned future is used to release
+   * the write lock after it has been acquired and the write-lock-protected action has completed.
    */
   Optional<AsyncReadWriteLock.WriteLockToken> tryWriteLock(T name);
 
   /**
    * Creates an {@link AsyncNamedReadWriteLock}
    *
-   * <p>The returned lock is only guaranteed to meet the requirements of {@link AsyncNamedReadWriteLock}; in
-   * particular, no guarantee of fairness is provided.
+   * <p>
+   * The returned lock is only guaranteed to meet the requirements of
+   * {@link AsyncNamedReadWriteLock}; in particular, no guarantee of fairness is provided.
    *
    * @return a new {@link AsyncNamedReadWriteLock}
    */

@@ -135,7 +135,8 @@ class AsyncIterators {
   }
 
   static <T, U> AsyncIterator<U> thenComposeImpl(
-      final AsyncIterator<T> it, Function<? super T, ? extends CompletionStage<U>> f, final Executor e) {
+      final AsyncIterator<T> it, Function<? super T, ? extends CompletionStage<U>> f,
+      final Executor e) {
     return new AsyncIterator<U>() {
       @Override
       public CompletionStage<Either<End, U>> nextFuture() {
@@ -247,7 +248,8 @@ class AsyncIterators {
     }
 
     /*
-     * wait for all pending results and then call close. epoch guarantees no more new results will come in
+     * wait for all pending results and then call close. epoch guarantees no more new results will
+     * come in
      */
     @Override
     public CompletionStage<Void> close() {
@@ -259,9 +261,8 @@ class AsyncIterators {
                 pendingResults
                     .stream()
                     .map(
-                        f ->
-                            f.thenCompose(
-                                either -> either.fold(end -> FutureSupport.voidFuture(), closeFn)))
+                        f -> f.thenCompose(
+                            either -> either.fold(end -> FutureSupport.voidFuture(), closeFn)))
                     .map(CompletionStage::toCompletableFuture)
                     .toArray(CompletableFuture[]::new);
 

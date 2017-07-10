@@ -12,11 +12,14 @@ import java.util.function.Function;
 
 @RunWith(Enclosed.class)
 public class TryWithTest {
-  private static class CloseException extends Exception {}
+  private static class CloseException extends Exception {
+  }
 
-  private static class CloseRuntimeException extends RuntimeException {}
+  private static class CloseRuntimeException extends RuntimeException {
+  }
 
-  private static class ActionException extends RuntimeException {}
+  private static class ActionException extends RuntimeException {
+  }
 
   interface CheckableAutoCloseable extends AutoCloseable {
     boolean wasClosed();
@@ -193,7 +196,8 @@ public class TryWithTest {
         final Class<? extends Exception> expectedException,
         final Class<? extends Exception> suppressedException) {
       try {
-        FutureSupport.tryWith(CompletableFuture.completedFuture(closeable), action).toCompletableFuture().join();
+        FutureSupport.tryWith(CompletableFuture.completedFuture(closeable), action)
+            .toCompletableFuture().join();
         Assert.assertTrue(
             "expected exception ", expectedException == null && suppressedException == null);
       } catch (CompletionException e) {

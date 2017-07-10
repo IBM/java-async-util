@@ -24,16 +24,19 @@ package com.ibm.async_util.locks;
  * Optimistic read mode can be thought of as a weak reader mode which does not prevent writers from
  * acquiring the lock.
  *
- * <p>In practice, optimistic reads of brief read-only sections can reduce memory contention. Great
+ * <p>
+ * In practice, optimistic reads of brief read-only sections can reduce memory contention. Great
  * care must be taken when reading mutable variables, however, as they can change at any point and
  * knowledge of the underlying accessed structures is necessary to ensure a consistent view of the
  * variables.
  *
- * <p>Consider the following example. The BitSet class is not inherently thread-safe, so we need a
- * lock to protect it. Further, our hypothetical use case exhibits only rare modifications but
- * extremely frequent queries, which may justify an optimistic read design:
+ * <p>
+ * Consider the following example. The BitSet class is not inherently thread-safe, so we need a lock
+ * to protect it. Further, our hypothetical use case exhibits only rare modifications but extremely
+ * frequent queries, which may justify an optimistic read design:
  *
- * <pre>{@code
+ * <pre>
+ * {@code
  * BitSet bits = new BitSet();
  *
  * Future<Boolean> isSet(int idx) {
@@ -66,15 +69,18 @@ package com.ibm.async_util.locks;
  *     }
  *   }
  * }
- * }</pre>
+ * }
+ * </pre>
  *
- * <p>This interface draws inspiration from the standard library's {@link
- * java.util.concurrent.locks.StampedLock} but certain implementation details may differ. Identical
- * behavior should not be expected from both locking facilities beyond what is explicitly
+ * <p>
+ * This interface draws inspiration from the standard library's
+ * {@link java.util.concurrent.locks.StampedLock} but certain implementation details may differ.
+ * Identical behavior should not be expected from both locking facilities beyond what is explicitly
  * documented.
  *
- * <p>Implementations will specify whether their lock acquisition is fair or not; this interface
- * does not define this requirement.
+ * <p>
+ * Implementations will specify whether their lock acquisition is fair or not; this interface does
+ * not define this requirement.
  *
  * @see AsyncReadWriteLock
  * @see java.util.concurrent.locks.StampedLock
@@ -110,7 +116,7 @@ public interface AsyncStampedLock extends AsyncReadWriteLock {
      * was issued.
      *
      * @return true iff the stamp is still valid i.e. write lock has not been acquired since this
-     *     stamp was issued
+     *         stamp was issued
      */
     boolean validate();
   }
@@ -118,7 +124,8 @@ public interface AsyncStampedLock extends AsyncReadWriteLock {
   /**
    * Creates an {@link AsyncStampedLock}
    *
-   * <p>The returned lock is only guaranteed to meet the requirements of {@link AsyncStampedLock}; in
+   * <p>
+   * The returned lock is only guaranteed to meet the requirements of {@link AsyncStampedLock}; in
    * particular, no guarantee of fairness is provided.
    *
    * @return a new {@link AsyncStampedLock}

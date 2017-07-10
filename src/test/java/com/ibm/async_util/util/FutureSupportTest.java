@@ -8,7 +8,8 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 
 public class FutureSupportTest {
-  private static class TestException extends RuntimeException {}
+  private static class TestException extends RuntimeException {
+  }
 
   @Test
   public void testThenComposeOrRecover() {
@@ -25,12 +26,12 @@ public class FutureSupportTest {
         // successful compose
         int x =
             FutureSupport.thenComposeOrRecover(
-                    inputStage,
-                    (result, throwable) -> {
-                      Assert.assertEquals(expectedResult, result);
-                      Assert.assertEquals(inputFailed, throwable != null);
-                      return success2;
-                    })
+                inputStage,
+                (result, throwable) -> {
+                  Assert.assertEquals(expectedResult, result);
+                  Assert.assertEquals(inputFailed, throwable != null);
+                  return success2;
+                })
                 .toCompletableFuture()
                 .join();
         Assert.assertEquals(2, x);

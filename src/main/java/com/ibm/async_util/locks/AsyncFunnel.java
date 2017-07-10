@@ -27,17 +27,20 @@ import java.util.function.Supplier;
 /**
  * Enforces that a single asynchronous computation occurs at a time, allowing others to observe it.
  *
- * <p>Used when many clients need the result of an expensive asynchronous operation but only one
- * should be ongoing at any given time. If {@link AsyncFunnel#doOrGet} is called while an operation
- * is ongoing, the future result of that ongoing task is returned. After the operation completes, a
- * new task can be created.
+ * <p>
+ * Used when many clients need the result of an expensive asynchronous operation but only one should
+ * be ongoing at any given time. If {@link AsyncFunnel#doOrGet} is called while an operation is
+ * ongoing, the future result of that ongoing task is returned. After the operation completes, a new
+ * task can be created.
  *
- * <p>For example, imagine we have many threads that will perform a computation on a potentially
- * cached value. If the value is not in the cache, they will have to do an expensive operation to
- * populate the cache. Many threads may discover the value needs to be computed at the same time,
- * but only one thread needs to actually compute it.
+ * <p>
+ * For example, imagine we have many threads that will perform a computation on a potentially cached
+ * value. If the value is not in the cache, they will have to do an expensive operation to populate
+ * the cache. Many threads may discover the value needs to be computed at the same time, but only
+ * one thread needs to actually compute it.
  *
- * <pre>{@code
+ * <pre>
+ * {@code
  * AsyncFunnel readFunnel = new AsyncFunnel();
  * for (int i = 0; i < numThreads; i++) {
  *    CompletableFuture.supplyAsync(() -> {
@@ -56,7 +59,8 @@ import java.util.function.Supplier;
  *        });
  *    })
  * }
- * }</pre>
+ * }
+ * </pre>
  */
 public class AsyncFunnel<T> {
   private final AtomicReference<CompletionStage<T>> current = new AtomicReference<>(null);
@@ -67,9 +71,9 @@ public class AsyncFunnel<T> {
    * start a new action
    *
    * @param action Supplier of a {@link CompletionStage} of T that only runs if no action is
-   *     currently running
+   *        currently running
    * @return A {@link CompletionStage} produced by <code> action </code> or one that was previously
-   *     produced
+   *         produced
    */
   public CompletionStage<T> doOrGet(final Supplier<CompletionStage<T>> action) {
     CompletableFuture<T> newFuture;

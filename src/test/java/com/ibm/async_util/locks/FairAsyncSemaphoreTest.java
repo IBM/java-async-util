@@ -21,7 +21,8 @@ package com.ibm.async_util.locks;
 
 import org.junit.Test;
 
-public class FairAsyncSemaphoreTest extends AbstractAsyncSemaphoreTest.AbstractAsyncSemaphoreFairnessTest {
+public class FairAsyncSemaphoreTest
+    extends AbstractAsyncSemaphoreTest.AbstractAsyncSemaphoreFairnessTest {
   public FairAsyncSemaphoreTest() {
     super(FairAsyncSemaphore.MAX_PERMITS);
   }

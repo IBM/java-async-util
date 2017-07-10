@@ -124,7 +124,8 @@ public final class EpochBenchmarks {
   }
 
   private static class NoOpEpoch implements ObservableEpoch, EpochToken {
-    private static final CompletionStage<Boolean> terminate = CompletableFuture.completedFuture(false);
+    private static final CompletionStage<Boolean> terminate =
+        CompletableFuture.completedFuture(false);
     private static final CompletionStage<Void> completion = CompletableFuture.completedFuture(null);
 
     @Override

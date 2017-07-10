@@ -81,7 +81,8 @@ public abstract class AbstractAsyncLockTest {
         .map(CompletableFuture::join).collect(Collectors.toList());
 
     TestUtil.join(CompletableFuture.allOf(acqs.stream()
-        .map(f -> f.thenAccept(AsyncLock.LockToken::releaseLock)).toArray(CompletableFuture[]::new)));
+        .map(f -> f.thenAccept(AsyncLock.LockToken::releaseLock))
+        .toArray(CompletableFuture[]::new)));
 
   }
 
@@ -120,17 +121,21 @@ public abstract class AbstractAsyncLockTest {
 
       // acquires primed to release on threads: main, A, B, A
       final CompletableFuture<Void> acq2 =
-          lock.acquireLock().thenAcceptAsync(AsyncLock.LockToken::releaseLock, execA).toCompletableFuture();
+          lock.acquireLock().thenAcceptAsync(AsyncLock.LockToken::releaseLock, execA)
+              .toCompletableFuture();
       final CompletableFuture<Void> acq3 =
-          lock.acquireLock().thenAcceptAsync(AsyncLock.LockToken::releaseLock, execB).toCompletableFuture();
+          lock.acquireLock().thenAcceptAsync(AsyncLock.LockToken::releaseLock, execB)
+              .toCompletableFuture();
       final CompletableFuture<Void> acq4 =
-          lock.acquireLock().thenAcceptAsync(AsyncLock.LockToken::releaseLock, execA).toCompletableFuture();
+          lock.acquireLock().thenAcceptAsync(AsyncLock.LockToken::releaseLock, execA)
+              .toCompletableFuture();
 
 
       acq1.releaseLock();
       // wait for everybody to do everything
       TestUtil.join(CompletableFuture.allOf(acq2, acq3, acq4));
-      TestUtil.join(lock.acquireLock().thenAccept(AsyncLock.LockToken::releaseLock), 2, TimeUnit.SECONDS);
+      TestUtil.join(lock.acquireLock().thenAccept(AsyncLock.LockToken::releaseLock), 2,
+          TimeUnit.SECONDS);
     }
 
     // test threading AA for unroll (release on same thread, but separate stacks)
@@ -142,14 +147,17 @@ public abstract class AbstractAsyncLockTest {
 
       // acqrs primed to release on threads: main, A, A
       final CompletableFuture<Void> acq2 =
-          lock.acquireLock().thenAcceptAsync(AsyncLock.LockToken::releaseLock, execA).toCompletableFuture();
+          lock.acquireLock().thenAcceptAsync(AsyncLock.LockToken::releaseLock, execA)
+              .toCompletableFuture();
       final CompletableFuture<Void> acq3 =
-          lock.acquireLock().thenAcceptAsync(AsyncLock.LockToken::releaseLock, execA).toCompletableFuture();
+          lock.acquireLock().thenAcceptAsync(AsyncLock.LockToken::releaseLock, execA)
+              .toCompletableFuture();
 
 
       acq1.releaseLock();
       TestUtil.join(CompletableFuture.allOf(acq2, acq3));
-      TestUtil.join(lock.acquireLock().thenAccept(AsyncLock.LockToken::releaseLock), 2, TimeUnit.SECONDS);
+      TestUtil.join(lock.acquireLock().thenAccept(AsyncLock.LockToken::releaseLock), 2,
+          TimeUnit.SECONDS);
     }
   }
 

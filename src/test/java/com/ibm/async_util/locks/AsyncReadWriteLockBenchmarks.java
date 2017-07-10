@@ -158,8 +158,10 @@ public final class AsyncReadWriteLockBenchmarks {
       }
     };
 
-    private static final CompletableFuture<ReadLockToken> readFuture = CompletableFuture.completedFuture(READ);
-    private static final CompletableFuture<WriteLockToken> writeFuture = CompletableFuture.completedFuture(WRITE);
+    private static final CompletableFuture<ReadLockToken> readFuture =
+        CompletableFuture.completedFuture(READ);
+    private static final CompletableFuture<WriteLockToken> writeFuture =
+        CompletableFuture.completedFuture(WRITE);
 
     @Override
     public CompletionStage<WriteLockToken> acquireWriteLock() {

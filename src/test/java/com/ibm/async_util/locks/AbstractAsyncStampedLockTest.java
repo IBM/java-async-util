@@ -58,7 +58,8 @@ public abstract class AbstractAsyncStampedLockTest extends AbstractAsyncReadWrit
     Assert.assertNotNull(stamp1);
     Assert.assertTrue(stamp1.validate());
 
-    final CompletableFuture<AsyncReadWriteLock.WriteLockToken> writeLock = asl.acquireWriteLock().toCompletableFuture();
+    final CompletableFuture<AsyncReadWriteLock.WriteLockToken> writeLock =
+        asl.acquireWriteLock().toCompletableFuture();
 
     // stamps are still valid because the write lock has not yet acquired
     Assert.assertTrue(stamp0.validate());

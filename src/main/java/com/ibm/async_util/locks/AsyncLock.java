@@ -6,8 +6,9 @@ import java.util.concurrent.CompletionStage;
 /**
  * An asynchronously acquirable mutual exclusion lock.
  *
- * <p>Implementations will specify whether their lock acquisition is fair or not; this interface
- * does not define this requirement.
+ * <p>
+ * Implementations will specify whether their lock acquisition is fair or not; this interface does
+ * not define this requirement.
  */
 public interface AsyncLock {
 
@@ -16,8 +17,9 @@ public interface AsyncLock {
    * immediately complete. Otherwise, the returned future will complete when the lock is exclusively
    * acquired by this caller.
    *
-   * <p>The {@link LockToken} held by the returned future is used to release the lock after it has
-   * been acquired and the lock-protected action has completed.
+   * <p>
+   * The {@link LockToken} held by the returned future is used to release the lock after it has been
+   * acquired and the lock-protected action has completed.
    */
   CompletionStage<LockToken> acquireLock();
 
@@ -26,14 +28,14 @@ public interface AsyncLock {
    * not currently held.
    *
    * @return An {@link Optional} holding a {@link LockToken} if the lock is not held; otherwise an
-   *     empty Optional
+   *         empty Optional
    */
   Optional<LockToken> tryLock();
 
   /**
    * A lock token indicating that the associated lock has been exclusively acquired. Once the
-   * protected action is completed, the lock may be released by calling {@link
-   * LockToken#releaseLock()}
+   * protected action is completed, the lock may be released by calling
+   * {@link LockToken#releaseLock()}
    */
   interface LockToken extends AutoCloseable {
     /** Release this lock, allowing others to acquire it. */
@@ -42,7 +44,8 @@ public interface AsyncLock {
     /**
      * Release this lock, allowing others to acquire it.
      *
-     * <p>{@inheritDoc}
+     * <p>
+     * {@inheritDoc}
      */
     @Override
     default void close() {
@@ -53,7 +56,8 @@ public interface AsyncLock {
   /**
    * Creates an {@link AsyncLock}
    *
-   * <p>The returned lock is only guaranteed to meet the requirements of {@link AsyncLock}; in
+   * <p>
+   * The returned lock is only guaranteed to meet the requirements of {@link AsyncLock}; in
    * particular, no guarantee of fairness is provided.
    *
    * @return a new {@link AsyncLock}

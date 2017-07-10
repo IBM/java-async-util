@@ -40,9 +40,10 @@ public final class AsyncChannels {
   /**
    * Creates an unbounded AsyncChannel.
    *
-   * <p>Sends on an unbounded channel always complete synchronously, and throttling must be managed
-   * by the senders to ensure senders don't get too far ahead of the consumer. {@link AsyncChannel}
-   * for details.
+   * <p>
+   * Sends on an unbounded channel always complete synchronously, and throttling must be managed by
+   * the senders to ensure senders don't get too far ahead of the consumer. {@link AsyncChannel} for
+   * details.
    *
    * @return an {@link AsyncChannel}
    */
@@ -53,7 +54,8 @@ public final class AsyncChannels {
   /**
    * Creates a bounded AsyncChannel.
    *
-   * <p>This channel can only accept one value at a time until it is consumed. It is useful when you
+   * <p>
+   * This channel can only accept one value at a time until it is consumed. It is useful when you
    * want to produce work potentially in parallel, but want to be throttled at the rate at which you
    * can consume this work. See {@link BoundedAsyncChannel} for details.
    *
@@ -70,11 +72,12 @@ public final class AsyncChannels {
   /**
    * Creates a buffered AsyncChannel.
    *
-   * <p>This channel can accept up to {@code maxBuffer} values before the futures returned by send
+   * <p>
+   * This channel can accept up to {@code maxBuffer} values before the futures returned by send
    * become delayed. See {@link BoundedAsyncChannel} for details
    *
    * @param maxBuffer the maximum number of values that the channel will accept before applying
-   *     backpressure to senders
+   *        backpressure to senders
    * @param <T> the type of elements in the returned channel
    * @return a {@link BoundedAsyncChannel} with a buffer size of {@code maxBuffer} elements
    */
@@ -87,29 +90,33 @@ public final class AsyncChannels {
    * multi-producer single-consumer model. This implementation is Fair - if there are two
    * non-overlapping calls to send, the consumer will see the first call before the second.
    *
-   * <p>The approach is simple. There is a singly linked list of futures with a head and tail
-   * pointer, with the following invariants
+   * <p>
+   * The approach is simple. There is a singly linked list of futures with a head and tail pointer,
+   * with the following invariants
    * <li>There is always at least one node in the list
    *
-   *     <p>While the Channel is open:
+   * <p>
+   * While the Channel is open:
    * <li>After any call to send or nextFuture completes, there is exactly one uncompleted future in
-   *     the list
+   * the list
    * <li>After any call to send or nextFuture completes, the uncompleted future is pointed at by
-   *     head
+   * head
    *
-   *     <p>The list starts with an initial uncompleted future. When send is called, the sender
-   *     attempts to update the tail with a new uncompleted future via CAS. When it succeeds, it
-   *     completes the former tails future. Readers just return the future pointed at by head, when
-   *     that future completes the head pointer is moved forward.
+   * <p>
+   * The list starts with an initial uncompleted future. When send is called, the sender attempts to
+   * update the tail with a new uncompleted future via CAS. When it succeeds, it completes the
+   * former tails future. Readers just return the future pointed at by head, when that future
+   * completes the head pointer is moved forward.
    *
-   *     <p>Concretely, if there are values to read when the reader comes in, it simply observes an
-   *     already completed future. If there are no values to read, it will wait on the head future
-   *     (which is also the tail in this case), which will be completed by whichever sender updates
-   *     the tail.
+   * <p>
+   * Concretely, if there are values to read when the reader comes in, it simply observes an already
+   * completed future. If there are no values to read, it will wait on the head future (which is
+   * also the tail in this case), which will be completed by whichever sender updates the tail.
    *
-   *     <p>When a sender sends an Optional.empty, the tail is replaced with STOP marker. Future
-   *     senders see the tail and don't try to update it. Once the reader hits the empty tail, it
-   *     stops moving the head
+   * <p>
+   * When a sender sends an Optional.empty, the tail is replaced with STOP marker. Future senders
+   * see the tail and don't try to update it. Once the reader hits the empty tail, it stops moving
+   * the head
    *
    * @param <T>
    */
@@ -155,13 +162,12 @@ public final class AsyncChannels {
       // whenever we get a value from the head future, we should unlink that node, and move the head
       // pointer forward. We know head.next must exist, because a node's next value is always
       // updated before completion.
-      return this.head.thenApply(
-          res -> {
-            // note: we don't need to check for exceptions here, because there is no way to send an
-            // exceptional result into a channel
-            this.head = this.head.next;
-            return res;
-          });
+      return this.head.thenApply(res -> {
+        // note: we don't need to check for exceptions here, because there is no way to send an
+        // exceptional result into a channel
+        this.head = this.head.next;
+        return res;
+      });
     }
 
     public Optional<T> poll() {
@@ -216,8 +222,9 @@ public final class AsyncChannels {
    * Implementation is backed by an {@link AsyncSemaphore} which throttles the number of elements
    * that can be in the linked list in the backing {@link UnboundedChannel}.
    *
-   * <p>This implementation is Fair - if there are two non-overlapping calls to send, the consumer
-   * will see the first call before the second.
+   * <p>
+   * This implementation is Fair - if there are two non-overlapping calls to send, the consumer will
+   * see the first call before the second.
    *
    * @param <T>
    */
@@ -236,13 +243,14 @@ public final class AsyncChannels {
     public CompletionStage<Either<End, T>> nextFuture() {
       return this.backingChannel
           .nextFuture()
-          .thenApply(
-              res -> {
-                // only need to release if the backing channel is open. after it is closed, senders will
-                // release automatically
-                res.forEach(ig -> {}, t -> this.sendThrottle.release());
-                return res;
-              });
+          .thenApply(res -> {
+            // only need to release if the backing channel is open. after it is closed, senders
+            // will
+            // release automatically
+            res.forEach(ig -> {
+            }, t -> this.sendThrottle.release());
+            return res;
+          });
     }
 
     @Override
@@ -252,31 +260,30 @@ public final class AsyncChannels {
           // acquire a permit, this represents the node we put
           // in the queue in our underlying channel
           .acquire()
-          .thenApply(
-              ig -> {
-                final boolean accepted = this.backingChannel.send(item);
-                if (!accepted) {
-                  // the backing channel was closed, so our item will never be consumed. we should
-                  // release the permit we acquired
-                  this.sendThrottle.release();
-                }
-                return accepted;
-              });
+          .thenApply(ig -> {
+            final boolean accepted = this.backingChannel.send(item);
+            if (!accepted) {
+              // the backing channel was closed, so our item will never be consumed. we should
+              // release the permit we acquired
+              this.sendThrottle.release();
+            }
+            return accepted;
+          });
     }
 
     @Override
     public CompletionStage<Void> terminate() {
       // note we still want to respect the buffer here, fairness of our backing semaphore will
-      // ensure that any sends queued before the terminate will still hit the backingChannel before the
+      // ensure that any sends queued before the terminate will still hit the backingChannel before
+      // the
       // terminate does
       return this.sendThrottle
           .acquire()
-          .thenApply(
-              res -> {
-                this.backingChannel.terminate();
-                this.sendThrottle.release();
-                return res;
-              });
+          .thenApply(res -> {
+            this.backingChannel.terminate();
+            this.sendThrottle.release();
+            return res;
+          });
     }
 
     @Override

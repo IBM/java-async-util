@@ -114,7 +114,8 @@ public interface AsyncReadWriteLock {
   /**
    * Creates an {@link AsyncReadWriteLock}
    *
-   * <p>The returned lock is only guaranteed to meet the requirements of {@link AsyncReadWriteLock}; in
+   * <p>
+   * The returned lock is only guaranteed to meet the requirements of {@link AsyncReadWriteLock}; in
    * particular, no guarantee of fairness is provided.
    *
    * @return a new {@link AsyncReadWriteLock}

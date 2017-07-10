@@ -51,10 +51,12 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
     {
       final AsyncReadWriteLock arwl = getReadWriteLock();
 
-      final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read1 = arwl.acquireReadLock().toCompletableFuture();
+      final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read1 =
+          arwl.acquireReadLock().toCompletableFuture();
       TestUtil.join(read1, 2, TimeUnit.SECONDS);
 
-      final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read2 = arwl.acquireReadLock().toCompletableFuture();
+      final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read2 =
+          arwl.acquireReadLock().toCompletableFuture();
       TestUtil.join(read2, 2, TimeUnit.SECONDS);
 
       final CompletableFuture<AsyncReadWriteLock.WriteLockToken> write1 =
@@ -85,7 +87,8 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
           arwl.acquireWriteLock().toCompletableFuture();
       Assert.assertFalse(write2.isDone());
 
-      final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read1 = arwl.acquireReadLock().toCompletableFuture();
+      final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read1 =
+          arwl.acquireReadLock().toCompletableFuture();
       Assert.assertFalse(read1.isDone());
 
       TestUtil.join(write1).releaseWriteLock();
@@ -113,7 +116,8 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
     for (int i = 0; i < 100_000; i++) {
       final CompletableFuture<AsyncReadWriteLock.WriteLockToken> write =
           rwlock.acquireWriteLock().toCompletableFuture();
-      final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read = rwlock.acquireReadLock().toCompletableFuture();
+      final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read =
+          rwlock.acquireReadLock().toCompletableFuture();
       write.thenAccept(writeLockToken -> {
         writeLockToken.releaseWriteLock();
         read.thenAccept(AsyncReadWriteLock.ReadLockToken::releaseReadLock);
@@ -157,7 +161,8 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
 
   @Test(expected = LockStateException.class)
   public final void testReadReleaseException() {
-    final AsyncReadWriteLock.ReadLockToken token = TestUtil.join(getReadWriteLock().acquireReadLock());
+    final AsyncReadWriteLock.ReadLockToken token =
+        TestUtil.join(getReadWriteLock().acquireReadLock());
 
     token.releaseReadLock();
     try {
@@ -169,7 +174,8 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
 
   @Test(expected = LockStateException.class)
   public final void testWriteReleaseException() {
-    final AsyncReadWriteLock.WriteLockToken token = TestUtil.join(getReadWriteLock().acquireWriteLock());
+    final AsyncReadWriteLock.WriteLockToken token =
+        TestUtil.join(getReadWriteLock().acquireWriteLock());
 
     token.releaseWriteLock();
     try {
@@ -181,7 +187,8 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
 
   @Test(expected = LockStateException.class)
   public final void testDowngradeTwiceException() {
-    final AsyncReadWriteLock.WriteLockToken token = TestUtil.join(getReadWriteLock().acquireWriteLock());
+    final AsyncReadWriteLock.WriteLockToken token =
+        TestUtil.join(getReadWriteLock().acquireWriteLock());
 
     token.downgradeLock();
     try {
@@ -193,7 +200,8 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
 
   @Test(expected = LockStateException.class)
   public final void testDowngradeReleaseException() {
-    final AsyncReadWriteLock.WriteLockToken token = TestUtil.join(getReadWriteLock().acquireWriteLock());
+    final AsyncReadWriteLock.WriteLockToken token =
+        TestUtil.join(getReadWriteLock().acquireWriteLock());
 
     token.downgradeLock();
     try {
@@ -235,7 +243,8 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
       final AsyncReadWriteLock.WriteLockToken firstLock = TestUtil.join(rwlock.acquireWriteLock());
       Assert.assertFalse(rwlock.tryWriteLock().isPresent());
 
-      final CompletableFuture<AsyncReadWriteLock.WriteLockToken> secondLock = rwlock.acquireWriteLock().toCompletableFuture();
+      final CompletableFuture<AsyncReadWriteLock.WriteLockToken> secondLock =
+          rwlock.acquireWriteLock().toCompletableFuture();
       Assert.assertFalse(secondLock.isDone());
 
       final AsyncReadWriteLock.ReadLockToken downgrade = firstLock.downgradeLock();
@@ -250,17 +259,20 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
   public final void testTryReadWriteLock() throws TimeoutException {
     final AsyncReadWriteLock rwlock = getReadWriteLock();
     // first read should succeed
-    final AsyncReadWriteLock.ReadLockToken read = rwlock.tryReadLock().orElseThrow(AssertionError::new);
+    final AsyncReadWriteLock.ReadLockToken read =
+        rwlock.tryReadLock().orElseThrow(AssertionError::new);
     // write lock should fail
     Assert.assertFalse(rwlock.tryWriteLock().isPresent());
 
     // other reads should succeed
     rwlock.tryReadLock().orElseThrow(AssertionError::new).releaseReadLock();
-    final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read2 = rwlock.acquireReadLock().toCompletableFuture();
+    final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read2 =
+        rwlock.acquireReadLock().toCompletableFuture();
     TestUtil.join(read2, 2, TimeUnit.SECONDS).releaseReadLock();
 
     // conventional write should also fail
-    final CompletableFuture<AsyncReadWriteLock.WriteLockToken> write = rwlock.acquireWriteLock().toCompletableFuture();
+    final CompletableFuture<AsyncReadWriteLock.WriteLockToken> write =
+        rwlock.acquireWriteLock().toCompletableFuture();
     Assert.assertFalse(write.isDone());
 
     // release last reader
@@ -275,11 +287,14 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
 
     TestUtil.join(write).releaseWriteLock();
 
-    final AsyncReadWriteLock.WriteLockToken write2 = rwlock.tryWriteLock().orElseThrow(AssertionError::new);
+    final AsyncReadWriteLock.WriteLockToken write2 =
+        rwlock.tryWriteLock().orElseThrow(AssertionError::new);
     Assert.assertFalse(rwlock.tryReadLock().isPresent());
-    final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read3 = rwlock.acquireReadLock().toCompletableFuture();
+    final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read3 =
+        rwlock.acquireReadLock().toCompletableFuture();
     Assert.assertFalse(read3.isDone());
-    final CompletableFuture<AsyncReadWriteLock.WriteLockToken> write3 = rwlock.acquireWriteLock().toCompletableFuture();
+    final CompletableFuture<AsyncReadWriteLock.WriteLockToken> write3 =
+        rwlock.acquireWriteLock().toCompletableFuture();
     Assert.assertFalse(write3.isDone());
 
     write2.releaseWriteLock();
@@ -297,7 +312,8 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
       // tryReadLock may succeed when no writers are waiting
       rwlock.tryReadLock().orElseThrow(AssertionError::new).releaseReadLock();
 
-      final CompletableFuture<AsyncReadWriteLock.WriteLockToken> write = rwlock.acquireWriteLock().toCompletableFuture();
+      final CompletableFuture<AsyncReadWriteLock.WriteLockToken> write =
+          rwlock.acquireWriteLock().toCompletableFuture();
       // now tryReadLock should fail because a writer is waiting
       Assert.assertFalse(rwlock.tryReadLock().isPresent());
 
@@ -311,28 +327,37 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
     public final void testFairness() throws Exception {
       final AsyncReadWriteLock narwls = getReadWriteLock();
 
-      final CompletableFuture<AsyncReadWriteLock.WriteLockToken> write1 = narwls.acquireWriteLock().toCompletableFuture();
+      final CompletableFuture<AsyncReadWriteLock.WriteLockToken> write1 =
+          narwls.acquireWriteLock().toCompletableFuture();
       Assert.assertTrue(write1.isDone());
 
       // under write lock
-      final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read1 = narwls.acquireReadLock().toCompletableFuture();
-      final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read2 = narwls.acquireReadLock().toCompletableFuture();
-      final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read3 = narwls.acquireReadLock().toCompletableFuture();
+      final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read1 =
+          narwls.acquireReadLock().toCompletableFuture();
+      final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read2 =
+          narwls.acquireReadLock().toCompletableFuture();
+      final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read3 =
+          narwls.acquireReadLock().toCompletableFuture();
       Assert.assertFalse(read1.isDone());
       Assert.assertFalse(read2.isDone());
       Assert.assertFalse(read3.isDone());
 
-      final CompletableFuture<AsyncReadWriteLock.WriteLockToken> write2 = narwls.acquireWriteLock().toCompletableFuture();
+      final CompletableFuture<AsyncReadWriteLock.WriteLockToken> write2 =
+          narwls.acquireWriteLock().toCompletableFuture();
       Assert.assertFalse(write2.isDone());
 
-      final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read4 = narwls.acquireReadLock().toCompletableFuture();
-      final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read5 = narwls.acquireReadLock().toCompletableFuture();
-      final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read6 = narwls.acquireReadLock().toCompletableFuture();
+      final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read4 =
+          narwls.acquireReadLock().toCompletableFuture();
+      final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read5 =
+          narwls.acquireReadLock().toCompletableFuture();
+      final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read6 =
+          narwls.acquireReadLock().toCompletableFuture();
       Assert.assertFalse(read4.isDone());
       Assert.assertFalse(read5.isDone());
       Assert.assertFalse(read6.isDone());
 
-      final CompletableFuture<AsyncReadWriteLock.WriteLockToken> write3 = narwls.acquireWriteLock().toCompletableFuture();
+      final CompletableFuture<AsyncReadWriteLock.WriteLockToken> write3 =
+          narwls.acquireWriteLock().toCompletableFuture();
       Assert.assertFalse(write3.isDone());
 
       TestUtil.join(write1).releaseWriteLock();
@@ -357,8 +382,10 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
       Assert.assertFalse(write3.isDone());
 
       // now under read lock (read3 still active)
-      final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read7 = narwls.acquireReadLock().toCompletableFuture();
-      final CompletableFuture<AsyncReadWriteLock.WriteLockToken> write4 = narwls.acquireWriteLock().toCompletableFuture();
+      final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read7 =
+          narwls.acquireReadLock().toCompletableFuture();
+      final CompletableFuture<AsyncReadWriteLock.WriteLockToken> write4 =
+          narwls.acquireWriteLock().toCompletableFuture();
 
       Assert.assertTrue(read3.isDone());
       Assert.assertFalse(write2.isDone());
