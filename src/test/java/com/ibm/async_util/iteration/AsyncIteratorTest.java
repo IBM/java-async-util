@@ -19,13 +19,6 @@
 
 package com.ibm.async_util.iteration;
 
-import com.ibm.async_util.iteration.AsyncIterator.End;
-import com.ibm.async_util.util.Either;
-import com.ibm.async_util.util.FutureSupport;
-import com.ibm.async_util.util.TestUtil;
-import org.junit.Assert;
-import org.junit.Test;
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -49,6 +42,14 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import org.junit.Assert;
+import org.junit.Test;
+
+import com.ibm.async_util.iteration.AsyncIterator.End;
+import com.ibm.async_util.util.Either;
+import com.ibm.async_util.util.FutureSupport;
+import com.ibm.async_util.util.TestUtil;
 
 public class AsyncIteratorTest {
 
@@ -206,7 +207,7 @@ public class AsyncIteratorTest {
   @Test
   public void testThenComposeAsync() {
     final AsyncIterator<Integer> x = intIterator(1000);
-    long currentThread = Thread.currentThread().getId();
+    final long currentThread = Thread.currentThread().getId();
     final AsyncIterator<Integer> mapped =
         x.thenComposeAsync(c -> {
           Assert.assertNotEquals(Thread.currentThread().getId(), currentThread);
@@ -233,7 +234,7 @@ public class AsyncIteratorTest {
   @Test
   public void testThenApplyAsync() {
     final AsyncIterator<Integer> x = intIterator(1000);
-    long currentThread = Thread.currentThread().getId();
+    final long currentThread = Thread.currentThread().getId();
     final AsyncIterator<Integer> mapped =
         x.thenApplyAsync(c -> {
           Assert.assertNotEquals(Thread.currentThread().getId(), currentThread);
@@ -262,7 +263,7 @@ public class AsyncIteratorTest {
   public void testThenComposeAheadException() throws Throwable {
     final AsyncIterator<Integer> x = intIterator(10);
     final CountDownLatch latch = new CountDownLatch(1);
-    AsyncIterator<Integer> exceptionOn3 =
+    final AsyncIterator<Integer> exceptionOn3 =
         x.thenComposeAhead(
             i -> {
               if (i == 3) {
@@ -273,7 +274,7 @@ public class AsyncIteratorTest {
                     () -> {
                       try {
                         latch.await();
-                      } catch (InterruptedException e) {
+                      } catch (final InterruptedException e) {
                       }
                       return 5;
                     });
@@ -285,7 +286,7 @@ public class AsyncIteratorTest {
     try {
       exceptionOn3.forEach(ig -> count.incrementAndGet()).toCompletableFuture().join();
       Assert.fail("expected exception");
-    } catch (CompletionException e) {
+    } catch (final CompletionException e) {
       Assert.assertEquals(3, count.get());
       throw e.getCause();
     }
@@ -543,6 +544,10 @@ public class AsyncIteratorTest {
 
     @SuppressWarnings("serial")
     class LimitedList<T> extends ArrayList<T> {
+      /**
+       *
+       */
+      private static final long serialVersionUID = 6604914508983772665L;
       // this poll will fail if the iterator tries to create more batches than necessary.
       // (not sufficiently lazy)
       final int limit = sizeLimitsQueue.poll();
@@ -621,14 +626,14 @@ public class AsyncIteratorTest {
   public void testFindNull() throws Throwable {
     try {
       AsyncIterator.<Integer>once(null).find(i -> i == null).toCompletableFuture().join().get();
-    } catch (CompletionException e) {
+    } catch (final CompletionException e) {
       throw e.getCause();
     }
   }
 
   @Test
   public void testFilterConvert() {
-    int evenSum =
+    final int evenSum =
         intIterator(5)
             .filterApply(i -> Optional.ofNullable(i % 2 == 0 ? i : null))
             .collect(Collectors.summingInt(i -> i))
@@ -640,7 +645,7 @@ public class AsyncIteratorTest {
 
   @Test
   public void testFilterMap() {
-    int evenSum =
+    final int evenSum =
         intIterator(5)
             .filterCompose(
                 i -> CompletableFuture.completedFuture(Optional.ofNullable(i % 2 == 0 ? i : null)))
@@ -654,7 +659,7 @@ public class AsyncIteratorTest {
   @Test
   public void testUnfold() {
     {
-      List<Integer> unfolded =
+      final List<Integer> unfolded =
           AsyncIterator.unfold(
               0, i -> CompletableFuture.completedFuture(Either.<End, Integer>right(i + 1)))
               .take(5)
@@ -664,7 +669,7 @@ public class AsyncIteratorTest {
       Assert.assertEquals(IntStream.range(0, 5).boxed().collect(Collectors.toList()), unfolded);
     }
     {
-      List<Integer> unfolded =
+      final List<Integer> unfolded =
           AsyncIterator.unfold(0, i -> AsyncIterators.endFuture())
               .collect(Collectors.toList())
               .toCompletableFuture()
@@ -687,7 +692,7 @@ public class AsyncIteratorTest {
 
   @Test
   public void testFuse() {
-    AsyncIterator<Integer> it = mustRespectEndIterator(1).fuse();
+    final AsyncIterator<Integer> it = mustRespectEndIterator(1).fuse();
     Assert.assertEquals(0, it.nextFuture().toCompletableFuture().join().right().get().intValue());
     Assert.assertTrue(it.nextFuture().toCompletableFuture().join().isLeft());
     Assert.assertTrue(it.nextFuture().toCompletableFuture().join().isLeft());
@@ -696,11 +701,11 @@ public class AsyncIteratorTest {
 
   @Test
   public void testAheadRespectsEnd() {
-    List<Integer> list = mustRespectEndIterator(2)
+    final List<Integer> list = mustRespectEndIterator(2)
         .thenComposeAhead(i -> CompletableFuture.supplyAsync(() -> {
           try {
             Thread.sleep(100);
-          } catch (InterruptedException e) {
+          } catch (final InterruptedException e) {
           }
           return 0;
         }), 15)
@@ -711,7 +716,7 @@ public class AsyncIteratorTest {
   }
 
   // throws exceptions when iterated past end of iteration
-  AsyncIterator<Integer> mustRespectEndIterator(int numElements) {
+  AsyncIterator<Integer> mustRespectEndIterator(final int numElements) {
     final AtomicInteger count = new AtomicInteger(numElements);
     return AsyncIterator.supply(
         () -> {

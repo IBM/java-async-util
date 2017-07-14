@@ -19,11 +19,6 @@
 
 package com.ibm.async_util.iteration;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -44,6 +39,11 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 public abstract class AbstractAsyncChannelTest {
   private final static int NUM_THREADS = 5;
@@ -111,7 +111,7 @@ public abstract class AbstractAsyncChannelTest {
   private void singleProducer(
       final Supplier<CompletionStage<List<Integer>>> consumer) {
     final CompletionStage<List<Integer>> future = consumer.get();
-    CompletableFuture<Boolean> prodFuture = CompletableFuture.supplyAsync(() -> {
+    final CompletableFuture<Boolean> prodFuture = CompletableFuture.supplyAsync(() -> {
       Integer next;
       while ((next = this.queue.poll()) != null) {
         Assert.assertTrue(send(next));
@@ -205,7 +205,7 @@ public abstract class AbstractAsyncChannelTest {
     final CompletionStage<List<Integer>> future = consumer.get();
 
     for (int i = 0; i < ITEMS_PER_THREAD; i++) {
-      List<CompletableFuture<Void>> futures = new ArrayList<>();
+      final List<CompletableFuture<Void>> futures = new ArrayList<>();
       for (int j = 0; j < NUM_THREADS; j++) {
         final int finali = i;
         // add the number i for each thread
@@ -248,7 +248,7 @@ public abstract class AbstractAsyncChannelTest {
 
     final CompletionStage<List<Integer>> future = consumer.get();
     final List<Queue<Integer>> chunks = chunk();
-    List<CompletableFuture<Void>> producers = new ArrayList<>();
+    final List<CompletableFuture<Void>> producers = new ArrayList<>();
     for (int i = 0; i < NUM_THREADS; i++) {
       final Queue<Integer> chunk = chunks.get(i);
       producers.add(CompletableFuture.runAsync(() -> {

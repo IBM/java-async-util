@@ -32,13 +32,14 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import com.ibm.async_util.util.Reference;
-import com.ibm.async_util.util.TestUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import com.ibm.async_util.util.Reference;
+import com.ibm.async_util.util.TestUtil;
 
 public abstract class AbstractAsyncLockTest {
 
@@ -163,6 +164,11 @@ public abstract class AbstractAsyncLockTest {
 
   @SuppressWarnings("serial")
   private static class LockStateException extends RuntimeException {
+
+    /**
+     *
+     */
+    private static final long serialVersionUID = -1646858483730793331L;
   }
 
   @Test(expected = LockStateException.class)

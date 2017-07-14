@@ -28,13 +28,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import com.ibm.async_util.util.Reference;
-import com.ibm.async_util.util.TestUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import com.ibm.async_util.util.Reference;
+import com.ibm.async_util.util.TestUtil;
 
 public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTest {
 
@@ -157,6 +158,11 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
 
   @SuppressWarnings("serial")
   private static class LockStateException extends RuntimeException {
+
+    /**
+     *
+     */
+    private static final long serialVersionUID = -9098909095535022560L;
   }
 
   @Test(expected = LockStateException.class)

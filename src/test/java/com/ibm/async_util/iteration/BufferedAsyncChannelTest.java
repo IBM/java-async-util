@@ -19,13 +19,6 @@
 
 package com.ibm.async_util.iteration;
 
-import com.ibm.async_util.iteration.AsyncIterator.End;
-import com.ibm.async_util.util.Combinators;
-import com.ibm.async_util.util.Either;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -33,6 +26,14 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
+import com.ibm.async_util.iteration.AsyncIterator.End;
+import com.ibm.async_util.util.Combinators;
+import com.ibm.async_util.util.Either;
 
 public class BufferedAsyncChannelTest extends AbstractAsyncChannelTest {
   private final static int BUFFER = 5;
@@ -80,7 +81,8 @@ public class BufferedAsyncChannelTest extends AbstractAsyncChannelTest {
         .collect(Collectors.toList());
 
     for (int i = 0; i < BUFFER; i++) {
-      CompletableFuture<Either<End, Integer>> fut = this.channel.nextFuture().toCompletableFuture();
+      final CompletableFuture<Either<End, Integer>> fut =
+          this.channel.nextFuture().toCompletableFuture();
 
       // could change with impl, but with a full channel, futures should already be completed
       Assert.assertTrue(fut.isDone());

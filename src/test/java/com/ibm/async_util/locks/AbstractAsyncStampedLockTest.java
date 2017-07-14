@@ -24,13 +24,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import com.ibm.async_util.util.TestUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.ibm.async_util.locks.AsyncStampedLock.Stamp;
+import com.ibm.async_util.util.TestUtil;
 
 public abstract class AbstractAsyncStampedLockTest extends AbstractAsyncReadWriteLockTest {
 

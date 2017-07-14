@@ -24,8 +24,6 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-import com.ibm.async_util.util.TestUtil;
-import com.ibm.async_util.util.FutureSupport;
 import org.openjdk.jmh.Main;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -42,6 +40,9 @@ import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.runner.RunnerException;
+
+import com.ibm.async_util.util.FutureSupport;
+import com.ibm.async_util.util.TestUtil;
 
 public final class AsyncSemaphoreBenchmark {
   private AsyncSemaphoreBenchmark() {}
@@ -262,22 +263,27 @@ public final class AsyncSemaphoreBenchmark {
       this.semaphore = new FairAsyncSemaphore(permits);
     }
 
+    @Override
     public final CompletionStage<Void> acquire(final long permits) {
       return this.semaphore.acquire(permits);
     }
 
+    @Override
     public final void release(final long permits) {
       this.semaphore.release(permits);
     }
 
+    @Override
     public final boolean tryAcquire(final long permits) {
       return this.semaphore.tryAcquire(permits);
     }
 
+    @Override
     public final long drainPermits() {
       return this.semaphore.drainPermits();
     }
 
+    @Override
     public final long getAvailablePermits() {
       return this.semaphore.getAvailablePermits();
     }

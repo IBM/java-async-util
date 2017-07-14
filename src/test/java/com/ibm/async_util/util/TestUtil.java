@@ -12,7 +12,8 @@ public class TestUtil {
     return future.toCompletableFuture().join();
   }
 
-  public static <T> T join(final CompletionStage<T> future, long time, TimeUnit timeUnit) throws TimeoutException{
+  public static <T> T join(final CompletionStage<T> future, final long time,
+      final TimeUnit timeUnit) throws TimeoutException {
     try {
       return future.toCompletableFuture().get(time, timeUnit);
     } catch (InterruptedException | ExecutionException e) {

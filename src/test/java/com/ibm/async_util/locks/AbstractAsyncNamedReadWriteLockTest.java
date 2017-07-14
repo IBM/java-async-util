@@ -19,15 +19,16 @@
 
 package com.ibm.async_util.locks;
 
-import com.ibm.async_util.util.Combinators;
-import com.ibm.async_util.util.TestUtil;
-import org.junit.Assert;
-import org.junit.Test;
-
 import java.util.ConcurrentModificationException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+
+import org.junit.Assert;
+import org.junit.Test;
+
+import com.ibm.async_util.util.Combinators;
+import com.ibm.async_util.util.TestUtil;
 
 public abstract class AbstractAsyncNamedReadWriteLockTest extends AbstractAsyncReadWriteLockTest {
 

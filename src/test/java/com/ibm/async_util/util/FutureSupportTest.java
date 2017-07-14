@@ -8,8 +8,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class FutureSupportTest {
-  @SuppressWarnings("serial")
   private static class TestException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
   }
 
   @Test
@@ -19,13 +19,13 @@ public class FutureSupportTest {
     final CompletionStage<Integer> success2 = CompletableFuture.completedFuture(2);
 
     // input stage status should only effect function arguments
-    for (boolean inputFailed : new boolean[] {false, true}) {
-      CompletionStage<Integer> inputStage = inputFailed ? error : success;
-      Integer expectedResult = inputFailed ? null : 1;
+    for (final boolean inputFailed : new boolean[] {false, true}) {
+      final CompletionStage<Integer> inputStage = inputFailed ? error : success;
+      final Integer expectedResult = inputFailed ? null : 1;
 
       {
         // successful compose
-        int x =
+        final int x =
             FutureSupport.thenComposeOrRecover(
                 inputStage,
                 (result, throwable) -> {
@@ -68,7 +68,7 @@ public class FutureSupportTest {
     try {
       stage.toCompletableFuture().join();
       Assert.fail("expected exception");
-    } catch (CompletionException e) {
+    } catch (final CompletionException e) {
       Assert.assertTrue(e.getCause() instanceof TestException);
     }
   }

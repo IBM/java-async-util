@@ -1,13 +1,5 @@
 package com.ibm.async_util.iteration;
 
-import com.ibm.async_util.util.Either;
-import com.ibm.async_util.util.FutureSupport;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -26,10 +18,19 @@ import java.util.function.Supplier;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.experimental.runners.Enclosed;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import com.ibm.async_util.util.Either;
+import com.ibm.async_util.util.FutureSupport;
+
 @RunWith(Enclosed.class)
 public class AsyncIteratorParameterizedTest {
-  @SuppressWarnings("serial")
   private static class TestException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
   }
 
   static final TestException testException = new TestException();
@@ -39,65 +40,71 @@ public class AsyncIteratorParameterizedTest {
       Arrays.asList(
           new Function<AsyncIterator<?>, CompletionStage<?>>() {
             @Override
-            public CompletionStage<?> apply(AsyncIterator<?> it) {
+            public CompletionStage<?> apply(final AsyncIterator<?> it) {
               return it.fold((i, j) -> new Object(), new Object());
             }
 
+            @Override
             public String toString() {
               return "fold";
             }
           },
           new Function<AsyncIterator<?>, CompletionStage<?>>() {
             @Override
-            public CompletionStage<?> apply(AsyncIterator<?> it) {
+            public CompletionStage<?> apply(final AsyncIterator<?> it) {
               return it.consume();
             }
 
+            @Override
             public String toString() {
               return "consume";
             }
           },
           new Function<AsyncIterator<?>, CompletionStage<?>>() {
             @Override
-            public CompletionStage<?> apply(AsyncIterator<?> it) {
+            public CompletionStage<?> apply(final AsyncIterator<?> it) {
               return it.collect(Collectors.toList());
             }
 
+            @Override
             public String toString() {
               return "collect1";
             }
           },
           new Function<AsyncIterator<?>, CompletionStage<?>>() {
             @Override
-            public CompletionStage<?> apply(AsyncIterator<?> it) {
+            public CompletionStage<?> apply(final AsyncIterator<?> it) {
               return it.collect(ArrayList<Object>::new, List::add);
             }
 
+            @Override
             public String toString() {
               return "collect2";
             }
           },
           new Function<AsyncIterator<?>, CompletionStage<?>>() {
             @Override
-            public CompletionStage<?> apply(AsyncIterator<?> it) {
+            public CompletionStage<?> apply(final AsyncIterator<?> it) {
               return it.forEach(i -> {
               });
             }
 
+            @Override
             public String toString() {
               return "forEach";
             }
           },
           new Function<AsyncIterator<?>, CompletionStage<?>>() {
             @Override
-            public CompletionStage<?> apply(AsyncIterator<?> it) {
-              AtomicInteger calls = new AtomicInteger();
+            public CompletionStage<?> apply(final AsyncIterator<?> it) {
+              final AtomicInteger calls = new AtomicInteger();
               return it.find(
                   i -> {
                     return calls.getAndIncrement() == 3;
                   });
             }
 
+            @Override
             public String toString() {
               return "find";
             }
@@ -107,7 +114,7 @@ public class AsyncIteratorParameterizedTest {
       Arrays.asList(
           new Function<AsyncIterator<Integer>, CompletionStage<?>>() {
             @Override
-            public CompletionStage<?> apply(AsyncIterator<Integer> it) {
+            public CompletionStage<?> apply(final AsyncIterator<Integer> it) {
               return it.fold(
                   (i, j) -> {
                     throw testException;
@@ -115,13 +122,14 @@ public class AsyncIteratorParameterizedTest {
                   0);
             }
 
+            @Override
             public String toString() {
               return "fold";
             }
           },
           new Function<AsyncIterator<Integer>, CompletionStage<?>>() {
             @Override
-            public CompletionStage<?> apply(AsyncIterator<Integer> it) {
+            public CompletionStage<?> apply(final AsyncIterator<Integer> it) {
               return it.collect(
                   new Collector<Integer, Object, Object>() {
                     @Override
@@ -151,13 +159,14 @@ public class AsyncIteratorParameterizedTest {
                   });
             }
 
+            @Override
             public String toString() {
               return "collect(supply-error)";
             }
           },
           new Function<AsyncIterator<Integer>, CompletionStage<?>>() {
             @Override
-            public CompletionStage<?> apply(AsyncIterator<Integer> it) {
+            public CompletionStage<?> apply(final AsyncIterator<Integer> it) {
               return it.collect(
                   new Collector<Integer, Object, Object>() {
                     @Override
@@ -189,13 +198,14 @@ public class AsyncIteratorParameterizedTest {
                   });
             }
 
+            @Override
             public String toString() {
               return "collect(accumulate-error)";
             }
           },
           new Function<AsyncIterator<Integer>, CompletionStage<?>>() {
             @Override
-            public CompletionStage<?> apply(AsyncIterator<Integer> it) {
+            public CompletionStage<?> apply(final AsyncIterator<Integer> it) {
               return it.collect(
                   ArrayList<Integer>::new,
                   (acc, t) -> {
@@ -203,32 +213,35 @@ public class AsyncIteratorParameterizedTest {
                   });
             }
 
+            @Override
             public String toString() {
               return "collect(accumulate-error-2)";
             }
           },
           new Function<AsyncIterator<Integer>, CompletionStage<?>>() {
             @Override
-            public CompletionStage<?> apply(AsyncIterator<Integer> it) {
+            public CompletionStage<?> apply(final AsyncIterator<Integer> it) {
               return it.forEach(
                   i -> {
                     throw testException;
                   });
             }
 
+            @Override
             public String toString() {
               return "forEach";
             }
           },
           new Function<AsyncIterator<Integer>, CompletionStage<?>>() {
             @Override
-            public CompletionStage<?> apply(AsyncIterator<Integer> it) {
+            public CompletionStage<?> apply(final AsyncIterator<Integer> it) {
               return it.find(
                   i -> {
                     throw testException;
                   });
             }
 
+            @Override
             public String toString() {
               return "find";
             }
@@ -238,7 +251,7 @@ public class AsyncIteratorParameterizedTest {
       Arrays.asList(
           new Function<AsyncIterator<Integer>, AsyncIterator<?>>() {
             @Override
-            public AsyncIterator<?> apply(AsyncIterator<Integer> it) {
+            public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
               return it.thenApply(i -> i);
             }
 
@@ -249,7 +262,7 @@ public class AsyncIteratorParameterizedTest {
           },
           new Function<AsyncIterator<Integer>, AsyncIterator<?>>() {
             @Override
-            public AsyncIterator<?> apply(AsyncIterator<Integer> it) {
+            public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
               return it.thenApplyAsync(i -> i);
             }
 
@@ -260,7 +273,7 @@ public class AsyncIteratorParameterizedTest {
           },
           new Function<AsyncIterator<Integer>, AsyncIterator<?>>() {
             @Override
-            public AsyncIterator<?> apply(AsyncIterator<Integer> it) {
+            public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
               return it.thenCompose(
                   i -> (CompletionStage<Integer>) CompletableFuture.completedFuture(i));
             }
@@ -272,7 +285,7 @@ public class AsyncIteratorParameterizedTest {
           },
           new Function<AsyncIterator<Integer>, AsyncIterator<?>>() {
             @Override
-            public AsyncIterator<?> apply(AsyncIterator<Integer> it) {
+            public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
               return it.thenComposeAsync(
                   i -> (CompletionStage<Integer>) CompletableFuture.completedFuture(i));
             }
@@ -284,7 +297,7 @@ public class AsyncIteratorParameterizedTest {
           },
           new Function<AsyncIterator<Integer>, AsyncIterator<?>>() {
             @Override
-            public AsyncIterator<?> apply(AsyncIterator<Integer> it) {
+            public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
               return it.thenFlatten(i -> AsyncIterator.<Integer>once(i));
             }
 
@@ -295,7 +308,7 @@ public class AsyncIteratorParameterizedTest {
           },
           new Function<AsyncIterator<Integer>, AsyncIterator<?>>() {
             @Override
-            public AsyncIterator<?> apply(AsyncIterator<Integer> it) {
+            public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
               return it.filter(i -> true);
             }
 
@@ -306,7 +319,7 @@ public class AsyncIteratorParameterizedTest {
           },
           new Function<AsyncIterator<Integer>, AsyncIterator<?>>() {
             @Override
-            public AsyncIterator<?> apply(AsyncIterator<Integer> it) {
+            public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
               return it.filterApply(Optional::of);
             }
 
@@ -317,7 +330,7 @@ public class AsyncIteratorParameterizedTest {
           },
           new Function<AsyncIterator<Integer>, AsyncIterator<?>>() {
             @Override
-            public AsyncIterator<?> apply(AsyncIterator<Integer> it) {
+            public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
               return it.filterCompose(
                   i -> (CompletionStage<Optional<Integer>>) CompletableFuture
                       .completedFuture(Optional.of(i)));
@@ -330,7 +343,7 @@ public class AsyncIteratorParameterizedTest {
           },
           new Function<AsyncIterator<Integer>, AsyncIterator<?>>() {
             @Override
-            public AsyncIterator<?> apply(AsyncIterator<Integer> it) {
+            public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
               return it.take(5);
             }
 
@@ -341,7 +354,7 @@ public class AsyncIteratorParameterizedTest {
           },
           new Function<AsyncIterator<Integer>, AsyncIterator<?>>() {
             @Override
-            public AsyncIterator<?> apply(AsyncIterator<Integer> it) {
+            public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
               return it.takeWhile(i -> true);
             }
 
@@ -363,7 +376,7 @@ public class AsyncIteratorParameterizedTest {
           // },
           new Function<AsyncIterator<Integer>, AsyncIterator<?>>() {
             @Override
-            public AsyncIterator<?> apply(AsyncIterator<Integer> it) {
+            public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
               return it.fuse();
             }
 
@@ -384,8 +397,8 @@ public class AsyncIteratorParameterizedTest {
     @Parameterized.Parameters(name = "{index} intermediate: {0}, terminal: {1}")
     public static Collection<Object[]> data() {
       final List<Object[]> list = new ArrayList<>();
-      for (Object intermediate : intermediateMethods) {
-        for (Object terminal : terminalMethods) {
+      for (final Object intermediate : intermediateMethods) {
+        for (final Object terminal : terminalMethods) {
           list.add(new Object[] {intermediate, terminal});
         }
       }
@@ -394,23 +407,24 @@ public class AsyncIteratorParameterizedTest {
 
     @Test
     public void testPipeline() {
-      AsyncIterator<Integer> ai = AsyncIterator.range(0, 10, 1);
-      terminal.apply(intermediate.apply(ai)).toCompletableFuture().join();
+      final AsyncIterator<Integer> ai = AsyncIterator.range(0, 10, 1);
+      this.terminal.apply(this.intermediate.apply(ai)).toCompletableFuture().join();
     }
 
     @Test
     public void testEmptyPipeline() {
-      terminal.apply(intermediate.apply(AsyncIterator.empty())).toCompletableFuture().join();
+      this.terminal.apply(this.intermediate.apply(AsyncIterator.empty())).toCompletableFuture()
+          .join();
     }
 
     @Test(expected = TestException.class)
     public void testExceptionalPipeline() throws Throwable {
       try {
-        terminal
-            .apply(intermediate.apply(AsyncIterator.error(testException)))
+        this.terminal
+            .apply(this.intermediate.apply(AsyncIterator.error(testException)))
             .toCompletableFuture()
             .join();
-      } catch (CompletionException e) {
+      } catch (final CompletionException e) {
         throw e.getCause();
       }
     }
@@ -419,18 +433,18 @@ public class AsyncIteratorParameterizedTest {
     public void testDelayedExceptionalPipeline() throws Throwable {
       try {
 
-        AsyncIterator<Integer> concat =
+        final AsyncIterator<Integer> concat =
             AsyncIterator.concat(
                 Arrays.asList(
                     AsyncIterator.repeat(0).take(3),
                     AsyncIterator.<Integer>error(testException),
                     AsyncIterator.repeat(1).take(3))
                     .iterator());
-        terminal
-            .apply(intermediate.apply(concat))
+        this.terminal
+            .apply(this.intermediate.apply(concat))
             .toCompletableFuture()
             .join();
-      } catch (CompletionException e) {
+      } catch (final CompletionException e) {
         throw e.getCause();
       }
     }
@@ -439,15 +453,15 @@ public class AsyncIteratorParameterizedTest {
     public void testExceptionalPipelineShortcircuit() throws Throwable {
       try {
 
-        AsyncIterator<Integer> concat =
+        final AsyncIterator<Integer> concat =
             AsyncIterator.concat(
                 Arrays.asList(
                     AsyncIterator.repeat(0).take(3),
                     AsyncIterator.<Integer>error(testException),
                     AsyncIterator.repeat(1)) // infinite
                     .iterator());
-        terminal.apply(intermediate.apply(concat)).toCompletableFuture().join();
-      } catch (CompletionException e) {
+        this.terminal.apply(this.intermediate.apply(concat)).toCompletableFuture().join();
+      } catch (final CompletionException e) {
         throw e.getCause();
       }
     }
@@ -462,13 +476,14 @@ public class AsyncIteratorParameterizedTest {
               return CompletableFuture.completedFuture(Either.right(1));
             }
 
+            @Override
             public CompletionStage<Void> close() {
               closed.set(true);
               return FutureSupport.voidFuture();
             }
           }.take(10);
-      AsyncIterator<?> intermediateAi = intermediate.apply(ai);
-      terminal.apply(intermediateAi).toCompletableFuture().join();
+      final AsyncIterator<?> intermediateAi = this.intermediate.apply(ai);
+      this.terminal.apply(intermediateAi).toCompletableFuture().join();
       Assert.assertFalse(closed.get());
       intermediateAi.close().toCompletableFuture().join();
       Assert.assertTrue(closed.get());
@@ -484,15 +499,16 @@ public class AsyncIteratorParameterizedTest {
               throw testException;
             }
 
+            @Override
             public CompletionStage<Void> close() {
               closed.set(true);
               return FutureSupport.voidFuture();
             }
           }.take(10);
-      AsyncIterator<?> intermediateAi = intermediate.apply(ai);
+      final AsyncIterator<?> intermediateAi = this.intermediate.apply(ai);
       try {
-        terminal.apply(intermediateAi).toCompletableFuture().join();
-      } catch (CompletionException e) {
+        this.terminal.apply(intermediateAi).toCompletableFuture().join();
+      } catch (final CompletionException e) {
         Assert.assertTrue(e.getCause() instanceof TestException);
       }
       Assert.assertFalse(closed.get());
@@ -515,9 +531,9 @@ public class AsyncIteratorParameterizedTest {
     @Test
     public void testLazy() {
       final AtomicInteger i = new AtomicInteger();
-      AsyncIterator<Integer> it =
+      final AsyncIterator<Integer> it =
           () -> CompletableFuture.completedFuture(Either.right(i.incrementAndGet()));
-      AsyncIterator<?> intermediate = fn.apply(it);
+      final AsyncIterator<?> intermediate = this.fn.apply(it);
       Assert.assertEquals(0, i.get());
       intermediate.nextFuture().toCompletableFuture().join();
       Assert.assertEquals(1, i.get());
@@ -528,15 +544,15 @@ public class AsyncIteratorParameterizedTest {
     @Test(expected = TestException.class)
     public void testExceptionPropagation() throws Throwable {
       try {
-        AsyncIterator<Integer> concat =
+        final AsyncIterator<Integer> concat =
             AsyncIterator.concat(
                 Arrays.asList(
                     AsyncIterator.repeat(0).take(3),
                     AsyncIterator.<Integer>error(testException),
                     AsyncIterator.repeat(1).take(3))
                     .iterator());
-        fn.apply(concat).consume().toCompletableFuture().join();
-      } catch (CompletionException e) {
+        this.fn.apply(concat).consume().toCompletableFuture().join();
+      } catch (final CompletionException e) {
         throw e.getCause();
       }
     }
@@ -551,12 +567,13 @@ public class AsyncIteratorParameterizedTest {
               return CompletableFuture.completedFuture(Either.right(1));
             }
 
+            @Override
             public CompletionStage<Void> close() {
               closed.set(true);
               return FutureSupport.voidFuture();
             }
           }.take(10);
-      AsyncIterator<?> it2 = fn.apply(ai);
+      final AsyncIterator<?> it2 = this.fn.apply(ai);
       it2.consume().toCompletableFuture().join();
       Assert.assertFalse(closed.get());
       it2.close().toCompletableFuture().join();
@@ -572,36 +589,37 @@ public class AsyncIteratorParameterizedTest {
               return CompletableFuture.completedFuture(Either.right(1));
             }
 
+            @Override
             public CompletionStage<Void> close() {
               throw testException;
             }
           };
-      AsyncIterator<?> it2 = fn.apply(ai);
+      final AsyncIterator<?> it2 = this.fn.apply(ai);
       try {
         it2.nextFuture().toCompletableFuture().join();
-      } catch (Exception e) {
+      } catch (final Exception e) {
         Assert.fail(e.getMessage());
       }
       try {
         it2.close().toCompletableFuture().join();
-      } catch (CompletionException e) {
+      } catch (final CompletionException e) {
         throw e.getCause();
       }
     }
 
     @Test
     public void testRecoverAfterException() {
-      AsyncIterator<Integer> it =
+      final AsyncIterator<Integer> it =
           AsyncIterator.concat(
               Arrays.asList(
                   AsyncIterators.<Integer>errorOnce(testException),
                   AsyncIterator.range(1, 5, 1))
                   .iterator());
-      AsyncIterator<?> it2 = fn.apply(it);
+      final AsyncIterator<?> it2 = this.fn.apply(it);
       try {
         it2.nextFuture().toCompletableFuture().join();
         Assert.fail("expected exception");
-      } catch (CompletionException e) {
+      } catch (final CompletionException e) {
         // expected
       }
       it2.nextFuture().toCompletableFuture().join();
@@ -627,8 +645,8 @@ public class AsyncIteratorParameterizedTest {
     @Test(expected = TestException.class)
     public void testErrorTerminal() throws Throwable {
       try {
-        fn.apply(AsyncIterator.repeat(0).take(5)).toCompletableFuture().join();
-      } catch (CompletionException e) {
+        this.fn.apply(AsyncIterator.repeat(0).take(5)).toCompletableFuture().join();
+      } catch (final CompletionException e) {
         throw e.getCause();
       }
     }
@@ -636,8 +654,8 @@ public class AsyncIteratorParameterizedTest {
     @Test(expected = TestException.class)
     public void testErrorTerminalShortCircuit() throws Throwable {
       try {
-        fn.apply(AsyncIterator.repeat(0)).toCompletableFuture().join();
-      } catch (CompletionException e) {
+        this.fn.apply(AsyncIterator.repeat(0)).toCompletableFuture().join();
+      } catch (final CompletionException e) {
         throw e.getCause();
       }
     }
@@ -655,14 +673,14 @@ public class AsyncIteratorParameterizedTest {
 
     @Test
     public void testEmpty() {
-      fn.apply(AsyncIterator.empty()).toCompletableFuture().join();
+      this.fn.apply(AsyncIterator.empty()).toCompletableFuture().join();
     }
 
     @Test(expected = TestException.class)
     public void testImmediateException() throws Throwable {
       try {
-        fn.apply(AsyncIterator.error(testException)).toCompletableFuture().join();
-      } catch (CompletionException e) {
+        this.fn.apply(AsyncIterator.error(testException)).toCompletableFuture().join();
+      } catch (final CompletionException e) {
         throw e.getCause();
       }
     }
@@ -670,15 +688,15 @@ public class AsyncIteratorParameterizedTest {
     @Test(expected = TestException.class)
     public void testDelayedException() throws Throwable {
       try {
-        AsyncIterator<Integer> concat =
+        final AsyncIterator<Integer> concat =
             AsyncIterator.concat(
                 Arrays.asList(
                     AsyncIterator.repeat(0).take(3),
                     AsyncIterator.<Integer>error(testException),
                     AsyncIterator.repeat(1).take(3))
                     .iterator());
-        fn.apply(concat).toCompletableFuture().join();
-      } catch (CompletionException e) {
+        this.fn.apply(concat).toCompletableFuture().join();
+      } catch (final CompletionException e) {
         throw e.getCause();
       }
     }
@@ -686,15 +704,15 @@ public class AsyncIteratorParameterizedTest {
     @Test(expected = TestException.class)
     public void testExceptionShortCircuit() throws Throwable {
       try {
-        AsyncIterator<Integer> concat =
+        final AsyncIterator<Integer> concat =
             AsyncIterator.concat(
                 Arrays.asList(
                     AsyncIterator.repeat(0).take(3),
                     AsyncIterator.<Integer>error(testException),
                     AsyncIterator.repeat(1)) // infinite
                     .iterator());
-        fn.apply(concat).toCompletableFuture().join();
-      } catch (CompletionException e) {
+        this.fn.apply(concat).toCompletableFuture().join();
+      } catch (final CompletionException e) {
         throw e.getCause();
       }
     }

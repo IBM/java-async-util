@@ -35,8 +35,8 @@ import org.junit.Test;
 
 public class AsyncFunnelTest {
 
-  @SuppressWarnings("serial")
   private static class TestException extends Exception {
+    private static final long serialVersionUID = 1L;
     private final int i;
 
     public TestException(final int i) {
@@ -54,8 +54,8 @@ public class AsyncFunnelTest {
     final AsyncFunnel<Integer> c = new AsyncFunnel<>();
     for (int k = 0; k < 5; k++) {
       final int finalK = k;
-      CompletionStage<Integer> second = c.doOrGet(() -> {
-        CompletableFuture<Integer> result = new CompletableFuture<>();
+      final CompletionStage<Integer> second = c.doOrGet(() -> {
+        final CompletableFuture<Integer> result = new CompletableFuture<>();
         if (finalK % 2 == 0) {
           result.complete(finalK);
         } else {
@@ -80,13 +80,13 @@ public class AsyncFunnelTest {
     c.doOrGet(() -> CompletableFuture.supplyAsync(() -> {
       try {
         latch1.await();
-      } catch (InterruptedException e) {
+      } catch (final InterruptedException e) {
       }
       return 1;
     }));
 
     // this should not be called
-    CompletableFuture<Integer> fail =
+    final CompletableFuture<Integer> fail =
         c.doOrGet(() -> CompletableFuture.completedFuture(-1)).toCompletableFuture();
     Assert.assertFalse(fail.isDone());
 
@@ -95,15 +95,15 @@ public class AsyncFunnelTest {
     Assert.assertEquals(1, fail.get(1, TimeUnit.SECONDS).intValue());
 
     // this can be accepted immediately
-    CompletableFuture<Integer> second =
+    final CompletableFuture<Integer> second =
         c.doOrGet(() -> CompletableFuture.completedFuture(2)).toCompletableFuture();
     Assert.assertTrue(second.isDone());
     Assert.assertEquals(2, second.join().intValue());
 
     // so can this
-    CompletableFuture<Integer> third =
+    final CompletableFuture<Integer> third =
         c.doOrGet(() -> {
-          CompletableFuture<Integer> x = new CompletableFuture<>();
+          final CompletableFuture<Integer> x = new CompletableFuture<>();
           x.completeExceptionally(new Exception());
           return x;
         }).toCompletableFuture();
@@ -122,23 +122,23 @@ public class AsyncFunnelTest {
     final CountDownLatch secondSubmitted = new CountDownLatch(1);
     final AtomicBoolean running = new AtomicBoolean(true);
     c.doOrGet(() -> CompletableFuture.supplyAsync(() -> {
-      int next = count.incrementAndGet();
+      final int next = count.incrementAndGet();
       try {
         latch1.await();
-      } catch (InterruptedException e) {
+      } catch (final InterruptedException e) {
       }
       return next;
     }));
     @SuppressWarnings("rawtypes")
-    CompletableFuture[] futures = IntStream.range(0, NUM_THREADS).mapToObj(i -> {
+    final CompletableFuture[] futures = IntStream.range(0, NUM_THREADS).mapToObj(i -> {
       return CompletableFuture.runAsync(() -> {
         while (running.get()) {
           c.doOrGet(() -> CompletableFuture.supplyAsync(() -> {
             secondSubmitted.countDown();
-            int next = count.incrementAndGet();
+            final int next = count.incrementAndGet();
             try {
               latch2.await();
-            } catch (InterruptedException e) {
+            } catch (final InterruptedException e) {
             }
             return next;
           }));
@@ -147,7 +147,7 @@ public class AsyncFunnelTest {
     }).toArray(CompletableFuture[]::new);
 
     Assert.assertEquals(count.get(), 1);
-    CompletableFuture<Integer> first =
+    final CompletableFuture<Integer> first =
         c.doOrGet(() -> CompletableFuture.completedFuture(-1)).toCompletableFuture();
     Assert.assertFalse(first.isDone());
     Assert.assertEquals(1, secondSubmitted.getCount());
@@ -158,7 +158,7 @@ public class AsyncFunnelTest {
     Assert.assertTrue(secondSubmitted.await(1, TimeUnit.SECONDS));
 
     Assert.assertEquals(count.get(), 2);
-    CompletableFuture<Integer> second =
+    final CompletableFuture<Integer> second =
         c.doOrGet(() -> CompletableFuture.completedFuture(-1)).toCompletableFuture();
     Assert.assertFalse(second.isDone());
     latch2.countDown();

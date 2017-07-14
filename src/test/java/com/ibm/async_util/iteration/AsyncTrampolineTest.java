@@ -19,10 +19,6 @@
 
 package com.ibm.async_util.iteration;
 
-import com.ibm.async_util.iteration.AsyncTrampoline;
-import org.junit.Assert;
-import org.junit.Test;
-
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
@@ -30,6 +26,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
+
+import org.junit.Assert;
+import org.junit.Test;
 
 
 public class AsyncTrampolineTest {

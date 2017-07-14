@@ -1,25 +1,40 @@
 package com.ibm.async_util.util;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
-import org.junit.runner.RunWith;
-
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.experimental.runners.Enclosed;
+import org.junit.runner.RunWith;
+
 @RunWith(Enclosed.class)
 public class TryWithTest {
   @SuppressWarnings("serial")
   private static class CloseException extends Exception {
+
+    /**
+     *
+     */
+    private static final long serialVersionUID = -2012800811952647868L;
   }
   @SuppressWarnings("serial")
   private static class CloseRuntimeException extends RuntimeException {
+
+    /**
+     *
+     */
+    private static final long serialVersionUID = 6809440040185897343L;
   }
   @SuppressWarnings("serial")
   private static class ActionException extends RuntimeException {
+
+    /**
+     *
+     */
+    private static final long serialVersionUID = 6731901340457855165L;
   }
 
   interface CheckableAutoCloseable extends AutoCloseable {
@@ -31,12 +46,12 @@ public class TryWithTest {
 
     @Override
     public void close() throws Exception {
-      closed = true;
+      this.closed = true;
     }
 
     @Override
     public boolean wasClosed() {
-      return closed;
+      return this.closed;
     }
   }
 
@@ -45,13 +60,13 @@ public class TryWithTest {
 
     @Override
     public void close() throws Exception {
-      closed = true;
+      this.closed = true;
       throw new CloseException();
     }
 
     @Override
     public boolean wasClosed() {
-      return closed;
+      return this.closed;
     }
   }
 
@@ -64,13 +79,13 @@ public class TryWithTest {
 
     @Override
     public CompletionStage<Void> close() {
-      closed = true;
+      this.closed = true;
       return FutureSupport.voidFuture();
     }
 
     @Override
     public boolean wasClosed() {
-      return closed;
+      return this.closed;
     }
   }
 
@@ -78,14 +93,14 @@ public class TryWithTest {
     boolean closed = false;
     boolean synchronousException;
 
-    ErrorAsyncCloseable(boolean synchronousException) {
+    ErrorAsyncCloseable(final boolean synchronousException) {
       this.synchronousException = synchronousException;
     }
 
     @Override
     public CompletionStage<Void> close() {
-      closed = true;
-      if (synchronousException) {
+      this.closed = true;
+      if (this.synchronousException) {
         throw new CloseRuntimeException();
       }
       return FutureSupport.errorStage(new CloseException());
@@ -93,7 +108,7 @@ public class TryWithTest {
 
     @Override
     public boolean wasClosed() {
-      return closed;
+      return this.closed;
     }
   }
 
@@ -148,13 +163,13 @@ public class TryWithTest {
         AsyncCloseable.tryWith(closeable, action).toCompletableFuture().join();
         Assert.assertTrue(
             "expected exception ", expectedException == null && suppressedException == null);
-      } catch (CompletionException e) {
+      } catch (final CompletionException e) {
         Assert.assertNotNull("unexpected exception " + e.getMessage(), expectedException);
         Assert.assertTrue(
             "unexpected exception " + e.getCause().getMessage(),
             e.getCause().getClass().equals(expectedException));
         if (suppressedException != null) {
-          Throwable[] suppresed = e.getCause().getSuppressed();
+          final Throwable[] suppresed = e.getCause().getSuppressed();
           Assert.assertTrue(suppresed.length == 1);
           Assert.assertTrue(suppresed[0].getClass().equals(suppressedException));
         }
@@ -201,13 +216,13 @@ public class TryWithTest {
             .toCompletableFuture().join();
         Assert.assertTrue(
             "expected exception ", expectedException == null && suppressedException == null);
-      } catch (CompletionException e) {
+      } catch (final CompletionException e) {
         Assert.assertNotNull("unexpected exception " + e.getMessage(), expectedException);
         Assert.assertTrue(
             "unexpected exception " + e.getCause().getMessage(),
             e.getCause().getClass().equals(expectedException));
         if (suppressedException != null) {
-          Throwable[] suppresed = e.getCause().getSuppressed();
+          final Throwable[] suppresed = e.getCause().getSuppressed();
           Assert.assertTrue(suppresed.length == 1);
           Assert.assertTrue(suppresed[0].getClass().equals(suppressedException));
         }
@@ -297,13 +312,13 @@ public class TryWithTest {
         AsyncCloseable.tryComposeWith(closeable, action).toCompletableFuture().join();
         Assert.assertTrue(
             "expected exception ", expectedException == null && suppressedException == null);
-      } catch (CompletionException e) {
+      } catch (final CompletionException e) {
         Assert.assertNotNull("unexpected exception " + e.getMessage(), expectedException);
         Assert.assertTrue(
             "unexpected exception " + e.getCause().getMessage(),
             e.getCause().getClass().equals(expectedException));
         if (suppressedException != null) {
-          Throwable[] suppresed = e.getCause().getSuppressed();
+          final Throwable[] suppresed = e.getCause().getSuppressed();
           Assert.assertTrue(suppresed.length == 1);
           Assert.assertTrue(suppresed[0].getClass().equals(suppressedException));
         }
@@ -354,7 +369,7 @@ public class TryWithTest {
 
     private void validate(
         final CheckableAutoCloseable closeable,
-        Function<CheckableAutoCloseable, CompletionStage<Integer>> action,
+        final Function<CheckableAutoCloseable, CompletionStage<Integer>> action,
         final Class<? extends Exception> expectedException,
         final Class<? extends Exception> suppressedException) {
       try {
@@ -363,14 +378,14 @@ public class TryWithTest {
             .join();
         Assert.assertTrue(
             "expected exception ", expectedException == null && suppressedException == null);
-      } catch (CompletionException e) {
+      } catch (final CompletionException e) {
 
         Assert.assertNotNull("unexpected exception " + e.getMessage(), expectedException);
         Assert.assertTrue(
             "unexpected exception " + e.getCause().getMessage(),
             e.getCause().getClass().equals(expectedException));
         if (suppressedException != null) {
-          Throwable[] suppresed = e.getCause().getSuppressed();
+          final Throwable[] suppresed = e.getCause().getSuppressed();
           Assert.assertTrue(suppresed.length == 1);
           Assert.assertTrue(suppresed[0].getClass().equals(suppressedException));
         }

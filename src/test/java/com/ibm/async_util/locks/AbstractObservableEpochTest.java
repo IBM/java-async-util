@@ -19,16 +19,17 @@
 
 package com.ibm.async_util.locks;
 
-import com.ibm.async_util.util.TestUtil;
-import org.junit.Assert;
-import org.junit.Test;
-
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
+
+import org.junit.Assert;
+import org.junit.Test;
+
+import com.ibm.async_util.util.TestUtil;
 
 public abstract class AbstractObservableEpochTest {
   abstract ObservableEpoch newEpoch();

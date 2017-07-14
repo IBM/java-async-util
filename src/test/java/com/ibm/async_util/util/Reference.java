@@ -21,7 +21,7 @@ package com.ibm.async_util.util;
 
 /**
  * sometimes you need a modifiable final variable...
- * 
+ *
  * @param <T>
  */
 public class Reference<T> {

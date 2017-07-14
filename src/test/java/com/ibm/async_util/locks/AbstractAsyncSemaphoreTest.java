@@ -27,12 +27,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongFunction;
 
-import com.ibm.async_util.util.TestUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import com.ibm.async_util.util.TestUtil;
 
 public abstract class AbstractAsyncSemaphoreTest extends AbstractAsyncReadWriteLockTest {
   private final long maxPermits;

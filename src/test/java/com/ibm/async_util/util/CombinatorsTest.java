@@ -1,8 +1,5 @@
 package com.ibm.async_util.util;
 
-import org.junit.Assert;
-import org.junit.Test;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -17,9 +14,12 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.junit.Assert;
+import org.junit.Test;
+
 public class CombinatorsTest {
-  @SuppressWarnings("serial")
   private static class TestException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
   }
 
   @Test
@@ -41,7 +41,7 @@ public class CombinatorsTest {
   @Test
   @SuppressWarnings("unchecked")
   public void testAllOfError() {
-    List<CompletableFuture<Integer>> futures =
+    final List<CompletableFuture<Integer>> futures =
         Arrays.asList(
             CompletableFuture.completedFuture(1),
             FutureSupport.<Integer>errorStage(new TestException()).toCompletableFuture());
@@ -54,14 +54,15 @@ public class CombinatorsTest {
   @SuppressWarnings("unchecked")
   public void testAllOfErrorNoShortCircuit() {
     final CompletableFuture<Integer> delayed = new CompletableFuture<>();
-    List<CompletableFuture<Integer>> futures =
+    final List<CompletableFuture<Integer>> futures =
         Arrays.asList(
             delayed, FutureSupport.<Integer>errorStage(new TestException()).toCompletableFuture());
 
-    CompletionStage<Collection<Integer>> arrAll =
+    final CompletionStage<Collection<Integer>> arrAll =
         Combinators.allOf(futures.toArray(new CompletableFuture[0]));
-    CompletionStage<Collection<Integer>> collAll = Combinators.allOf(futures);
-    CompletionStage<List<Integer>> collCollect = Combinators.collect(futures, Collectors.toList());
+    final CompletionStage<Collection<Integer>> collAll = Combinators.allOf(futures);
+    final CompletionStage<List<Integer>> collCollect =
+        Combinators.collect(futures, Collectors.toList());
 
     assertIncomplete(arrAll);
     assertIncomplete(collAll);
@@ -107,9 +108,9 @@ public class CombinatorsTest {
         IntStream.range(0, 5)
             .boxed()
             .collect(Collectors.toMap(Function.identity(), i -> new CompletableFuture<>()));
-    CompletionStage<Map<Integer, Integer>> fut = Combinators.keyedAll(stageMap);
+    final CompletionStage<Map<Integer, Integer>> fut = Combinators.keyedAll(stageMap);
     int i = 0;
-    for (CompletableFuture<Integer> future : stageMap.values()) {
+    for (final CompletableFuture<Integer> future : stageMap.values()) {
       assertIncomplete(fut);
       if (i == 3) {
         future.completeExceptionally(new TestException());
@@ -124,7 +125,7 @@ public class CombinatorsTest {
   private <T> void assertError(final CompletionStage<T> stage) {
     try {
       stage.toCompletableFuture().join();
-    } catch (CompletionException e) {
+    } catch (final CompletionException e) {
       Assert.assertTrue(e.getCause() instanceof TestException);
     }
   }
@@ -133,10 +134,10 @@ public class CombinatorsTest {
     try {
       stage.toCompletableFuture().get(20, TimeUnit.MILLISECONDS);
       Assert.fail("not all futures complete, get should timeout");
-    } catch (InterruptedException e) {
-    } catch (ExecutionException e) {
+    } catch (final InterruptedException e) {
+    } catch (final ExecutionException e) {
       Assert.fail(e.getMessage());
-    } catch (TimeoutException e) {
+    } catch (final TimeoutException e) {
       // expected
     }
   }
