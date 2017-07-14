@@ -1421,21 +1421,26 @@ public interface AsyncIterator<T> extends AsyncCloseable {
 
   /**
    * Create an AsyncIterator from a collection of {@link CompletionStage CompletionStages}. When a
-   * stage completes, the returned iterator yields a value. As the name implies, the order in which
-   * values are returned does not reflect the original order of the collection of stages.
+   * stage completes, the value becomes available for consumption in the returned iterator. If a
+   * stage completes exceptionally, the returned iterator will emit an exceptional stage. The order
+   * in which values are returned does not reflect the original order of the collection of stages.
    *
    * @param stages a Collection of {@link CompletionStage CompletionStages} that will be emitted in
    *        the returned iterator as they complete
    * @return AsyncIterator of values produced by stages in order of completion
    */
   static <T> AsyncIterator<T> unordered(final Collection<? extends CompletionStage<T>> stages) {
-    final AtomicInteger size = new AtomicInteger(stages.size());
+    final int size = stages.size();
+    if (size == 0) {
+      return AsyncIterator.empty();
+    }
+    final AtomicInteger count = new AtomicInteger(size);
     final AsyncChannel<Either<Throwable, T>> channel = AsyncChannels.unbounded();
     for (final CompletionStage<T> future : stages) {
       future.whenComplete((t, ex) -> {
         final Either<Throwable, T> toSend = t != null ? Either.right(t) : Either.left(ex);
         channel.send(toSend);
-        if (size.decrementAndGet() == 0) {
+        if (count.decrementAndGet() == 0) {
           // terminate the channel
           channel.terminate();
         }
