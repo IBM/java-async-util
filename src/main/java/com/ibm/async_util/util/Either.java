@@ -57,7 +57,7 @@ public interface Either<L, R> {
   /**
    * Applies exactly one of the two provided functions to produce a value of type {@code V}. For
    * example, applying an int function or defaulting to zero on error:
-   * 
+   *
    * <pre>
    * {@code
    * {

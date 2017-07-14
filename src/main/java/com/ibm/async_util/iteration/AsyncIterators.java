@@ -114,7 +114,8 @@ class AsyncIterators {
       final Either<AsyncIterator.End, T> et,
       final Either<AsyncIterator.End, U> eu,
       final BiFunction<? super T, ? super U, V> f) {
-    return et.fold(end -> end(), t -> eu.fold(end -> end(), u -> Either.right(f.apply(t, u))));
+    return et.fold(end -> AsyncIterators.end(),
+        t -> eu.fold(end -> AsyncIterators.end(), u -> Either.right(f.apply(t, u))));
   }
 
   static <T, U> AsyncIterator<U> thenApplyImpl(
@@ -145,9 +146,12 @@ class AsyncIterators {
         // otherwise just return end marker
         return e == null
             ? nxt.thenCompose(
-                nt -> nt.fold(end -> endFuture(), t -> f.apply(t).thenApply(Either::right)))
+                nt -> nt.fold(end -> AsyncIterators.endFuture(),
+                    t -> f.apply(t).thenApply(Either::right)))
             : nxt.thenComposeAsync(
-                nt -> nt.fold(end -> endFuture(), t -> f.apply(t).thenApply(Either::right)), e);
+                nt -> nt.fold(end -> AsyncIterators.endFuture(),
+                    t -> f.apply(t).thenApply(Either::right)),
+                e);
       }
 
       @Override
@@ -173,7 +177,7 @@ class AsyncIterators {
         final Function<U, CompletionStage<Void>> closeFn) {
       this.backingIterator = backingIterator;
       this.executeAhead = executeAhead;
-      this.closeFn = u -> convertSynchronousException(() -> closeFn.apply(u));
+      this.closeFn = u -> AsyncIterators.convertSynchronousException(() -> closeFn.apply(u));
       this.mappingFn = mappingFn;
       this.pendingResults = new ArrayDeque<>(executeAhead);
       this.lock = new FairAsyncLock();
@@ -275,7 +279,7 @@ class AsyncIterators {
                 (ig, extraCloseError) -> {
                   // call close on the source iterator
                   return FutureSupport.thenComposeOrRecover(
-                      convertSynchronousException(this.backingIterator::close),
+                      AsyncIterators.convertSynchronousException(this.backingIterator::close),
                       (ig2, backingCloseError) -> {
                         if (epochError != null) {
                           return FutureSupport.<Void>errorStage(epochError);
@@ -318,7 +322,7 @@ class AsyncIterators {
         this.exception = null;
         return FutureSupport.errorStage(e);
       } else {
-        return endFuture();
+        return AsyncIterators.endFuture();
       }
     }
   }
