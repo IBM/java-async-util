@@ -1438,7 +1438,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
     final AsyncChannel<Either<Throwable, T>> channel = AsyncChannels.unbounded();
     for (final CompletionStage<T> future : stages) {
       future.whenComplete((t, ex) -> {
-        final Either<Throwable, T> toSend = t != null ? Either.right(t) : Either.left(ex);
+        final Either<Throwable, T> toSend = ex != null ? Either.left(ex) : Either.right(t);
         channel.send(toSend);
         if (count.decrementAndGet() == 0) {
           // terminate the channel
