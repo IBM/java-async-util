@@ -1154,14 +1154,14 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    *
    * <pre>
    * {@code
-   * // returns an AsyncInterator of 0,1,2,0,1,2,0,1,2
+   * // returns an AsyncIterator of 0,1,2,0,1,2,0,1,2
    * AsyncIterators.concat(AsyncIterators.generate(() -> AsyncIterators.range(0, 3, 1)).take(3))
    * }
    * </pre>
    *
    * Once all elements from an input AsyncIterator have been consumed, {@link #close()} is called on
    * that iterator. If {@link #close()} produces an exception, an exceptional stage will be produced
-   * in the handled iterator. If {@link #close()} exceptions should be ignored, they should either
+   * in the returned iterator. If {@link #close()} exceptions should be ignored, they should either
    * be squashed in the input iterators or the consumer may use manual {@link #nextFuture()}
    * iteration to continue past exceptions. It is still necessary to {@link #close()} the returned
    * iterator; this will close both {@code asyncIterators} as well as the last used AsyncIterator if
