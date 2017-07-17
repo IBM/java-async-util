@@ -1,7 +1,7 @@
 # async-util
 
 ## Introduction
-async-util is a library for working with Java 8 [CompletionStages](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletionStage.html). Its primary goal is to provide tools for asynchronous coordination, including iterative production/consumption of CompletionStages and lock-free asynchronous mutual exclusion support.
+async-util is a library for working with Java 8 [CompletionStages](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletionStage.html). Its primary goal is to provide tools for asynchronous coordination, including iterative production/consumption of CompletionStages and non-blocking asynchronous mutual exclusion support.
 
 The library is broken up into three packages:
 * [Locks](#locks)
@@ -58,7 +58,7 @@ sum.thenRun(() -> widgets.terminate());
 ```
 
 ## Locks
-The locks package provides asynchronous analogs of familiar synchronization primitives, all with efficient lock-free implementations. Imagine we again have some source of asynchronity (say asynchronous network requests), and we'd like to implement an asynchronous method that makes a request and generates a result based on the request's response and some state that requires access under mutual exclusion.
+The locks package provides asynchronous analogs of familiar synchronization primitives, all with efficient non-blocking implementations. Imagine we again have some source of asynchronity (say asynchronous network requests), and we'd like to implement an asynchronous method that makes a request and generates a result based on the request's response and some state that requires access under mutual exclusion.
 ```java
 class MyAsyncClass {
   // not thread safe
@@ -114,6 +114,6 @@ CompletionStage<Result> makeRequest(Request request) {
     );
 }
 ```
-The package provides lock-free asynchronous versions of read/write locks, stamped locks, semaphores and named locks. The full [locks javadoc](https://pages.github.ibm.com/cs-team-atg/async-util/apidocs/com/ibm/async_util/locks/package-summary.html) contains more information.
+The package provides asynchronous versions of read/write locks, stamped locks, semaphores and named locks. The full [locks javadoc](https://pages.github.ibm.com/cs-team-atg/async-util/apidocs/com/ibm/async_util/locks/package-summary.html) contains more information.
 ## Util
 TODO
