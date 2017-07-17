@@ -1463,13 +1463,13 @@ public interface AsyncIterator<T> extends AsyncCloseable {
     if (size == 0) {
       return AsyncIterator.empty();
     }
-    final AtomicInteger count = new AtomicInteger(size);
+    final AtomicInteger count = new AtomicInteger();
     final AsyncChannel<Either<Throwable, T>> channel = AsyncChannels.unbounded();
     for (final CompletionStage<T> future : stages) {
       future.whenComplete((t, ex) -> {
-        final Either<Throwable, T> toSend = t != null ? Either.right(t) : Either.left(ex);
+        final Either<Throwable, T> toSend = ex != null ? Either.left(ex) : Either.right(t);
         channel.send(toSend);
-        if (count.decrementAndGet() == 0) {
+        if (count.incrementAndGet() == size) {
           // terminate the channel
           channel.terminate();
         }

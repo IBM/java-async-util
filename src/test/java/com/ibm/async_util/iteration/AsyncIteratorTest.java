@@ -494,6 +494,23 @@ public class AsyncIteratorTest {
     Assert.assertFalse(TestUtil.join(it.nextFuture()).isRight());
   }
 
+  @Test
+  public void testUnorderedWithNull() throws Exception {
+    final Collection<String> expected = Arrays.asList("a", "b", null, "c");
+    final AsyncIterator<String> iter;
+    {
+      final Collection<CompletableFuture<String>> futures = expected.stream()
+          .map(ignored -> new CompletableFuture<String>())
+          .collect(Collectors.toList());
+      iter = AsyncIterator.unordered(futures);
+      final Iterator<String> values = expected.iterator();
+      for (final CompletableFuture<String> f : futures) {
+        f.complete(values.next());
+      }
+    }
+    Assert.assertEquals(expected, iter.collect(Collectors.toList()).toCompletableFuture().join());
+  }
+
   @Test(expected = CompletionException.class)
   public void testUnorderedError() throws Exception {
     AsyncIterator.unordered(
