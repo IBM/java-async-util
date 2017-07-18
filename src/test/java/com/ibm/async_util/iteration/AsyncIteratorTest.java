@@ -632,6 +632,39 @@ public class AsyncIteratorTest {
   }
 
   @Test
+  public void testFromIteratorStageClose() {
+    class MustCloseIterator implements AsyncIterator<Void> {
+      boolean didClose = false;
+
+      @Override
+      public CompletionStage<Either<End, Void>> nextFuture() {
+        return End.endFuture();
+      }
+
+      @Override
+      public CompletionStage<Void> close() {
+        this.didClose = true;
+        return FutureSupport.voidFuture();
+      }
+    }
+    {
+      final MustCloseIterator mustClose = new MustCloseIterator();
+
+      AsyncIterator.fromIteratorStage(CompletableFuture.completedFuture(mustClose)).close()
+          .toCompletableFuture().join();
+      Assert.assertTrue(mustClose.didClose);
+    }
+    {
+      final MustCloseIterator mustClose = new MustCloseIterator();
+
+      final AsyncIterator<Void> newIter =
+          AsyncIterator.fromIteratorStage(CompletableFuture.completedFuture(mustClose));
+      newIter.nextFuture().thenCompose(ignored -> newIter.close()).toCompletableFuture().join();
+      Assert.assertTrue(mustClose.didClose);
+    }
+  }
+
+  @Test
   public void testFind() {
     Assert.assertEquals(
         7, intIterator(10).find(i -> i == 7).toCompletableFuture().join().get().intValue());

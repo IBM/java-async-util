@@ -1344,7 +1344,29 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    */
   static <T> AsyncIterator<T> fromIteratorStage(
       final CompletionStage<? extends AsyncIterator<T>> stage) {
-    return () -> stage.thenCompose(AsyncIterator::nextFuture);
+    return new AsyncIterator<T>() {
+      AsyncIterator<T> iter;
+
+      @Override
+      public CompletionStage<Either<End, T>> nextFuture() {
+        return this.iter == null
+            ? stage.thenCompose(it -> {
+              this.iter = it;
+              return it.nextFuture();
+            })
+            : this.iter.nextFuture();
+      }
+
+      @Override
+      public CompletionStage<Void> close() {
+        return this.iter == null
+            ? stage.thenCompose(it -> {
+              this.iter = it;
+              return it.close();
+            })
+            : this.iter.close();
+      }
+    };
   }
 
   /**
