@@ -137,7 +137,7 @@ import com.ibm.async_util.util.FutureSupport;
  * {@code this} iterator were exceptional, the {@link CompletionStage} returned by a terminal
  * operation will also be exceptional. The exception will short-circuit the terminal operation. For
  * example, a terminal operation such as {@link #forEach(Consumer)} will not to continue to run on
- * subsequent elements of the iterator and instead immediately complete it's returned stage with the
+ * subsequent elements of the iterator and instead immediately complete its returned stage with the
  * error. Unless otherwise noted, this behavior holds for all terminal methods but may not
  * documented explicitly.
  *
@@ -212,13 +212,13 @@ public interface AsyncIterator<T> extends AsyncCloseable {
 
   /**
    * Returns a stage that will be completed with the next element of {@code this} iterator when it
-   * becomes available.
+   * becomes available, or {@link End} if there are no more elements.
    *
    * <p>
-   * This is not a terminal method, it can be safely called multiple times. However, This this
-   * method is <b>not thread safe</b>, and should only be called in a single-threaded fashion.
-   * Moreover, after a call another call should not be made until the {@link CompletionStage}
-   * returned by the previous call has completed. That is to say,
+   * This is not a terminal method, it can be safely called multiple times. However, this method is
+   * <b>not thread safe</b>, and should only be called in a single-threaded fashion. Moreover,
+   * sequential calls should not be made until the {@link CompletionStage} returned by the previous
+   * call has completed. That is to say,
    *
    * <pre>
    * {@code
@@ -258,7 +258,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * Relinquishes any resources associated with this iterator.
    *
    * <p>
-   * This method should be overriden if manual resource management is required, the default
+   * This method should be overridden if manual resource management is required, the default
    * implementation does nothing. This method is <b>not</b> thread safe, and must not be called
    * concurrently with calls to {@link #nextFuture()}. This method is not automatically called by
    * terminal methods, and must be explicitly called after iteration is complete if the underlying
@@ -275,7 +275,6 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    *  {@literal @Override}
    *  CompletionStage<Void> close() { return socket.close(); }
    * }
-   * AsyncIterator<byte[]> it = new SocketBackedIterator(socket);
    * AsyncCloseable.tryComposeWith(new SocketBackedIterator(socket), socketIt -> socketIt
    *  .thenCompose(this::deserialize)
    *  .filter(this::isRelevantMessage)
@@ -304,9 +303,9 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   }
 
   /**
-   * Transforms {@code this} this into a new AsyncIterator that iterates over the results of {@code
-   * fn} applied to the outcomes of stages in this iterator when they complete normally. When stages
-   * in {@code this} iterator complete exceptionally the returned iterator will emit an exceptional
+   * Transforms {@code this} into a new AsyncIterator that iterates over the results of {@code fn}
+   * applied to the outcomes of stages in this iterator when they complete normally. When stages in
+   * {@code this} iterator complete exceptionally the returned iterator will emit an exceptional
    * stage without applying {@code fn}.
    *
    * <pre>
@@ -603,7 +602,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
 
   /**
    * Applies a transformation and filters this AsyncIterator at the same time. Since
-   * {@link Optional} cannot hold a null values, this method cannot be used to map to an iterator of
+   * {@link Optional} cannot hold null values, this method cannot be used to map to an iterator of
    * possibly null types.
    *
    * <p>
@@ -618,8 +617,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   }
 
   /**
-   * Composes and filters an AsyncIterator at the same time. Since {@link Optional} cannot hold a
-   * null values, this method cannot be used to map to an iterator of possibly null types.
+   * Composes and filters an AsyncIterator at the same time. Since {@link Optional} cannot hold null
+   * values, this method cannot be used to map to an iterator of possibly null types.
    *
    * <p>
    * This is a lazy <i> intermediate </i> method.
@@ -801,8 +800,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
        * This field holds the result of the latest call to the underlying iterator's 'nextFuture';
        * At the start of the batching iterator's 'nextFuture' method, this holds the value which was
        * rejected by the last 'addToBatch' call (or empty if the iterator terminated, or null if
-       * this is the first call). If non-empty, this rejected value should be tested again in the
-       * next batch. If empty, iteration should terminate
+       * this is the first call). If non-End, this rejected value should be tested again in the next
+       * batch. If End, iteration should terminate
        */
       private Either<End, T> lastAdvance = null;
 
@@ -1036,7 +1035,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    *
    * @param collector a {@link Collector} which will sequentially collect the contents of this
    *        iterator into an {@code R}
-   * @param <A> The intermediate type of the accumulated
+   * @param <A> The intermediate type of the accumulated object
    * @param <R> The final type of the accumulated object
    * @return a {@link CompletionStage} which will complete with the collected value
    * @see Stream#collect(Collector)
@@ -1247,7 +1246,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
                           // return the next future from the newly updated curr
                           return this.curr != null
                               ? this.curr.nextFuture()
-                              : End.<T>endFuture();
+                              : End.endFuture();
                         });
                   },
                   t -> CompletableFuture.completedFuture(either));
@@ -1349,7 +1348,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * Creates an AsyncIterator of one element.
    *
    * @param t the element to return
-   * @return an AsyncIterator which yield the element t, and then afterward produce the {@link End}
+   * @return an AsyncIterator which yields the element t, and then afterward produce the {@link End}
    *         marker.
    */
   static <T> AsyncIterator<T> once(final T t) {
@@ -1394,8 +1393,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * Create an AsyncIterator for a range.
    *
    * <p>
-   * If delta is positive, similar to {@code for(i = start; start < end; start+=delta)}. If delta is
-   * negative, similar to {@code for(i = start; start > end; start+=delta)}.
+   * If delta is positive, similar to {@code for(i = start; i < end; i+=delta)}. If delta is
+   * negative, similar to {@code for(i = start; i > end; i+=delta)}.
    *
    * <p>
    * The futures returned by nextFuture will be already completed.

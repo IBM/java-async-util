@@ -53,8 +53,8 @@ public interface AsyncCloseable {
   /**
    * Performs an asynchronous action with an {@link AsyncCloseable} resource, ensuring that the
    * resource is {@link AsyncCloseable#close()} closed} after the stage returned by the action
-   * completes. The returned stage will complete when the stage returned by the close has completed.
-   * Similar to a try-with-resources block, the resource will be closed even if {@code
+   * completes. The returned stage will complete when the close stage has completed. Similar to a
+   * try-with-resources block, the resource will be closed even if {@code
    * actionUnderResources} throws an exception or if its returned stage completes exceptionally.
    *
    * <p>
@@ -67,9 +67,10 @@ public interface AsyncCloseable {
    * <li>{@link AutoCloseable#close()} returns a stage that completes exceptionally
    * </ol>
    *
-   * If the action produces an exception (cases 1 and 2) <b> and </b> {@link #close()} produces an
-   * exception (cases 3 and 4) the exception produced by close will be added to the exception from
-   * {@code actionUnderResource} as a suppressed exception.
+   * If the action produces an exception (cases 1 or 2) <b> and </b> {@link #close()} produces an
+   * exception (cases 3 or 4) the exception produced by close will be added to the exception from
+   * {@code actionUnderResource} as a {@link Throwable#addSuppressed(Throwable) suppressed
+   * exception}.
    *
    * @param resource an {@link AsyncCloseable} which will be {{@link #close()} closed} when the
    *        stage returned by {@code actionUnderResource} completes.
@@ -130,8 +131,8 @@ public interface AsyncCloseable {
   /**
    * Performs an action with an {@link AsyncCloseable} resource, ensuring that the resource is
    * {@link AsyncCloseable#close()} closed} after the action completes. The returned stage will
-   * complete when the stage returned by the close has completed. Similar to a try-with-resources
-   * block, the resource will be closed even if {@code actionUnderResources} throws an exception.
+   * complete when the close stage has completed. Similar to a try-with-resources block, the
+   * resource will be closed even if {@code actionUnderResources} throws an exception.
    *
    * <p>
    * The returned stage will complete exceptionally in the following scenarios
@@ -144,7 +145,7 @@ public interface AsyncCloseable {
    *
    * If the action produces an exception <b> and </b> {@link #close()} produces an exception the
    * exception produced by close will be added to the exception from {@code actionUnderResource} as
-   * a suppressed exception.
+   * a {@link Throwable#addSuppressed(Throwable) suppressed exception}.
    *
    * @param resource an {@link AsyncCloseable} which will be {{@link #close()} closed} after {@code
    *     actionUnderResource} is run

@@ -18,9 +18,9 @@ public class Combinators {
   /**
    * Given an array of futures all of of the same type, returns a new {@link CompletionStage} that
    * is completed with the result of all input futures when all futures are complete. The order of
-   * elements in the returned collection reflect the order of the elements in {@code futures}. If an
-   * element of {@code futures} completes exceptionally, so too will the CompletionStage returned by
-   * this method.
+   * elements in the returned collection reflects the order of the elements in {@code futures}. If
+   * an element of {@code futures} completes exceptionally, so too will the CompletionStage returned
+   * by this method.
    *
    * @param futures an array of {@link CompletableFuture} all of type T
    * @return a {@link CompletionStage} which will complete with a collection of the elements
@@ -52,7 +52,7 @@ public class Combinators {
   @SuppressWarnings("unchecked")
   public static <T> CompletionStage<Collection<T>> allOf(
       final Collection<? extends CompletionStage<T>> stages) {
-    return allOf(
+    return Combinators.allOf(
         stages
             .stream()
             .map(CompletionStage::toCompletableFuture)

@@ -42,10 +42,11 @@ public final class AsyncChannels {
    *
    * <p>
    * Sends on an unbounded channel always complete synchronously, and throttling must be managed by
-   * the senders to ensure senders don't get too far ahead of the consumer. {@link AsyncChannel} for
-   * details.
+   * the senders to ensure senders don't get too far ahead of the consumer. See {@link AsyncChannel}
+   * for details.
    *
    * @return an {@link AsyncChannel}
+   * @see AsyncChannel
    */
   public static <T> AsyncChannel<T> unbounded() {
     return new UnboundedChannel<>();
@@ -55,9 +56,9 @@ public final class AsyncChannels {
    * Creates a bounded AsyncChannel.
    *
    * <p>
-   * This channel can only accept one value at a time until it is consumed. It is useful when you
-   * want to produce work potentially in parallel, but want to be throttled at the rate at which you
-   * can consume this work. See {@link BoundedAsyncChannel} for details.
+   * This channel can only accept one value at a time until it is consumed. This may be useful when
+   * you want to produce work potentially in parallel, but want to be throttled at the rate at which
+   * you can consume this work. See {@link BoundedAsyncChannel} for details.
    *
    * @return a {@link BoundedAsyncChannel}
    */

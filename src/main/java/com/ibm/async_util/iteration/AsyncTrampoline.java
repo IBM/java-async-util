@@ -41,7 +41,7 @@ import com.ibm.async_util.util.FutureSupport;
  * }
  * </pre>
  *
- * then getFirstOddNumber can easily cause a StackOverflow. This situation often happens when a
+ * then getFirstOddNumber can easily cause a stack overflow. This situation often happens when a
  * cache is put under an async API, and all the values are cached and returned immediately. This
  * could be avoided by scheduling the recursive calls back to a thread pool using
  * {@link CompletionStage#thenComposeAsync}, however the overhead of the thread pool submissions may

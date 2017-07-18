@@ -10,7 +10,7 @@ import java.util.function.Function;
  * Either.right(value)}.
  *
  * <p>
- * By convention, if using this class to represent a result that may an error or a success, the
+ * By convention, if using this class to represent a result that may be an error or a success, the
  * error type should be in the left position and the success type should be in the right position
  * (mnemonic: "right" also means correct). As a result, this class implements monadic methods
  * (similar to those on {@link Optional}, {@link java.util.stream.Stream}, etc) for working on the R
@@ -138,7 +138,7 @@ public interface Either<L, R> {
    * <pre>
    * {@code
    * Either<Exception, Double> eitherDouble;
-   * Either<Exception, String> = eitherString = eitherInt.map(Double::intValue).map(Integer::toString);
+   * Either<Exception, String> eitherString = eitherInt.map(Double::intValue).map(Integer::toString);
    * }
    * </pre>
    *
@@ -165,7 +165,7 @@ public interface Either<L, R> {
    *
    * // will be an exception if eitherString was an exception
    * // or if tryParse failed, otherwise will be an Integer
-   * Either<Exception, Integer> eitherString.flatMap(tryParse);
+   * Either<Exception, Integer> e = eitherString.flatMap(tryParse);
    *
    * }
    * </pre>

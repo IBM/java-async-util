@@ -35,16 +35,16 @@ import java.util.Optional;
  * the sender that the queue is "full" (nor is there a notion of the queue being full to begin
  * with). The channel will continue to accept values as fast as the senders can {@link #send} them,
  * regardless of the rate at which the values are being consumed. If senders produce a lot of values
- * much faster than the consumption rate, it will lead to an out of memory, so users are responsible
- * for enforcing that the channel does not grow too large. If you would like a channel abstraction
- * that provides backpressure, see {@link BoundedAsyncChannel}.
+ * much faster than the consumption rate, it will lead to an out of memory error, so users are
+ * responsible for enforcing that the channel does not grow too large. If you would like a channel
+ * abstraction that provides backpressure, see {@link BoundedAsyncChannel}.
  *
  * <p>
- * This channel can be terminated by someone calling {@link #terminate()}, it can be called by
+ * This channel can be terminated by someone calling {@link #terminate()}, which can be called by
  * consumers or senders. It is strongly recommended that all instances of this class eventually be
- * terminated. Mose terminal operations on {@link AsyncIterator} return
- * {@link java.util.concurrent.CompletionStage CompletionStages} that whose stage will not complete
- * until the channel is terminated. After the channel is terminated, subsequent {@link #send}s are
+ * terminated. Most terminal operations on {@link AsyncIterator} return
+ * {@link java.util.concurrent.CompletionStage CompletionStages} whose stage will not complete until
+ * the channel is terminated. After the channel is terminated, subsequent {@link #send}s are
  * rejected, though consumers of the channel will still receive any values that were sent before the
  * termination.
  *
@@ -52,9 +52,9 @@ import java.util.Optional;
  * Typically you'll want to use a channel when you have some "source" of items, and want to consume
  * them asynchronously as the become available. Some examples of sources could be a collection of
  * {@link java.util.concurrent.CompletionStage CompletionStages}, bytes off of a socket, results
- * produced by dedicated worker threads, etc. Suppose you had scenario where you had many threads
- * doing some CPU intensive computation, and you'd send their answers off to some server somewhere
- * one at a time.
+ * produced by dedicated worker threads, etc. Suppose you had a scenario where you had many threads
+ * doing some CPU intensive computation, and you'd send their answers off to some server one at a
+ * time.
  *
  * <pre>
  * {@code
@@ -86,11 +86,11 @@ import java.util.Optional;
  * </pre>
  *
  * <p>
- * It is also convenient to use a channel to merge many {@link AsyncIterator}s together. Think if we
- * were the destination server in the previous example, and we had many compute servers sending us
- * numbers they were computing. If we used {@link AsyncIterator#concat} in the following example, we
- * would wait until we got all the work from the first iterator to move onto the next. With a
- * channel we process each number as soon as it becomes available.
+ * It is also convenient to use a channel to merge many {@link AsyncIterator}s together. Consider
+ * the destination server in the previous example, now with many compute servers sending the numbers
+ * they were computing. If we used {@link AsyncIterator#concat} in the following example, we would
+ * wait until we got all the work from the first iterator to move onto the next. With a channel we
+ * instead process each number as soon as it becomes available.
  *
  * <pre>
  * {@code
@@ -123,8 +123,8 @@ import java.util.Optional;
  *
  * <ul>
  * <li>Consumption of an AsyncIterator is <b> not </b> thread safe
- * <li>Lazy methods on AsyncIterator like map/flatMap don't consume anything. Make sure you actually
- * use a consumption operation somewhere, otherwise no one will ever read what was sent
+ * <li>Lazy methods on AsyncIterator like thenApply/thenCompose don't consume anything. Make sure
+ * you actually use a consumption operation somewhere, otherwise no one will ever read what was sent
  * </ul>
  *
  * @param <T> The type of the elements in this channel
@@ -137,9 +137,9 @@ public interface AsyncChannel<T> extends AsyncIterator<T> {
    *
    * <p>
    * This method is thread safe - multiple threads can send values into this channel concurrently.
-   * This channel is unbounded, so it will continue accept new items immediately and store them in
-   * memory until they can be consumed. If you are sending work faster than you can consume it, this
-   * can easily lead to an out of memory condition.
+   * This channel is unbounded, so it will continue to accept new items immediately and store them
+   * in memory until they can be consumed. If you are sending work faster than you can consume it,
+   * this can easily lead to an out of memory condition.
    *
    * @param item the item to be sent into the channel
    * @return true if the item was accepted, false if it was rejected because the channel has already
@@ -162,11 +162,11 @@ public interface AsyncChannel<T> extends AsyncIterator<T> {
   void terminate();
 
   /**
-   * Gets a result from the channel if there is one ready right now.
+   * Gets a result from the channel if one is immediately available.
    *
    * <p>
    * This method consumes parts of the channel, so like the consumption methods on
-   * {@link AsyncIterator}, this method is not thread-safe should be used in a single threaded
+   * {@link AsyncIterator}, this method is not thread-safe and should be used in a single threaded
    * fashion. After {@link #terminate()} is called and all outstanding results are consumed, poll
    * will always return empty. This method <b> should not </b> be used if there are null values in
    * the channel. <br>
@@ -177,8 +177,8 @@ public interface AsyncChannel<T> extends AsyncIterator<T> {
    * that only complete once the channel has been closed.
    *
    * @throws NullPointerException if the polled result is null
-   * @return a present T value if there was one immediately available in the channel, empty if the
-   *         channel is currently empty
+   * @return a present T value if there was one immediately available in the channel, otherwise
+   *         empty if the channel is currently empty
    */
   Optional<T> poll();
 }
