@@ -43,34 +43,13 @@ class AsyncIterators {
 
   private AsyncIterators() {}
 
-  private static final Either<End, ?> ITERATION_END =
-      Either.left(
-          new AsyncIterator.End() {
-            @Override
-            public String toString() {
-              return "End of iteration";
-            }
-          });
-
-  private static final CompletionStage<? extends Either<AsyncIterator.End, ?>> END_FUTURE =
-      CompletableFuture.completedFuture(ITERATION_END);
-
   static final EmptyAsyncIterator<?> EMPTY_ITERATOR = new EmptyAsyncIterator<>();
 
-  @SuppressWarnings("unchecked")
-  static <T> Either<AsyncIterator.End, T> end() {
-    return (Either<AsyncIterator.End, T>) ITERATION_END;
-  }
-
-  @SuppressWarnings("unchecked")
-  static <T> CompletionStage<Either<AsyncIterator.End, T>> endFuture() {
-    return (CompletionStage<Either<AsyncIterator.End, T>>) END_FUTURE;
-  }
-
   private static class EmptyAsyncIterator<T> implements AsyncIterator<T> {
+
     @Override
     public CompletionStage<Either<End, T>> nextFuture() {
-      return AsyncIterators.endFuture();
+      return End.endFuture();
     }
 
     @Override
@@ -114,8 +93,8 @@ class AsyncIterators {
       final Either<AsyncIterator.End, T> et,
       final Either<AsyncIterator.End, U> eu,
       final BiFunction<? super T, ? super U, V> f) {
-    return et.fold(end -> AsyncIterators.end(),
-        t -> eu.fold(end -> AsyncIterators.end(), u -> Either.right(f.apply(t, u))));
+    return et.fold(end -> End.end(),
+        t -> eu.fold(end -> End.end(), u -> Either.right(f.apply(t, u))));
   }
 
   static <T, U> AsyncIterator<U> thenApplyImpl(
@@ -146,10 +125,10 @@ class AsyncIterators {
         // otherwise just return end marker
         return e == null
             ? nxt.thenCompose(
-                nt -> nt.fold(end -> AsyncIterators.endFuture(),
+                nt -> nt.fold(end -> End.endFuture(),
                     t -> f.apply(t).thenApply(Either::right)))
             : nxt.thenComposeAsync(
-                nt -> nt.fold(end -> AsyncIterators.endFuture(),
+                nt -> nt.fold(end -> End.endFuture(),
                     t -> f.apply(t).thenApply(Either::right)),
                 e);
       }
@@ -188,7 +167,7 @@ class AsyncIterators {
     private CompletionStage<Either<End, T>> fillMore() {
       if (this.pendingResults.size() >= this.executeAhead) {
         // don't call nextFuture, we already have enough stuff pending
-        return AsyncIterators.endFuture();
+        return End.endFuture();
       } else {
         // keep filling up the ahead queue
         final CompletionStage<Either<End, T>> nxt =
@@ -304,7 +283,7 @@ class AsyncIterators {
                   return nextFutureImpl();
                 }
               })
-          .orElse(AsyncIterators.endFuture());
+          .orElse(End.endFuture());
     }
   }
 
@@ -322,7 +301,7 @@ class AsyncIterators {
         this.exception = null;
         return FutureSupport.errorStage(e);
       } else {
-        return AsyncIterators.endFuture();
+        return End.endFuture();
       }
     }
   }

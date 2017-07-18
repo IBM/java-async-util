@@ -125,7 +125,7 @@ public final class AsyncChannels {
     private static final AtomicReferenceFieldUpdater<UnboundedChannel, Node> TAIL_UPDATER =
         AtomicReferenceFieldUpdater.newUpdater(UnboundedChannel.class, Node.class, "tail");
 
-    private static final Node<?> STOP = new Node<>(AsyncIterators.end());
+    private static final Node<?> STOP = new Node<>(End.end());
 
     static {
       // link STOP to itself so that advancing does nothing when head reaches STOP
@@ -191,7 +191,7 @@ public final class AsyncChannels {
 
     @Override
     public void terminate() {
-      sendImpl(AsyncIterators.end(), UnboundedChannel.stopNode());
+      sendImpl(End.end(), UnboundedChannel.stopNode());
     }
 
     private boolean sendImpl(final Either<End, T> item, final Node<T> newTail) {

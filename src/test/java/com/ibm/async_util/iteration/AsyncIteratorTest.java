@@ -670,7 +670,7 @@ public class AsyncIteratorTest {
     }
     {
       final List<Integer> unfolded =
-          AsyncIterator.unfold(0, i -> AsyncIterators.endFuture())
+          AsyncIterator.unfold(0, i -> End.endFuture())
               .collect(Collectors.toList())
               .toCompletableFuture()
               .join();
@@ -722,7 +722,7 @@ public class AsyncIteratorTest {
         () -> {
           final int curr = count.getAndDecrement();
           if (curr == 0) {
-            return AsyncIterators.endFuture();
+            return End.endFuture();
           } else if (curr > 0) {
             return CompletableFuture.completedFuture(Either.right(0));
           }
