@@ -528,7 +528,7 @@ public class AsyncIteratorTest {
   @Test
   public void testBatch() {
     final List<String> list =
-        Arrays.asList("a", "123", "foo", "bar", "b", "c", "q", "w", "e", "r", "t", "y");
+        Arrays.asList("a", null, "foo", "bar", "b", "c", "q", null, "e", "r", "t", "y");
 
     /*
      * this test batches the given iter of strings into lists that have a predefined size limit. The
@@ -540,11 +540,11 @@ public class AsyncIteratorTest {
 
     final List<Collection<String>> expected =
         Arrays.asList(
-            Arrays.asList("a", "123"),
+            Arrays.asList("a", null),
             Arrays.asList("foo", "bar", "b"),
             Collections.emptyList(),
             Arrays.asList("c"),
-            Arrays.asList("q", "w", "e", "r"),
+            Arrays.asList("q", null, "e", "r"),
             Arrays.asList("t", "y"));
 
     final Queue<Integer> sizeLimitsQueue =

@@ -831,12 +831,15 @@ public interface AsyncIterator<T> extends AsyncCloseable {
               final A batch = collector.supplier().get();
 
               return AsyncTrampoline.asyncWhile(
-                  eitherT -> eitherT.right().filter(t -> shouldAddToBatch.test(batch, t))
-                      .isPresent(),
+                  eitherT -> eitherT.fold(end -> false, t -> shouldAddToBatch.test(batch, t)),
                   eitherT -> {
                     collector
                         .accumulator()
-                        .accept(batch, eitherT.right().orElseThrow(IllegalStateException::new));
+                        .accept(batch, eitherT.fold(
+                            end -> {
+                              throw new IllegalStateException();
+                            },
+                            t -> t));
                     return AsyncIterator.this.nextFuture();
                   },
                   this.lastAdvance)
