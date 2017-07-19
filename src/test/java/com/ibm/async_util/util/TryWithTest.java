@@ -1,6 +1,5 @@
 package com.ibm.async_util.util;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
@@ -212,7 +211,7 @@ public class TryWithTest {
         final Class<? extends Exception> expectedException,
         final Class<? extends Exception> suppressedException) {
       try {
-        FutureSupport.tryWith(CompletableFuture.completedFuture(closeable), action)
+        FutureSupport.tryWith(FutureSupport.completedStage(closeable), action)
             .toCompletableFuture().join();
         Assert.assertTrue(
             "expected exception ", expectedException == null && suppressedException == null);
@@ -234,7 +233,7 @@ public class TryWithTest {
   public static class TryComposeWithAsyncCloseable {
 
     private static Function<CheckableAsyncCloseable, CompletionStage<Integer>> successAction =
-        ig -> CompletableFuture.completedFuture(0);
+        ig -> FutureSupport.completedStage(0);
     private static Function<CheckableAsyncCloseable, CompletionStage<Integer>> asyncErrorAction =
         ig -> FutureSupport.errorStage(new ActionException());
     private static Function<CheckableAsyncCloseable, CompletionStage<Integer>> syncErrorAction =
@@ -329,7 +328,7 @@ public class TryWithTest {
 
   public static class TryComposeWithAutoCloseable {
     private static Function<CheckableAutoCloseable, CompletionStage<Integer>> successAction =
-        ig -> CompletableFuture.completedFuture(0);
+        ig -> FutureSupport.completedStage(0);
     private static Function<CheckableAutoCloseable, CompletionStage<Integer>> asyncErrorAction =
         ig -> FutureSupport.errorStage(new ActionException());
     private static Function<CheckableAutoCloseable, CompletionStage<Integer>> syncErrorAction =
@@ -373,7 +372,7 @@ public class TryWithTest {
         final Class<? extends Exception> expectedException,
         final Class<? extends Exception> suppressedException) {
       try {
-        FutureSupport.tryComposeWith(CompletableFuture.completedFuture(closeable), action)
+        FutureSupport.tryComposeWith(FutureSupport.completedStage(closeable), action)
             .toCompletableFuture()
             .join();
         Assert.assertTrue(

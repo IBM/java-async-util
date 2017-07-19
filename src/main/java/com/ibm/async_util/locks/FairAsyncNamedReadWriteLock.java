@@ -21,10 +21,11 @@ package com.ibm.async_util.locks;
 
 import java.util.ConcurrentModificationException;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
+
+import com.ibm.async_util.util.FutureSupport;
 
 
 /**
@@ -128,7 +129,7 @@ public class FairAsyncNamedReadWriteLock<T> implements AsyncNamedReadWriteLock<T
       if (headRef == created.ref) {
         // no one was holding the lock, so we've initialized a read-acquired node and inserted it
         // into the map. good to return
-        return CompletableFuture.completedFuture(created.node);
+        return FutureSupport.completedStage(created.node);
       }
 
       readHead: while (true) {
@@ -166,7 +167,7 @@ public class FairAsyncNamedReadWriteLock<T> implements AsyncNamedReadWriteLock<T
         final NamedNode pred = new NamedNode(name, AbstractSimpleEpoch.TERMINATED);
         pred.next = head;
         head.prev = pred;
-        return CompletableFuture.completedFuture(pred);
+        return FutureSupport.completedStage(pred);
       }
 
       readHead: while (true) {

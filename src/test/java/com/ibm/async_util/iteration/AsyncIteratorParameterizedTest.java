@@ -6,7 +6,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -275,7 +274,7 @@ public class AsyncIteratorParameterizedTest {
             @Override
             public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
               return it.thenCompose(
-                  i -> (CompletionStage<Integer>) CompletableFuture.completedFuture(i));
+                  i -> FutureSupport.completedStage(i));
             }
 
             @Override
@@ -287,7 +286,7 @@ public class AsyncIteratorParameterizedTest {
             @Override
             public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
               return it.thenComposeAsync(
-                  i -> (CompletionStage<Integer>) CompletableFuture.completedFuture(i));
+                  i -> FutureSupport.completedStage(i));
             }
 
             @Override
@@ -332,8 +331,7 @@ public class AsyncIteratorParameterizedTest {
             @Override
             public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
               return it.filterCompose(
-                  i -> (CompletionStage<Optional<Integer>>) CompletableFuture
-                      .completedFuture(Optional.of(i)));
+                  i -> FutureSupport.completedStage(Optional.of(i)));
             }
 
             @Override
@@ -473,7 +471,7 @@ public class AsyncIteratorParameterizedTest {
           new AsyncIterator<Integer>() {
             @Override
             public CompletionStage<Either<End, Integer>> nextFuture() {
-              return CompletableFuture.completedFuture(Either.right(1));
+              return FutureSupport.completedStage(Either.right(1));
             }
 
             @Override
@@ -532,7 +530,7 @@ public class AsyncIteratorParameterizedTest {
     public void testLazy() {
       final AtomicInteger i = new AtomicInteger();
       final AsyncIterator<Integer> it =
-          () -> CompletableFuture.completedFuture(Either.right(i.incrementAndGet()));
+          () -> FutureSupport.completedStage(Either.right(i.incrementAndGet()));
       final AsyncIterator<?> intermediate = this.fn.apply(it);
       Assert.assertEquals(0, i.get());
       intermediate.nextFuture().toCompletableFuture().join();
@@ -564,7 +562,7 @@ public class AsyncIteratorParameterizedTest {
           new AsyncIterator<Integer>() {
             @Override
             public CompletionStage<Either<End, Integer>> nextFuture() {
-              return CompletableFuture.completedFuture(Either.right(1));
+              return FutureSupport.completedStage(Either.right(1));
             }
 
             @Override
@@ -586,7 +584,7 @@ public class AsyncIteratorParameterizedTest {
           new AsyncIterator<Integer>() {
             @Override
             public CompletionStage<Either<End, Integer>> nextFuture() {
-              return CompletableFuture.completedFuture(Either.right(1));
+              return FutureSupport.completedStage(Either.right(1));
             }
 
             @Override

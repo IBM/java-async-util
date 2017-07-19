@@ -21,7 +21,6 @@ package com.ibm.async_util.locks;
 
 import java.io.IOException;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 
@@ -42,6 +41,7 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.runner.RunnerException;
 
+import com.ibm.async_util.util.FutureSupport;
 import com.ibm.async_util.util.TestUtil;
 
 public final class AsyncReadWriteLockBenchmarks {
@@ -159,10 +159,10 @@ public final class AsyncReadWriteLockBenchmarks {
       }
     };
 
-    private static final CompletableFuture<ReadLockToken> readFuture =
-        CompletableFuture.completedFuture(READ);
-    private static final CompletableFuture<WriteLockToken> writeFuture =
-        CompletableFuture.completedFuture(WRITE);
+    private static final CompletionStage<ReadLockToken> readFuture =
+        FutureSupport.completedStage(READ);
+    private static final CompletionStage<WriteLockToken> writeFuture =
+        FutureSupport.completedStage(WRITE);
 
     @Override
     public CompletionStage<WriteLockToken> acquireWriteLock() {

@@ -27,12 +27,16 @@ public class CombinatorsTest {
   public void testAllOf() {
     final List<Integer> results = Arrays.asList(1, 2, 3);
     @SuppressWarnings("rawtypes")
-    final CompletableFuture[] arr =
-        results.stream().map(CompletableFuture::completedFuture).toArray(CompletableFuture[]::new);
-    final List<CompletableFuture<Integer>> collect =
-        results.stream().map(CompletableFuture::completedFuture).collect(Collectors.toList());
+    final CompletionStage[] arr =
+        results.stream().map(FutureSupport::completedStage).toArray(CompletableFuture[]::new);
+    final List<CompletionStage<Integer>> collect =
+        results.stream().map(FutureSupport::completedStage).collect(Collectors.toList());
 
-    Assert.assertEquals(results, Combinators.allOf(arr).toCompletableFuture().join());
+    Assert.assertEquals(results, Combinators
+        .allOf(Arrays.stream(arr)
+            .map(CompletionStage::toCompletableFuture)
+            .toArray(CompletableFuture[]::new))
+        .toCompletableFuture().join());
     Assert.assertEquals(results, Combinators.allOf(collect).toCompletableFuture().join());
     Assert.assertEquals(results,
         Combinators.collect(collect, Collectors.toList()).toCompletableFuture().join());
@@ -41,9 +45,9 @@ public class CombinatorsTest {
   @Test
   @SuppressWarnings("unchecked")
   public void testAllOfError() {
-    final List<CompletableFuture<Integer>> futures =
+    final List<CompletionStage<Integer>> futures =
         Arrays.asList(
-            CompletableFuture.completedFuture(1),
+            FutureSupport.completedStage(1),
             FutureSupport.<Integer>errorStage(new TestException()).toCompletableFuture());
     assertError(Combinators.allOf(futures.toArray(new CompletableFuture[0])));
     assertError(Combinators.allOf(futures));
@@ -80,7 +84,7 @@ public class CombinatorsTest {
     final Map<Integer, CompletionStage<Integer>> stageMap =
         IntStream.range(0, 5)
             .boxed()
-            .collect(Collectors.toMap(Function.identity(), CompletableFuture::completedFuture));
+            .collect(Collectors.toMap(Function.identity(), FutureSupport::completedStage));
     final Map<Integer, Integer> integerMap =
         Combinators.keyedAll(stageMap).toCompletableFuture().join();
     Assert.assertEquals(5, integerMap.size());
@@ -97,7 +101,7 @@ public class CombinatorsTest {
               if (i == 3) {
                 return FutureSupport.errorStage(new TestException());
               }
-              return CompletableFuture.completedFuture(i);
+              return FutureSupport.completedStage(i);
             }));
     assertError(Combinators.keyedAll(stageMap));
   }

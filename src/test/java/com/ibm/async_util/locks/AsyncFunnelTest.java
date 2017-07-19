@@ -33,6 +33,8 @@ import java.util.stream.IntStream;
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.ibm.async_util.util.FutureSupport;
+
 public class AsyncFunnelTest {
 
   private static class TestException extends Exception {
@@ -87,7 +89,7 @@ public class AsyncFunnelTest {
 
     // this should not be called
     final CompletableFuture<Integer> fail =
-        c.doOrGet(() -> CompletableFuture.completedFuture(-1)).toCompletableFuture();
+        c.doOrGet(() -> FutureSupport.completedStage(-1)).toCompletableFuture();
     Assert.assertFalse(fail.isDone());
 
     // let the first future finish
@@ -96,7 +98,7 @@ public class AsyncFunnelTest {
 
     // this can be accepted immediately
     final CompletableFuture<Integer> second =
-        c.doOrGet(() -> CompletableFuture.completedFuture(2)).toCompletableFuture();
+        c.doOrGet(() -> FutureSupport.completedStage(2)).toCompletableFuture();
     Assert.assertTrue(second.isDone());
     Assert.assertEquals(2, second.join().intValue());
 
@@ -148,7 +150,7 @@ public class AsyncFunnelTest {
 
     Assert.assertEquals(count.get(), 1);
     final CompletableFuture<Integer> first =
-        c.doOrGet(() -> CompletableFuture.completedFuture(-1)).toCompletableFuture();
+        c.doOrGet(() -> FutureSupport.completedStage(-1)).toCompletableFuture();
     Assert.assertFalse(first.isDone());
     Assert.assertEquals(1, secondSubmitted.getCount());
     latch1.countDown();
@@ -159,7 +161,7 @@ public class AsyncFunnelTest {
 
     Assert.assertEquals(count.get(), 2);
     final CompletableFuture<Integer> second =
-        c.doOrGet(() -> CompletableFuture.completedFuture(-1)).toCompletableFuture();
+        c.doOrGet(() -> FutureSupport.completedStage(-1)).toCompletableFuture();
     Assert.assertFalse(second.isDone());
     latch2.countDown();
     Assert.assertEquals(2, second.get(1, TimeUnit.SECONDS).intValue());

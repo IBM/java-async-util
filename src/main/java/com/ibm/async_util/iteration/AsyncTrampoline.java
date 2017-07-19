@@ -36,7 +36,7 @@ import com.ibm.async_util.util.FutureSupport;
  * <pre>
  * {@code
  * CompletionStage<Integer> getNextNumber() {
- *   return CompletableFuture.completedFuture(random.nextInt());
+ *   return FutureSupport.completedStage(random.nextInt());
  * }
  * }
  * </pre>

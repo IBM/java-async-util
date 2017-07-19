@@ -1,6 +1,5 @@
 package com.ibm.async_util.util;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 
@@ -15,8 +14,8 @@ public class FutureSupportTest {
   @Test
   public void testThenComposeOrRecover() {
     final CompletionStage<Integer> error = FutureSupport.errorStage(new TestException());
-    final CompletionStage<Integer> success = CompletableFuture.completedFuture(1);
-    final CompletionStage<Integer> success2 = CompletableFuture.completedFuture(2);
+    final CompletionStage<Integer> success = FutureSupport.completedStage(1);
+    final CompletionStage<Integer> success2 = FutureSupport.completedStage(2);
 
     // input stage status should only effect function arguments
     for (final boolean inputFailed : new boolean[] {false, true}) {

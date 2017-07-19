@@ -47,7 +47,7 @@ import java.util.function.Supplier;
  *
  *        val = readFromCache();
  *        if (val != null) {
- *          return CompletableFuture.completedFuture(val);
+ *          return FutureSupport.completedStage(val);
  *        }
  *        // populate the cache if we're first, or just listen for the result on the thread
  *        // already doing the computation if we're not

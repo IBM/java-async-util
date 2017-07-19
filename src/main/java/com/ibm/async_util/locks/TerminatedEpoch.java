@@ -1,7 +1,6 @@
 package com.ibm.async_util.locks;
 
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import com.ibm.async_util.util.FutureSupport;
@@ -21,7 +20,7 @@ class TerminatedEpoch implements ObservableEpoch {
 
   @Override
   public CompletionStage<Boolean> terminate() {
-    return CompletableFuture.completedFuture(false);
+    return FutureSupport.completedStage(false);
   }
 
   @Override

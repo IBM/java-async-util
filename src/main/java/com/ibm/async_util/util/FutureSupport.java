@@ -9,17 +9,17 @@ import java.util.function.Function;
 public class FutureSupport {
   private FutureSupport() {}
 
-  private static final CompletableFuture<Void> VOID = CompletableFuture.completedFuture(null);
+  private static final CompletionStage<Void> VOID = FutureSupport.completedStage(null);
 
   /**
    * Gets an already completed {@link CompletionStage} of Void. This common static instance can be
-   * used as an alternative to {@code CompletableFuture.completedFuture(null)}
+   * used as an alternative to {@code FutureSupport.<Void>completedStage(null)}
    *
    * <p>
    * This has a few advantages:
    *
    * <ul>
-   * <li>Depending on context, CompletableFuture.completedFuture(null) could either mean a {@code
+   * <li>Depending on context, FutureSupport.completedStage(null) could either mean a {@code
    *       CompletionStage<Void>} or an {@code CompletionStage<T>}. Using this method clearly
    * indicates that we are returning a void future, not a T future with a null result.
    * <li>Immediately completed null futures are very common. Since they are final and static, we can
@@ -44,8 +44,19 @@ public class FutureSupport {
   }
 
   /**
+   * Creates a {@link CompletionStage} that is already completed with the given value.
+   * 
+   * @param t the value to be held by the returned stage
+   * @return a {@link CompletionStage} that has already been completed with {@code t}
+   */
+  public static <T> CompletionStage<T> completedStage(final T t) {
+    // note: possible to replace this with an immediately complete CompletionStage implementation
+    return CompletableFuture.completedFuture(t);
+  }
+
+  /**
    * Creates a {@link CompletionStage} that is already completed exceptionally. This is the
-   * exceptional analog of {@link CompletableFuture#completedFuture(Object)}.
+   * exceptional analog of {@link #completedStage(Object)}.
    *
    * @param ex the exception that completes the returned stage
    * @return a {@link CompletionStage} that has already been completed exceptionally with {@code ex}
