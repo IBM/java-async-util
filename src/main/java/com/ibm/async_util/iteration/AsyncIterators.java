@@ -71,10 +71,10 @@ class AsyncIterators {
   static <T> void listen(final CompletionStage<T> source, final CompletableFuture<T> dest) {
     source.whenComplete(
         (t, ex) -> {
-          if (t != null) {
-            dest.complete(t);
-          } else {
+          if (ex != null) {
             dest.completeExceptionally(ex);
+          } else {
+            dest.complete(t);
           }
         });
   }
@@ -212,7 +212,7 @@ class AsyncIterators {
             final CompletionStage<AsyncLock.LockToken> lockFuture = this.lock.acquireLock();
             return lockFuture.thenCompose(
                 token -> {
-                  CompletionStage<Either<End, T>> next;
+                  final CompletionStage<Either<End, T>> next;
                   if (connected[0]) {
                     next = fillMore();
                   } else {

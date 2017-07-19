@@ -90,10 +90,10 @@ public class AsyncFunnel<T> {
         .whenComplete(
             (t, ex) -> {
               this.current.set(null);
-              if (t != null) {
-                finalRef.complete(t);
-              } else {
+              if (ex != null) {
                 finalRef.completeExceptionally(ex);
+              } else {
+                finalRef.complete(t);
               }
             });
   }

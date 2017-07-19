@@ -176,10 +176,10 @@ public class StageSupport {
         actionUnderResource.apply(r).whenComplete((t, actionEx) -> {
           try {
             r.close();
-            if (t != null) {
-              ret.complete(t);
-            } else {
+            if (actionEx != null) {
               ret.completeExceptionally(actionEx);
+            } else {
+              ret.complete(t);
             }
           } catch (final Exception closeEx) {
             if (actionEx != null) {
