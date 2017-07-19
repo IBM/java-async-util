@@ -136,8 +136,8 @@ public class AsyncFunnelTest {
       return CompletableFuture.runAsync(() -> {
         while (running.get()) {
           c.doOrGet(() -> CompletableFuture.supplyAsync(() -> {
-            secondSubmitted.countDown();
             final int next = count.incrementAndGet();
+            secondSubmitted.countDown();
             try {
               latch2.await();
             } catch (final InterruptedException e) {
