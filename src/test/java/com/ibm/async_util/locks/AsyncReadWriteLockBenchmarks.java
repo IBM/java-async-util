@@ -41,7 +41,7 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.runner.RunnerException;
 
-import com.ibm.async_util.util.FutureSupport;
+import com.ibm.async_util.util.StageSupport;
 import com.ibm.async_util.util.TestUtil;
 
 public final class AsyncReadWriteLockBenchmarks {
@@ -160,9 +160,9 @@ public final class AsyncReadWriteLockBenchmarks {
     };
 
     private static final CompletionStage<ReadLockToken> readFuture =
-        FutureSupport.completedStage(READ);
+        StageSupport.completedStage(READ);
     private static final CompletionStage<WriteLockToken> writeFuture =
-        FutureSupport.completedStage(WRITE);
+        StageSupport.completedStage(WRITE);
 
     @Override
     public CompletionStage<WriteLockToken> acquireWriteLock() {

@@ -42,7 +42,7 @@ import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.runner.RunnerException;
 
 import com.ibm.async_util.locks.ObservableEpoch.EpochToken;
-import com.ibm.async_util.util.FutureSupport;
+import com.ibm.async_util.util.StageSupport;
 
 public final class EpochBenchmarks {
   private EpochBenchmarks() {}
@@ -126,8 +126,8 @@ public final class EpochBenchmarks {
 
   private static class NoOpEpoch implements ObservableEpoch, EpochToken {
     private static final CompletionStage<Boolean> terminate =
-        FutureSupport.completedStage(false);
-    private static final CompletionStage<Void> completion = FutureSupport.completedStage(null);
+        StageSupport.completedStage(false);
+    private static final CompletionStage<Void> completion = StageSupport.completedStage(null);
 
     @Override
     public Optional<EpochToken> enter() {

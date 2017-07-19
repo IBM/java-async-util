@@ -41,7 +41,7 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.runner.RunnerException;
 
-import com.ibm.async_util.util.FutureSupport;
+import com.ibm.async_util.util.StageSupport;
 import com.ibm.async_util.util.TestUtil;
 
 public final class AsyncSemaphoreBenchmark {
@@ -304,7 +304,7 @@ public final class AsyncSemaphoreBenchmark {
     @Override
     public CompletionStage<Void> acquire(final long permits) {
       this.semaphore.acquireUninterruptibly(Math.toIntExact(permits));
-      return FutureSupport.voidFuture();
+      return StageSupport.voidFuture();
     }
 
     @Override

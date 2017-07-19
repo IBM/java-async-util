@@ -36,7 +36,7 @@ import com.ibm.async_util.locks.AsyncLock;
 import com.ibm.async_util.locks.FairAsyncLock;
 import com.ibm.async_util.locks.ObservableEpoch;
 import com.ibm.async_util.util.Either;
-import com.ibm.async_util.util.FutureSupport;
+import com.ibm.async_util.util.StageSupport;
 
 /** Package private methods to use in {@link AsyncIterator} */
 class AsyncIterators {
@@ -84,7 +84,7 @@ class AsyncIterators {
     try {
       return supplier.get();
     } catch (final Throwable e) {
-      return FutureSupport.errorStage(e);
+      return StageSupport.exceptionalStage(e);
     }
   }
 
@@ -236,7 +236,7 @@ class AsyncIterators {
      */
     @Override
     public CompletionStage<Void> close() {
-      return FutureSupport.thenComposeOrRecover(
+      return StageSupport.thenComposeOrRecover(
           this.epoch.terminate(),
           (b, epochError) -> {
             // call closeFn on all extra eagerly evaluated results
@@ -246,28 +246,28 @@ class AsyncIterators {
                     .stream()
                     .map(f -> f.thenCompose(
                         either -> either.fold(
-                            end -> FutureSupport.voidFuture(),
+                            end -> StageSupport.voidFuture(),
                             this.closeFn)))
                     .map(CompletionStage::toCompletableFuture)
                     .toArray(CompletableFuture[]::new);
 
             // wait for all to complete
             final CompletableFuture<Void> extraClose = CompletableFuture.allOf(closeFutures);
-            return FutureSupport.thenComposeOrRecover(
+            return StageSupport.thenComposeOrRecover(
                 extraClose,
                 (ig, extraCloseError) -> {
                   // call close on the source iterator
-                  return FutureSupport.thenComposeOrRecover(
+                  return StageSupport.thenComposeOrRecover(
                       AsyncIterators.convertSynchronousException(this.backingIterator::close),
                       (ig2, backingCloseError) -> {
                         if (epochError != null) {
-                          return FutureSupport.<Void>errorStage(epochError);
+                          return StageSupport.<Void>exceptionalStage(epochError);
                         } else if (extraCloseError != null) {
-                          return FutureSupport.<Void>errorStage(extraCloseError);
+                          return StageSupport.<Void>exceptionalStage(extraCloseError);
                         } else if (backingCloseError != null) {
-                          return FutureSupport.<Void>errorStage(backingCloseError);
+                          return StageSupport.<Void>exceptionalStage(backingCloseError);
                         }
-                        return FutureSupport.voidFuture();
+                        return StageSupport.voidFuture();
                       });
                 });
           });
@@ -299,7 +299,7 @@ class AsyncIterators {
       if (this.exception != null) {
         final Throwable e = this.exception;
         this.exception = null;
-        return FutureSupport.errorStage(e);
+        return StageSupport.exceptionalStage(e);
       } else {
         return End.endFuture();
       }

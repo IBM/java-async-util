@@ -30,7 +30,7 @@ import java.util.stream.IntStream;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.ibm.async_util.util.FutureSupport;
+import com.ibm.async_util.util.StageSupport;
 
 
 public class AsyncTrampolineTest {
@@ -44,7 +44,7 @@ public class AsyncTrampolineTest {
         c -> c < breakPoint,
         c -> {
           sum.addAndGet(c);
-          return FutureSupport.completedStage(c + 1);
+          return StageSupport.completedStage(c + 1);
         },
         0);
     final int expected = IntStream.range(0, breakPoint).sum();

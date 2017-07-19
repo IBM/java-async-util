@@ -48,7 +48,7 @@ import org.junit.Test;
 
 import com.ibm.async_util.iteration.AsyncIterator.End;
 import com.ibm.async_util.util.Either;
-import com.ibm.async_util.util.FutureSupport;
+import com.ibm.async_util.util.StageSupport;
 import com.ibm.async_util.util.TestUtil;
 
 public class AsyncIteratorTest {
@@ -196,7 +196,7 @@ public class AsyncIteratorTest {
   public void testThenCompose() {
     final AsyncIterator<Integer> x = intIterator(1000);
     final AsyncIterator<Integer> mapped =
-        x.thenCompose(c -> FutureSupport.completedStage(c + 1));
+        x.thenCompose(c -> StageSupport.completedStage(c + 1));
     final List<Integer> list = TestUtil.join(mapped.take(1001).collect(Collectors.toList()));
     Assert.assertEquals(1000, list.size());
     for (int i = 0; i < 1000; i++) {
@@ -211,7 +211,7 @@ public class AsyncIteratorTest {
     final AsyncIterator<Integer> mapped =
         x.thenComposeAsync(c -> {
           Assert.assertNotEquals(Thread.currentThread().getId(), currentThread);
-          return FutureSupport.completedStage(c + 1);
+          return StageSupport.completedStage(c + 1);
         });
     final List<Integer> list = TestUtil.join(mapped.take(1001).collect(Collectors.toList()));
     Assert.assertEquals(1000, list.size());
@@ -251,7 +251,7 @@ public class AsyncIteratorTest {
   public void testThenComposeAhead() {
     final AsyncIterator<Integer> x = intIterator(1000);
     final AsyncIterator<Integer> mapped =
-        x.thenComposeAhead(c -> FutureSupport.completedStage(c + 1), 2);
+        x.thenComposeAhead(c -> StageSupport.completedStage(c + 1), 2);
     final List<Integer> list = TestUtil.join(mapped.take(1001).collect(Collectors.toList()));
     Assert.assertEquals(1000, list.size());
     for (int i = 0; i < 1000; i++) {
@@ -517,8 +517,8 @@ public class AsyncIteratorTest {
         IntStream.range(0, 5)
             .mapToObj(
                 i -> i == 3
-                    ? FutureSupport.<Integer>errorStage(new IllegalStateException())
-                    : FutureSupport.completedStage(i))
+                    ? StageSupport.<Integer>exceptionalStage(new IllegalStateException())
+                    : StageSupport.completedStage(i))
             .collect(Collectors.toList()))
         .consume()
         .toCompletableFuture()
@@ -644,13 +644,13 @@ public class AsyncIteratorTest {
       @Override
       public CompletionStage<Void> close() {
         this.didClose = true;
-        return FutureSupport.voidFuture();
+        return StageSupport.voidFuture();
       }
     }
     {
       final MustCloseIterator mustClose = new MustCloseIterator();
 
-      AsyncIterator.fromIteratorStage(FutureSupport.completedStage(mustClose)).close()
+      AsyncIterator.fromIteratorStage(StageSupport.completedStage(mustClose)).close()
           .toCompletableFuture().join();
       Assert.assertTrue(mustClose.didClose);
     }
@@ -658,7 +658,7 @@ public class AsyncIteratorTest {
       final MustCloseIterator mustClose = new MustCloseIterator();
 
       final AsyncIterator<Void> newIter =
-          AsyncIterator.fromIteratorStage(FutureSupport.completedStage(mustClose));
+          AsyncIterator.fromIteratorStage(StageSupport.completedStage(mustClose));
       newIter.nextFuture().thenCompose(ignored -> newIter.close()).toCompletableFuture().join();
       Assert.assertTrue(mustClose.didClose);
     }
@@ -698,7 +698,7 @@ public class AsyncIteratorTest {
     final int evenSum =
         intIterator(5)
             .filterCompose(
-                i -> FutureSupport.completedStage(Optional.ofNullable(i % 2 == 0 ? i : null)))
+                i -> StageSupport.completedStage(Optional.ofNullable(i % 2 == 0 ? i : null)))
             .collect(Collectors.summingInt(i -> i))
             .toCompletableFuture()
             .join();
@@ -711,7 +711,7 @@ public class AsyncIteratorTest {
     {
       final List<Integer> unfolded =
           AsyncIterator.unfold(
-              0, i -> FutureSupport.completedStage(Either.<End, Integer>right(i + 1)))
+              0, i -> StageSupport.completedStage(Either.<End, Integer>right(i + 1)))
               .take(5)
               .collect(Collectors.toList())
               .toCompletableFuture()
@@ -774,7 +774,7 @@ public class AsyncIteratorTest {
           if (curr == 0) {
             return End.endFuture();
           } else if (curr > 0) {
-            return FutureSupport.completedStage(Either.right(0));
+            return StageSupport.completedStage(Either.right(0));
           }
           Assert.fail("called nextFuture() after previous call returned empty");
           return null;

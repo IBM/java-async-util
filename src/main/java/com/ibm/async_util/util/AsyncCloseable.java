@@ -163,7 +163,7 @@ public interface AsyncCloseable {
       try {
         return resource.close().thenApply(ig -> t);
       } catch (final Throwable ex) {
-        return FutureSupport.errorStage(ex);
+        return StageSupport.exceptionalStage(ex);
       }
     } catch (final Throwable ex) {
       try {
@@ -177,7 +177,7 @@ public interface AsyncCloseable {
             });
       } catch (final Throwable closeEx) {
         ex.addSuppressed(closeEx);
-        return FutureSupport.errorStage(ex);
+        return StageSupport.exceptionalStage(ex);
       }
     }
   }

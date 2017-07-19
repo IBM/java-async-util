@@ -6,7 +6,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-import com.ibm.async_util.util.FutureSupport;
+import com.ibm.async_util.util.StageSupport;
 
 /**
  * Static methods for asynchronous looping procedures without blowing the stack.
@@ -188,7 +188,7 @@ public final class AsyncTrampoline {
    */
   public static CompletionStage<Void> asyncWhile(
       final Supplier<? extends CompletionStage<Boolean>> fn) {
-    return FutureSupport.voided(AsyncTrampoline.asyncWhile(b -> b, b -> fn.get(), true));
+    return StageSupport.voided(AsyncTrampoline.asyncWhile(b -> b, b -> fn.get(), true));
   }
 
   /**

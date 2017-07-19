@@ -6,10 +6,13 @@ import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-public class FutureSupport {
-  private FutureSupport() {}
+/**
+ * Utility methods for creating and composing {@link CompletionStage CompletionStages}
+ */
+public class StageSupport {
+  private StageSupport() {}
 
-  private static final CompletionStage<Void> VOID = FutureSupport.completedStage(null);
+  private static final CompletionStage<Void> VOID = StageSupport.completedStage(null);
 
   /**
    * Gets an already completed {@link CompletionStage} of Void. This common static instance can be
@@ -45,9 +48,21 @@ public class FutureSupport {
 
   /**
    * Creates a {@link CompletionStage} that is already completed with the given value.
+   * <p>
+   * Non-Async methods on the returned stage will run their dependent actions immediately on the
+   * calling thread.
+   * <p>
+   * Async methods which do not supply an executor (and don't involve another stage) will use the
+   * same default executor as used by {@link CompletableFuture}. If another stage is involved (e.g.
+   * {@link CompletionStage#thenAcceptBothAsync(CompletionStage, java.util.function.BiConsumer)
+   * thenAcceptBothAsync}) then the other stage's default execution facility is used.
+   * <p>
+   * A completed exceptional stage can be similarly created with the method
+   * {@link #exceptionalStage(Throwable)}
    * 
    * @param t the value to be held by the returned stage
    * @return a {@link CompletionStage} that has already been completed with {@code t}
+   * @see #exceptionalStage(Throwable)
    */
   public static <T> CompletionStage<T> completedStage(final T t) {
     // note: possible to replace this with an immediately complete CompletionStage implementation
@@ -57,11 +72,20 @@ public class FutureSupport {
   /**
    * Creates a {@link CompletionStage} that is already completed exceptionally. This is the
    * exceptional analog of {@link #completedStage(Object)}.
+   * <p>
+   * Non-Async methods on the returned stage will run their dependent actions immediately on the
+   * calling thread.
+   * <p>
+   * Async methods which do not supply an executor (and don't involve another stage) will use the
+   * same default executor as used by {@link CompletableFuture}. If another stage is involved (e.g.
+   * {@link CompletionStage#thenAcceptBothAsync(CompletionStage, java.util.function.BiConsumer)
+   * thenAcceptBothAsync}) then the other stage's default execution facility is used.
    *
    * @param ex the exception that completes the returned stage
    * @return a {@link CompletionStage} that has already been completed exceptionally with {@code ex}
+   * @see #completedStage(Object)
    */
-  public static <T> CompletionStage<T> errorStage(final Throwable ex) {
+  public static <T> CompletionStage<T> exceptionalStage(final Throwable ex) {
     final CompletableFuture<T> fut = new CompletableFuture<>();
     fut.completeExceptionally(ex);
     return fut;

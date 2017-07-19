@@ -4,7 +4,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
-import com.ibm.async_util.util.FutureSupport;
+import com.ibm.async_util.util.StageSupport;
 
 
 /**
@@ -39,7 +39,7 @@ class ObservableEpochImpl extends AbstractSimpleEpoch implements ObservableEpoch
 
   @Override
   public CompletionStage<Void> awaitCompletion() {
-    return FutureSupport.voided(this.future);
+    return StageSupport.voided(this.future);
   }
 }
 

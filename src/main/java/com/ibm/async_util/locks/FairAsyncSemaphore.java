@@ -25,7 +25,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
-import com.ibm.async_util.util.FutureSupport;
+import com.ibm.async_util.util.StageSupport;
 
 /**
  * An {@link AsyncSemaphore} implementation which is strictly fair: if the permits requested by an
@@ -228,7 +228,7 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
         if (encodedDiff >= ENCODED_ZERO) {
           // enough permits to satisfy request, attempt CAS
           if (node.casValue(nodeEncodedPermits, encodedDiff)) {
-            return FutureSupport.voidFuture();
+            return StageSupport.voidFuture();
           }
         } else {
           // not enough permits to satisfy request. CAS to deficit+mark then enqueue new zero
