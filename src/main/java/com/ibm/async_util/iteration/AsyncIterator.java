@@ -188,6 +188,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
 
     /**
      * An {@link Either} instance which contains the {@link End} enum.
+     * 
+     * @return An {@link Either} containing the {@link End} instance
      */
     @SuppressWarnings("unchecked")
     public static <T> Either<AsyncIterator.End, T> end() {
@@ -198,6 +200,9 @@ public interface AsyncIterator<T> extends AsyncCloseable {
     /**
      * A {@link CompletionStage} which is already complete, and contains the {@link End#end()}
      * instance as its value.
+     * 
+     * @return A completed stage whose value is an {@link Either} containing the {@link End}
+     *         instance
      */
     @SuppressWarnings("unchecked")
     public static <T> CompletionStage<Either<AsyncIterator.End, T>> endFuture() {
