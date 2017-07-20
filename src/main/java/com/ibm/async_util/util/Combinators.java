@@ -52,11 +52,9 @@ public class Combinators {
   @SuppressWarnings("unchecked")
   public static <T> CompletionStage<Collection<T>> allOf(
       final Collection<? extends CompletionStage<T>> stages) {
-    return Combinators.allOf(
-        stages
-            .stream()
-            .map(CompletionStage::toCompletableFuture)
-            .toArray(CompletableFuture[]::new));
+    return Combinators.allOf(stages.stream()
+        .map(CompletionStage::toCompletableFuture)
+        .toArray(CompletableFuture[]::new));
   }
 
   /**
@@ -86,12 +84,14 @@ public class Combinators {
    * @return a {@link CompletionStage} that will be completed with a map mapping keys of type K to
    *         the values returned by the CompletionStages in {@code stageMap}
    */
+  @SuppressWarnings("unchecked")
   public static <K, V> CompletionStage<Map<K, V>> keyedAll(
       final Map<K, ? extends CompletionStage<V>> stageMap) {
-    return CompletableFuture.allOf(stageMap.values().stream().toArray(CompletableFuture[]::new))
-        .thenApply(ignore -> stageMap
-            .entrySet()
-            .stream()
+    return Combinators
+        .allOf(stageMap.values().stream()
+            .map(CompletionStage::toCompletableFuture)
+            .toArray(CompletableFuture[]::new))
+        .thenApply(ignore -> stageMap.entrySet().stream()
             .collect(Collectors.toMap(
                 e -> e.getKey(),
                 e -> e.getValue().toCompletableFuture().join())));

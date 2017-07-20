@@ -12,8 +12,6 @@ import java.util.function.Function;
 public class StageSupport {
   private StageSupport() {}
 
-  private static final CompletionStage<Void> VOID = StageSupport.completedStage(null);
-
   /**
    * Gets an already completed {@link CompletionStage} of Void. This common static instance can be
    * used as an alternative to {@code FutureSupport.<Void>completedStage(null)}
@@ -32,7 +30,7 @@ public class StageSupport {
    * @return An immediately completed {@link CompletionStage} of {@code Void}
    */
   public static CompletionStage<Void> voidFuture() {
-    return VOID;
+    return CompletedStage.VOID;
   }
 
   /**
@@ -65,8 +63,7 @@ public class StageSupport {
    * @see #exceptionalStage(Throwable)
    */
   public static <T> CompletionStage<T> completedStage(final T t) {
-    // note: possible to replace this with an immediately complete CompletionStage implementation
-    return CompletableFuture.completedFuture(t);
+    return CompletedStage.of(t);
   }
 
   /**
@@ -86,9 +83,7 @@ public class StageSupport {
    * @see #completedStage(Object)
    */
   public static <T> CompletionStage<T> exceptionalStage(final Throwable ex) {
-    final CompletableFuture<T> fut = new CompletableFuture<>();
-    fut.completeExceptionally(ex);
-    return fut;
+    return CompletedStage.exception(ex);
   }
 
   /**
