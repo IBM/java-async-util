@@ -63,8 +63,7 @@ public class StageSupport {
    * @see #exceptionalStage(Throwable)
    */
   public static <T> CompletionStage<T> completedStage(final T t) {
-    // note: possible to replace this with an immediately complete CompletionStage implementation
-    return CompletableFuture.completedFuture(t);
+    return CompletedStage.of(t);
   }
 
   /**
@@ -84,9 +83,7 @@ public class StageSupport {
    * @see #completedStage(Object)
    */
   public static <T> CompletionStage<T> exceptionalStage(final Throwable ex) {
-    final CompletableFuture<T> fut = new CompletableFuture<>();
-    fut.completeExceptionally(ex);
-    return fut;
+    return CompletedStage.exception(ex);
   }
 
   /**

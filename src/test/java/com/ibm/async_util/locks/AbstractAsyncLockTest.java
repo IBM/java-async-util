@@ -83,6 +83,7 @@ public abstract class AbstractAsyncLockTest {
 
     TestUtil.join(CompletableFuture.allOf(acqs.stream()
         .map(f -> f.thenAccept(AsyncLock.LockToken::releaseLock))
+        .map(CompletionStage::toCompletableFuture)
         .toArray(CompletableFuture[]::new)));
 
   }

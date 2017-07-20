@@ -28,7 +28,7 @@ public class CombinatorsTest {
     final List<Integer> results = Arrays.asList(1, 2, 3);
     @SuppressWarnings("rawtypes")
     final CompletionStage[] arr =
-        results.stream().map(StageSupport::completedStage).toArray(CompletableFuture[]::new);
+        results.stream().map(StageSupport::completedStage).toArray(CompletionStage[]::new);
     final List<CompletionStage<Integer>> collect =
         results.stream().map(StageSupport::completedStage).collect(Collectors.toList());
 
@@ -45,9 +45,9 @@ public class CombinatorsTest {
   @Test
   @SuppressWarnings("unchecked")
   public void testAllOfError() {
-    final List<CompletionStage<Integer>> futures =
+    final List<CompletableFuture<Integer>> futures =
         Arrays.asList(
-            StageSupport.completedStage(1),
+            StageSupport.completedStage(1).toCompletableFuture(),
             StageSupport.<Integer>exceptionalStage(new TestException()).toCompletableFuture());
     assertError(Combinators.allOf(futures.toArray(new CompletableFuture[0])));
     assertError(Combinators.allOf(futures));
@@ -60,7 +60,8 @@ public class CombinatorsTest {
     final CompletableFuture<Integer> delayed = new CompletableFuture<>();
     final List<CompletableFuture<Integer>> futures =
         Arrays.asList(
-            delayed, StageSupport.<Integer>exceptionalStage(new TestException()).toCompletableFuture());
+            delayed,
+            StageSupport.<Integer>exceptionalStage(new TestException()).toCompletableFuture());
 
     final CompletionStage<Collection<Integer>> arrAll =
         Combinators.allOf(futures.toArray(new CompletableFuture[0]));
