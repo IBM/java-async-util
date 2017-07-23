@@ -1342,39 +1342,6 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   }
 
   /**
-   * Creates an AsyncIterator from a {@link CompletionStage} of an {@link Iterator}.
-   *
-   * @param stage a {@link CompletionStage} stage that produces an AsyncIterator
-   * @return a new AsyncIterator which will yield the elements of the produced iterator
-   */
-  static <T> AsyncIterator<T> fromIteratorStage(
-      final CompletionStage<? extends AsyncIterator<T>> stage) {
-    return new AsyncIterator<T>() {
-      AsyncIterator<T> iter;
-
-      @Override
-      public CompletionStage<Either<End, T>> nextFuture() {
-        return this.iter == null
-            ? stage.thenCompose(it -> {
-              this.iter = it;
-              return it.nextFuture();
-            })
-            : this.iter.nextFuture();
-      }
-
-      @Override
-      public CompletionStage<Void> close() {
-        return this.iter == null
-            ? stage.thenCompose(it -> {
-              this.iter = it;
-              return it.close();
-            })
-            : this.iter.close();
-      }
-    };
-  }
-
-  /**
    * Creates an AsyncIterator of one element.
    *
    * @param t the element to return
