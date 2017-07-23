@@ -10,7 +10,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -327,7 +326,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    *         from {@code this} iterator
    */
   default <U> AsyncIterator<U> thenApply(final Function<? super T, ? extends U> fn) {
-    return AsyncIterators.thenApplyImpl(this, fn, null);
+    return AsyncIterators.thenApplyImpl(this, fn, true, null);
   }
 
   /**
@@ -351,7 +350,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    *         from {@code this} iterator
    */
   default <U> AsyncIterator<U> thenApplyAsync(final Function<? super T, ? extends U> fn) {
-    return AsyncIterators.thenApplyImpl(this, fn, ForkJoinPool.commonPool());
+    return AsyncIterators.thenApplyImpl(this, fn, false, null);
   }
 
   /**
@@ -377,7 +376,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   default <U> AsyncIterator<U> thenApplyAsync(
       final Function<? super T, ? extends U> fn, final Executor executor) {
     Objects.requireNonNull(executor);
-    return AsyncIterators.thenApplyImpl(this, fn, executor);
+    return AsyncIterators.thenApplyImpl(this, fn, false, executor);
   }
 
   /**
@@ -402,7 +401,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    */
   default <U> AsyncIterator<U> thenCompose(
       final Function<? super T, ? extends CompletionStage<U>> fn) {
-    return AsyncIterators.thenComposeImpl(this, fn, null);
+    return AsyncIterators.thenComposeImpl(this, fn, true, null);
   }
 
   /**
@@ -428,7 +427,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    */
   default <U> AsyncIterator<U> thenComposeAsync(
       final Function<? super T, ? extends CompletionStage<U>> fn) {
-    return AsyncIterators.thenComposeImpl(this, fn, ForkJoinPool.commonPool());
+    return AsyncIterators.thenComposeImpl(this, fn, false, null);
   }
 
   /**
@@ -455,7 +454,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   default <U> AsyncIterator<U> thenComposeAsync(
       final Function<? super T, ? extends CompletionStage<U>> fn, final Executor executor) {
     Objects.requireNonNull(executor);
-    return AsyncIterators.thenComposeImpl(this, fn, executor);
+    return AsyncIterators.thenComposeImpl(this, fn, false, executor);
   }
 
   /**

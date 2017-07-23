@@ -98,13 +98,25 @@ class AsyncIterators {
   }
 
   static <T, U> AsyncIterator<U> thenApplyImpl(
-      final AsyncIterator<T> it, final Function<? super T, ? extends U> f, final Executor e) {
+      final AsyncIterator<T> it,
+      final Function<? super T, ? extends U> f,
+      final boolean synchronous,
+      final Executor e) {
+    assert !synchronous || e == null;
     return new AsyncIterator<U>() {
       @Override
       public CompletionStage<Either<End, U>> nextFuture() {
-        return e == null
-            ? it.nextFuture().thenApply(either -> either.map(f))
-            : it.nextFuture().thenApplyAsync(either -> either.map(f), e);
+        final CompletionStage<Either<End, T>> next = it.nextFuture();
+
+        return synchronous
+            ? next.thenApply(this::eitherFunction)
+            : e == null
+                ? next.thenApplyAsync(this::eitherFunction)
+                : next.thenApplyAsync(this::eitherFunction, e);
+      }
+
+      Either<End, U> eitherFunction(final Either<End, T> either) {
+        return either.map(f);
       }
 
       @Override
@@ -115,22 +127,31 @@ class AsyncIterators {
   }
 
   static <T, U> AsyncIterator<U> thenComposeImpl(
-      final AsyncIterator<T> it, final Function<? super T, ? extends CompletionStage<U>> f,
+      final AsyncIterator<T> it,
+      final Function<? super T, ? extends CompletionStage<U>> f,
+      final boolean synchronous,
       final Executor e) {
+    assert !synchronous || e == null;
+
     return new AsyncIterator<U>() {
       @Override
       public CompletionStage<Either<End, U>> nextFuture() {
         final CompletionStage<Either<End, T>> nxt = it.nextFuture();
-        // if there's a value, apply f and wrap the result in an Either,
-        // otherwise just return end marker
-        return e == null
-            ? nxt.thenCompose(
-                nt -> nt.fold(end -> End.endFuture(),
-                    t -> f.apply(t).thenApply(Either::right)))
-            : nxt.thenComposeAsync(
-                nt -> nt.fold(end -> End.endFuture(),
-                    t -> f.apply(t).thenApply(Either::right)),
-                e);
+        return synchronous
+            ? nxt.thenCompose(this::eitherFunction)
+            : e == null
+                ? nxt.thenComposeAsync(this::eitherFunction)
+                : nxt.thenComposeAsync(this::eitherFunction, e);
+      }
+
+      /*
+       * if there's a value, apply f and wrap the result in an Either, otherwise just return end
+       * marker
+       */
+      private CompletionStage<Either<End, U>> eitherFunction(final Either<End, T> either) {
+        return either.fold(
+            end -> End.endFuture(),
+            t -> f.apply(t).thenApply(Either::right));
       }
 
       @Override
