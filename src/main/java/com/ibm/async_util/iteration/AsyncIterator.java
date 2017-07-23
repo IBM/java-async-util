@@ -270,8 +270,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * iterator has resources to release. Similar to the situation with {@link Stream#close()},
    * because the common case requires no resources the user should only call close if it is possible
    * that the {@link AsyncIterator} has resources. Special care needs to be taken to call close even
-   * in the case of an exception, {@link AsyncCloseable#tryComposeWith(AsyncCloseable, Function)}
-   * can make this more convenient.
+   * in the case of an exception, {@link StageSupport#tryComposeWith(AsyncCloseable, Function)} can
+   * make this more convenient.
    *
    * <pre>
    * {@code

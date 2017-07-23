@@ -112,8 +112,8 @@ public class TryWithTest {
   }
 
   public static class TryWithAsyncCloseable {
-    private static Function<CheckableAsyncCloseable, Integer> successAction = ig -> 0;
-    private static Function<CheckableAsyncCloseable, Integer> errorAction =
+    private static final Function<CheckableAsyncCloseable, Integer> successAction = ig -> 0;
+    private static final Function<CheckableAsyncCloseable, Integer> errorAction =
         ig -> {
           throw new ActionException();
         };
@@ -159,7 +159,7 @@ public class TryWithTest {
         final Class<? extends Exception> expectedException,
         final Class<? extends Exception> suppressedException) {
       try {
-        AsyncCloseable.tryWith(closeable, action).toCompletableFuture().join();
+        StageSupport.tryWith(closeable, action).toCompletableFuture().join();
         Assert.assertTrue(
             "expected exception ", expectedException == null && suppressedException == null);
       } catch (final CompletionException e) {
@@ -178,8 +178,8 @@ public class TryWithTest {
   }
 
   public static class TryWithAutoCloseable {
-    private static Function<CheckableAutoCloseable, Integer> successAction = ig -> 0;
-    private static Function<CheckableAutoCloseable, Integer> errorAction =
+    private static final Function<CheckableAutoCloseable, Integer> successAction = ig -> 0;
+    private static final Function<CheckableAutoCloseable, Integer> errorAction =
         ig -> {
           throw new ActionException();
         };
@@ -232,11 +232,11 @@ public class TryWithTest {
 
   public static class TryComposeWithAsyncCloseable {
 
-    private static Function<CheckableAsyncCloseable, CompletionStage<Integer>> successAction =
+    private static final Function<CheckableAsyncCloseable, CompletionStage<Integer>> successAction =
         ig -> StageSupport.completedStage(0);
-    private static Function<CheckableAsyncCloseable, CompletionStage<Integer>> asyncErrorAction =
+    private static final Function<CheckableAsyncCloseable, CompletionStage<Integer>> asyncErrorAction =
         ig -> StageSupport.exceptionalStage(new ActionException());
-    private static Function<CheckableAsyncCloseable, CompletionStage<Integer>> syncErrorAction =
+    private static final Function<CheckableAsyncCloseable, CompletionStage<Integer>> syncErrorAction =
         ig -> {
           throw new ActionException();
         };
@@ -308,7 +308,7 @@ public class TryWithTest {
         final Class<? extends Exception> expectedException,
         final Class<? extends Exception> suppressedException) {
       try {
-        AsyncCloseable.tryComposeWith(closeable, action).toCompletableFuture().join();
+        StageSupport.tryComposeWith(closeable, action).toCompletableFuture().join();
         Assert.assertTrue(
             "expected exception ", expectedException == null && suppressedException == null);
       } catch (final CompletionException e) {
@@ -327,11 +327,11 @@ public class TryWithTest {
   }
 
   public static class TryComposeWithAutoCloseable {
-    private static Function<CheckableAutoCloseable, CompletionStage<Integer>> successAction =
+    private static final Function<CheckableAutoCloseable, CompletionStage<Integer>> successAction =
         ig -> StageSupport.completedStage(0);
-    private static Function<CheckableAutoCloseable, CompletionStage<Integer>> asyncErrorAction =
+    private static final Function<CheckableAutoCloseable, CompletionStage<Integer>> asyncErrorAction =
         ig -> StageSupport.exceptionalStage(new ActionException());
-    private static Function<CheckableAutoCloseable, CompletionStage<Integer>> syncErrorAction =
+    private static final Function<CheckableAutoCloseable, CompletionStage<Integer>> syncErrorAction =
         ig -> {
           throw new ActionException();
         };
