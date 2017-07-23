@@ -1254,7 +1254,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
                           // return the next future from the newly updated curr
                           return this.curr != null
                               ? this.curr.nextFuture()
-                              : End.endFuture();
+                              : End.<T>endFuture();
                         });
                   },
                   t -> StageSupport.completedStage(either));
