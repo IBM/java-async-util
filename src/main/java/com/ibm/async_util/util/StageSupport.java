@@ -14,15 +14,15 @@ public class StageSupport {
 
   /**
    * Gets an already completed {@link CompletionStage} of Void. This common static instance can be
-   * used as an alternative to {@code FutureSupport.<Void>completedStage(null)}
+   * used as an alternative to {@code StageSupport.<Void>completedStage(null)}
    *
    * <p>
    * This has a few advantages:
    *
    * <ul>
-   * <li>Depending on context, FutureSupport.completedStage(null) could either mean a {@code
-   *       CompletionStage<Void>} or an {@code CompletionStage<T>}. Using this method clearly
-   * indicates that we are returning a void future, not a T future with a null result.
+   * <li>Depending on context, StageSupport.completedStage(null) could either mean a {@code
+   * CompletionStage<Void>} or an {@code CompletionStage<T>}. Using this method clearly indicates
+   * that we are returning a void future, not a T future with a null result.
    * <li>Immediately completed null futures are very common. Since they are final and static, we can
    * just reuse a single object and save allocations
    * </ul>
@@ -101,7 +101,7 @@ public class StageSupport {
    * <li>{@link AutoCloseable#close()} throws an exception
    * </ol>
    *
-   * Of these cases, only 2 and 3 can happen simultaneously - in this cases, the exception thrown by
+   * Of these cases, only 2 and 3 can happen simultaneously - in this case, the exception thrown by
    * close will be added to the exception from {@code actionUnderResource} as a suppressed
    * exception. If {@link AutoCloseable#close()} throws a non-runtime exception, it will be wrapped
    * in a {@link CompletionException}.

@@ -9,7 +9,7 @@ import java.util.function.Supplier;
 import com.ibm.async_util.util.StageSupport;
 
 /**
- * Static methods for asynchronous looping procedures without blowing the stack.
+ * Static methods for asynchronous looping procedures without exhausting the stack.
  *
  * <p>
  * When working with {@link CompletionStage}, it's often desirable to have a loop like construct
@@ -23,7 +23,7 @@ import com.ibm.async_util.util.StageSupport;
  * CompletionStage<Integer> getFirstOddNumber(int current) {
  *   if (current % 2 != 0)
  *     // found odd number
- *     return CompletableFuture.of(current);
+ *     return CompletableFuture.completedFuture(current);
  *   else
  *     // get the next number and recurse
  *     return getNextNumber().thenCompose(next -> getFirstOddNumber(next));
@@ -36,7 +36,7 @@ import com.ibm.async_util.util.StageSupport;
  * <pre>
  * {@code
  * CompletionStage<Integer> getNextNumber() {
- *   return FutureSupport.completedStage(random.nextInt());
+ *   return CompletableFuture.completedFuture(random.nextInt());
  * }
  * }
  * </pre>

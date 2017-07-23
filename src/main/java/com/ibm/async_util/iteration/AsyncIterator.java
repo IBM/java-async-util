@@ -1536,7 +1536,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * applications
    *
    * <p>
-   * For example, if {@code f = t -> FutureSupport.completedStage(Either.right(f(t)))}, then this
+   * For example, if {@code f = t -> StageSupport.completedStage(Either.right(f(t)))}, then this
    * would produce an asynchronous stream of the values {@code seed, f(seed), f(f(seed)),
    * f(f(f(seed))),...}. The iterator is potentially infinite - it would be in the preceding
    * example.

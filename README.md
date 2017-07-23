@@ -102,12 +102,12 @@ CompletionStage<Result> makeRequest(Request request) {
     });
 }
 ```
-for cleanliness, we can use `FutureSupport.tryWith` for try-with-resources emulation:
+for cleanliness, we can use `StageSupport.tryWith` for try-with-resources emulation:
 ```java
 CompletionStage<Result> makeRequest(Request request) {
   return asyncNetworkOperation(request)
     .thenCompose(response ->
-      FutureSupport.tryWith(lock.acquireLock(), ignored -> {
+      StageSupport.tryWith(lock.acquireLock(), ignored -> {
           mutableState.update(response);
           return mutableState.produceResult();
       })
