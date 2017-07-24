@@ -748,6 +748,32 @@ public class AsyncIteratorTest {
         });
   }
 
+  @Test(expected = NullPointerException.class)
+  public void testFlattenNull() throws Throwable {
+    final CompletionStage<Either<End, Object>> future = AsyncIterator
+        .range(0, 15, 1)
+        .thenFlatten(i -> null)
+        .nextFuture();
+    try {
+      TestUtil.join(future);
+    } catch (final CompletionException e) {
+      throw e.getCause();
+    }
+  }
+
+  @Test(expected = NullPointerException.class)
+  public void testFlattenAheadNull() throws Throwable {
+    final CompletionStage<Either<End, Object>> future = AsyncIterator
+        .range(0, 15, 1)
+        .thenFlattenAhead(i -> StageSupport.completedStage(null), 5)
+        .nextFuture();
+    try {
+      TestUtil.join(future);
+    } catch (final CompletionException e) {
+      throw e.getCause();
+    }
+  }
+
   AsyncIterator<Integer> intIterator(final int size) {
     return AsyncIterator.fromIterator(IntStream.range(0, size).iterator());
   }

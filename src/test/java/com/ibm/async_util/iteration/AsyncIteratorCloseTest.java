@@ -2,6 +2,7 @@ package com.ibm.async_util.iteration;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.CompletionException;
@@ -13,13 +14,15 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.ibm.async_util.util.Either;
+import com.ibm.async_util.util.StageSupport;
+import com.ibm.async_util.util.TestUtil;
 
 public class AsyncIteratorCloseTest {
   private static class TestException extends RuntimeException {
     private static final long serialVersionUID = 1L;
   }
 
-  private static RuntimeException testException = new TestException();
+  private static final RuntimeException testException = new TestException();
 
   static class CloseableIterator implements AsyncIterator<Integer> {
     private final AsyncIterator<Integer> backing;
@@ -165,7 +168,7 @@ public class AsyncIteratorCloseTest {
   }
 
   @Test
-  public void testEagerClose() throws InterruptedException {
+  public void testEagerFlattenClose() throws InterruptedException {
     final AsyncIterator<Integer> it = AsyncIterator.range(0, 15, 1);
     final Deque<CloseableIterator> closeables = new ConcurrentLinkedDeque<CloseableIterator>();
     final CountDownLatch closeablesGenerated = new CountDownLatch(1);
@@ -195,4 +198,46 @@ public class AsyncIteratorCloseTest {
     ahead.close().toCompletableFuture().join();
     Assert.assertTrue(closeables.stream().allMatch(closeableIterator -> closeableIterator.closed));
   }
+
+
+  @Test
+  public void testEagerComposeClose() throws InterruptedException {
+    final AsyncIterator<Integer> it = AsyncIterator.range(0, 15, 1);
+
+    final CountDownLatch latch = new CountDownLatch(1);
+    final Collection<Integer> objects = new ArrayList<>();
+    final AsyncIterator<Integer> ahead =
+        it.thenComposeAhead(i -> {
+          latch.countDown();
+          objects.add(1);
+          return StageSupport.completedStage(objects.size());
+        }, 5);
+
+    final CompletionStage<Either<AsyncIterator.End, Integer>> first = ahead.nextFuture();
+    latch.await();
+    // 6: 5 eagerly evaluated items, + 1 we evaluated
+    Assert.assertEquals(6, objects.size());
+    Assert.assertEquals(1, first.toCompletableFuture().join().right().get().intValue());
+
+    // close
+    ahead.close().toCompletableFuture().join();
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testNextFutureAfterCloseIllegal() throws Throwable {
+    final AsyncIterator<Integer> it = AsyncIterator.range(0, 15, 1);
+    final AsyncIterator<Integer> ahead =
+        it.thenComposeAhead(i -> StageSupport.completedStage(i + 1), 5);
+
+    final CompletionStage<Either<AsyncIterator.End, Integer>> first = ahead.nextFuture();
+
+    TestUtil.join(first);
+    TestUtil.join(ahead.close());
+    try {
+      TestUtil.join(ahead.nextFuture());
+    } catch (final CompletionException e) {
+      throw e.getCause();
+    }
+  }
+
 }

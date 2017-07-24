@@ -526,6 +526,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    */
   default <U> AsyncIterator<U> thenFlattenAhead(
       final Function<? super T, ? extends AsyncIterator<U>> fn, final int executeAhead) {
+    Objects.requireNonNull(fn);
     final Function<Either<End, T>, CompletionStage<Either<End, AsyncIterator<U>>>> eitherF =
         nt -> nt.fold(
             stop -> End.endFuture(),
@@ -559,6 +560,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    */
   default <U> AsyncIterator<U> thenComposeAhead(
       final Function<? super T, ? extends CompletionStage<U>> fn, final int executeAhead) {
+    Objects.requireNonNull(fn);
+
     // apply user function and wrap future result in a Either
     final Function<Either<End, T>, CompletionStage<Either<End, U>>> eitherF =
         nt -> nt.fold(stop -> End.endFuture(),
