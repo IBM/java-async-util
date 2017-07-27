@@ -512,25 +512,29 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * should be ignored, they should either be squashed in the input iterators or the consumer may
    * use manual {@link #nextFuture()} iteration to continue past exceptions. It is still necessary
    * to {@link #close()} the returned iterator; this will close {@code this} iterator as well as the
-   * up to {@code executeAhead} iterators that have been eagerly produced by {@code fn}.
+   * up to {@code executeAhead} iterators that have been eagerly produced by {@code fn}. The
+   * {@link CompletionStage} returned from calling {@link #close()} on the returned iterator will
+   * not complete until the close completes on all eagerly produced iterators.
    *
    * <p>
    * This is a partially eager <i> intermediate </i> method.
    *
-   * @param fn A function which produces a new AsyncIterator
+   * @param fn A function which produces a {@link CompletionStage} which will complete with an
+   *        AsyncIterator
    * @param executeAhead An integer indicating the number of allowable calls to {@code fn} that can
-   *        be made ahead of the user has already consumed
-   * @return A new AsyncIterator consisting of flattened iterators from apply {@code fn} to elements
-   *         of {@code this}
+   *        be made ahead of what the user has already consumed from the returned iterator
+   * @return A new AsyncIterator consisting of flattened iterators from applying {@code fn} to
+   *         elements of {@code this}
    * @see #thenFlatten(Function)
    */
   default <U> AsyncIterator<U> thenFlattenAhead(
-      final Function<? super T, ? extends AsyncIterator<U>> fn, final int executeAhead) {
+      final Function<? super T, ? extends CompletionStage<? extends AsyncIterator<U>>> fn,
+      final int executeAhead) {
     Objects.requireNonNull(fn);
     final Function<Either<End, T>, CompletionStage<Either<End, AsyncIterator<U>>>> eitherF =
         nt -> nt.fold(
             stop -> End.endFuture(),
-            t -> StageSupport.completedStage(Either.right(fn.apply(t))));
+            t -> fn.apply(t).thenApply(Either::right));
 
     final AsyncIterator<AsyncIterator<U>> nestedAsyncIterator =
         new AsyncIterators.PartiallyEagerAsyncIterator<>(

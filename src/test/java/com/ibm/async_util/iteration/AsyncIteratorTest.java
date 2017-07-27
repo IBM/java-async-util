@@ -358,7 +358,8 @@ public class AsyncIteratorTest {
     // should take [0,1,2,...,999] -> [1,2,2,3,3,3,4,4,4,4,...999,999]
     final int count = 1000;
     final AsyncIterator<Integer> x = intIterator(count);
-    final AsyncIterator<Integer> flatMapped = x.thenFlattenAhead(c -> repeat(c, c), 5);
+    final AsyncIterator<Integer> flatMapped =
+        x.thenFlattenAhead(c -> StageSupport.completedStage(repeat(c, c)), 5);
     final List<Integer> expected = new ArrayList<>();
     for (int i = 0; i < count; i++) {
       for (int j = 0; j < i; j++) {

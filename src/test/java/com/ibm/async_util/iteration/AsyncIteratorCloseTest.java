@@ -179,7 +179,7 @@ public class AsyncIteratorCloseTest {
                   new CloseableIterator(AsyncIterator.range(0, 3, 1));
               closeables.addLast(closeable);
               closeablesGenerated.countDown();
-              return closeable;
+              return StageSupport.completedStage(closeable);
             },
             5);
     final CompletionStage<Either<AsyncIterator.End, Integer>> first = ahead.nextFuture();
