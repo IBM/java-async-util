@@ -32,9 +32,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collector;
 
 import com.ibm.async_util.iteration.AsyncIterator.End;
-import com.ibm.async_util.locks.AsyncLock;
 import com.ibm.async_util.locks.FairAsyncLock;
-import com.ibm.async_util.locks.ObservableEpoch;
 import com.ibm.async_util.util.Either;
 import com.ibm.async_util.util.StageSupport;
 
@@ -165,10 +163,11 @@ class AsyncIterators {
     private final AsyncIterator<T> backingIterator;
     private final int executeAhead;
     private final Function<U, CompletionStage<Void>> closeFn;
-    final Function<Either<End, T>, CompletionStage<Either<End, U>>> mappingFn;
-    final Queue<CompletionStage<Either<End, U>>> pendingResults;
-    final FairAsyncLock lock;
-    final ObservableEpoch epoch;
+    private final Function<Either<End, T>, CompletionStage<Either<End, U>>> mappingFn;
+    private final Queue<CompletionStage<Either<End, U>>> pendingResults;
+    private final FairAsyncLock lock;
+    private boolean closed;
+
 
     PartiallyEagerAsyncIterator(
         final AsyncIterator<T> backingIterator,
@@ -177,11 +176,13 @@ class AsyncIterators {
         final Function<U, CompletionStage<Void>> closeFn) {
       this.backingIterator = backingIterator;
       this.executeAhead = executeAhead;
-      this.closeFn = u -> AsyncIterators.convertSynchronousException(() -> closeFn.apply(u));
+      this.closeFn = closeFn == null
+          ? u -> StageSupport.voidFuture()
+          : u -> AsyncIterators.convertSynchronousException(() -> closeFn.apply(u));
       this.mappingFn = mappingFn;
       this.pendingResults = new ArrayDeque<>(executeAhead);
       this.lock = new FairAsyncLock();
-      this.epoch = ObservableEpoch.newEpoch();
+      this.closed = false;
     }
 
     /* return whether we need to keep filling */
@@ -198,57 +199,62 @@ class AsyncIterators {
       }
     }
 
-    /* find someone for listener to listen to, kickoff a call to fill the queue */
-    private CompletionStage<Either<End, T>> attachListener(
-        final CompletableFuture<Either<End, U>> listener) {
-      final CompletionStage<Either<End, U>> poll = this.pendingResults.poll();
-      if (poll == null) {
+    /**
+     * Get a nextFuture either from the queue or the backing iterator and apply the mappingFn.
+     *
+     * @param listener stage is completed when the mapping function finishes
+     * @return stage that is complete when any calls that this method made to nextFuture are
+     *         complete
+     */
+    private CompletionStage<Void> attachListener(final CompletableFuture<Either<End, U>> listener) {
+      return StageSupport.tryComposeWith(this.lock.acquireLock(), token -> {
+        if (this.closed) {
+          final IllegalStateException ex =
+              new IllegalStateException("nextFuture called after async iterator was closed");
+          listener.completeExceptionally(ex);
+          throw ex;
+        }
 
-        // there was nothing in the queue, associate our returned future with a new
-        // safeNextFuture call
-        final CompletionStage<Either<End, T>> nxt =
-            AsyncIterators.convertSynchronousException(this.backingIterator::nextFuture);
+        final CompletionStage<Either<End, U>> poll = this.pendingResults.poll();
+        if (poll == null) {
 
-        // don't bother adding it to the queue, because we are already listening on it
-        AsyncIterators.listen(nxt.thenCompose(this.mappingFn), listener);
+          // there was nothing in the queue, associate our returned future with a new
+          // safeNextFuture call
+          final CompletionStage<Either<End, T>> nxt =
+              AsyncIterators.convertSynchronousException(this.backingIterator::nextFuture);
 
-        return nxt;
-      } else {
-        // let our future be tied to the first result that was in the queue
-        AsyncIterators.listen(poll, listener);
-        return fillMore();
-      }
+          // don't bother adding it to the queue, because we are already listening on it
+          AsyncIterators.listen(nxt.thenCompose(this.mappingFn), listener);
+
+          return StageSupport.voided(nxt);
+        } else {
+          // let our future be tied to the first result that was in the queue
+          AsyncIterators.listen(poll, listener);
+          return StageSupport.voidFuture();
+        }
+      });
     }
 
-    private CompletionStage<Either<End, U>> nextFutureImpl() {
-      final CompletableFuture<Either<End, U>> retFuture = new CompletableFuture<>();
+    @Override
+    public CompletionStage<Either<End, U>> nextFuture() {
+      final CompletableFuture<Either<End, U>> listener = new CompletableFuture<>();
+      final CompletionStage<Void> nextFinished = attachListener(listener);
 
-      // whether this simple future already has a buddy in the pendingResults queue
-      // just need a local final reference, other things enforce memory barriers
-      final boolean[] connected = new boolean[1];
-      connected[0] = false;
+      nextFinished.thenRun(() -> {
+        AsyncTrampoline
+            .asyncWhile(() -> StageSupport.tryComposeWith(this.lock.acquireLock(), token -> {
+              if (this.closed) {
+                return StageSupport.completedStage(false);
+              }
+              return fillMore()
+                  .thenApply(Either::isRight)
+                  // exceptional futures get added to the queue same as normal ones,
+                  // we may continue filling
+                  .exceptionally(e -> true);
+            }));
+      });
 
-      AsyncTrampoline.asyncWhile(
-          () -> {
-            final CompletionStage<AsyncLock.LockToken> lockFuture = this.lock.acquireLock();
-            return lockFuture.thenCompose(
-                token -> {
-                  final CompletionStage<Either<End, T>> next;
-                  if (connected[0]) {
-                    next = fillMore();
-                  } else {
-                    connected[0] = true;
-                    // find something for retFuture to listen to
-                    next = attachListener(retFuture);
-                  }
-                  return next.thenApply(Either::isRight)
-                      // exceptional futures get added to the queue same as normal ones,
-                      // we may continue filling
-                      .exceptionally(e -> true)
-                      .whenComplete((t, ex) -> token.releaseLock());
-                });
-          });
-      return retFuture;
+      return listener;
     }
 
     /*
@@ -257,54 +263,38 @@ class AsyncIterators {
      */
     @Override
     public CompletionStage<Void> close() {
-      return StageSupport.thenComposeOrRecover(
-          this.epoch.terminate(),
-          (b, epochError) -> {
-            // call closeFn on all extra eagerly evaluated results
-            @SuppressWarnings({"rawtypes"})
-            final CompletableFuture[] closeFutures =
-                this.pendingResults
-                    .stream()
-                    .map(f -> f.thenCompose(
-                        either -> either.fold(
-                            end -> StageSupport.voidFuture(),
-                            this.closeFn)))
-                    .map(CompletionStage::toCompletableFuture)
-                    .toArray(CompletableFuture[]::new);
+      return StageSupport.tryComposeWith(this.lock.acquireLock(), token -> {
+        this.closed = true;
+        // call closeFn on all extra eagerly evaluated results
+        @SuppressWarnings({"rawtypes"})
+        final CompletableFuture[] closeFutures =
+            this.pendingResults
+                .stream()
+                .map(f -> f.thenCompose(
+                    either -> either.fold(
+                        end -> StageSupport.voidFuture(),
+                        this.closeFn)))
+                .map(CompletionStage::toCompletableFuture)
+                .toArray(CompletableFuture[]::new);
 
-            // wait for all to complete
-            final CompletableFuture<Void> extraClose = CompletableFuture.allOf(closeFutures);
-            return StageSupport.thenComposeOrRecover(
-                extraClose,
-                (ig, extraCloseError) -> {
-                  // call close on the source iterator
-                  return StageSupport.thenComposeOrRecover(
-                      AsyncIterators.convertSynchronousException(this.backingIterator::close),
-                      (ig2, backingCloseError) -> {
-                        if (epochError != null) {
-                          return StageSupport.<Void>exceptionalStage(epochError);
-                        } else if (extraCloseError != null) {
-                          return StageSupport.<Void>exceptionalStage(extraCloseError);
-                        } else if (backingCloseError != null) {
-                          return StageSupport.<Void>exceptionalStage(backingCloseError);
-                        }
-                        return StageSupport.voidFuture();
-                      });
-                });
-          });
-    }
-
-    @Override
-    public CompletionStage<Either<End, U>> nextFuture() {
-      return this.epoch
-          .enter()
-          .map(
-              epochToken -> {
-                try (ObservableEpoch.EpochToken temp = epochToken) {
-                  return nextFutureImpl();
-                }
-              })
-          .orElse(End.endFuture());
+        // wait for all to complete
+        final CompletableFuture<Void> extraClose = CompletableFuture.allOf(closeFutures);
+        return StageSupport.thenComposeOrRecover(
+            extraClose,
+            (ig, extraCloseError) -> {
+              // call close on the source iterator
+              return StageSupport.thenComposeOrRecover(
+                  AsyncIterators.convertSynchronousException(this.backingIterator::close),
+                  (ig2, backingCloseError) -> {
+                    if (extraCloseError != null) {
+                      return StageSupport.<Void>exceptionalStage(extraCloseError);
+                    } else if (backingCloseError != null) {
+                      return StageSupport.<Void>exceptionalStage(backingCloseError);
+                    }
+                    return StageSupport.voidFuture();
+                  });
+            });
+      });
     }
   }
 
