@@ -8,6 +8,7 @@ package com.ibm.asyncutil.util;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -35,9 +36,50 @@ public class CombinatorsTest {
     final List<CompletionStage<Integer>> collect =
         results.stream().map(StageSupport::completedStage).collect(Collectors.toList());
 
-    Assert.assertEquals(results, Combinators.collectAll(collect).toCompletableFuture().join());
-    Assert.assertEquals(results,
-        Combinators.collect(collect, Collectors.toList()).toCompletableFuture().join());
+    Combinators.allOf(collect).toCompletableFuture().join();
+    Assert.assertArrayEquals(results.toArray(),
+        Combinators.collect(collect).toCompletableFuture().join().toArray());
+    Assert.assertArrayEquals(results.toArray(),
+        Combinators.collect(collect, Collectors.toList()).toCompletableFuture().join().toArray());
+  }
+
+  @Test
+  public void testAllEmptyInput()
+      throws InterruptedException, ExecutionException, TimeoutException {
+    {
+      final Collection<Object> collection = Combinators.collect(Collections.emptyList())
+          .toCompletableFuture().get(50, TimeUnit.MILLISECONDS);
+      Assert.assertTrue(collection.isEmpty());
+    }
+
+    {
+      final Collection<Object> collection =
+          Combinators.collect(Collections.emptyList(), Collectors.toList()).toCompletableFuture()
+              .get(50, TimeUnit.MILLISECONDS);
+      Assert.assertTrue(collection.isEmpty());
+    }
+
+    {
+      Combinators.allOf(Collections.emptyList()).toCompletableFuture().join();
+    }
+  }
+
+  @Test
+  public void testAllLargeCollection() {
+    final int NUM_FUTURES = 10000;
+
+    final List<Integer> results =
+        IntStream.range(0, NUM_FUTURES).boxed().collect(Collectors.toList());
+    final List<CompletionStage<Integer>> collect = IntStream
+        .range(0, NUM_FUTURES)
+        .mapToObj(StageSupport::completedStage)
+        .collect(Collectors.toList());
+
+    Combinators.allOf(collect).toCompletableFuture().join();
+    Assert.assertArrayEquals(results.toArray(),
+        Combinators.collect(collect).toCompletableFuture().join().toArray());
+    Assert.assertArrayEquals(results.toArray(),
+        Combinators.collect(collect, Collectors.toList()).toCompletableFuture().join().toArray());
   }
 
   @Test
@@ -48,7 +90,7 @@ public class CombinatorsTest {
             StageSupport.completedStage(1).toCompletableFuture(),
             StageSupport.<Integer>exceptionalStage(new TestException()).toCompletableFuture());
     assertError(Combinators.allOf(futures));
-    assertError(Combinators.collectAll(futures));
+    assertError(Combinators.collect(futures));
     assertError(Combinators.collect(futures, Collectors.toList()));
   }
 
@@ -62,7 +104,7 @@ public class CombinatorsTest {
             StageSupport.<Integer>exceptionalStage(new TestException()).toCompletableFuture());
 
     final CompletionStage<Void> voidAll = Combinators.allOf(futures);
-    final CompletionStage<Collection<Integer>> collAll = Combinators.collectAll(futures);
+    final CompletionStage<Collection<Integer>> collAll = Combinators.collect(futures);
     final CompletionStage<List<Integer>> collCollect =
         Combinators.collect(futures, Collectors.toList());
 

@@ -189,7 +189,7 @@ public abstract class AbstractAsyncNamedReadWriteLockTest extends AbstractAsyncR
       Assert.assertFalse(read7.isDone());
       Assert.assertFalse(write4.isDone());
 
-      TestUtil.join(Combinators.collectAll(Arrays.asList(read4, read5, read6)))
+      TestUtil.join(Combinators.collect(Arrays.asList(read4, read5, read6)))
           .forEach(readLock -> readLock.releaseReadLock());
       Assert.assertTrue(write3.isDone());
       Assert.assertFalse(read7.isDone());

@@ -256,16 +256,16 @@ class AsyncIterators {
       return StageSupport.tryComposeWith(this.lock.acquireLock(), token -> {
         this.closed = true;
         // call closeFn on all extra eagerly evaluated results
-            final List<CompletionStage<Void>> closeFutures = this.pendingResults
-                .stream()
-                .map(f -> f.thenCompose(
-                    either -> either.fold(
-                        end -> StageSupport.voidFuture(),
-                        this.closeFn)))
-                .collect(Collectors.toList());
+        final List<CompletionStage<Void>> closeFutures = this.pendingResults
+            .stream()
+            .map(f -> f.thenCompose(
+                either -> either.fold(
+                    end -> StageSupport.voidFuture(),
+                    this.closeFn)))
+            .collect(Collectors.toList());
 
         // wait for all to complete
-            final CompletionStage<Void> extraClose = Combinators.allOf(closeFutures);
+        final CompletionStage<Void> extraClose = Combinators.allOf(closeFutures);
         return StageSupport.thenComposeOrRecover(
             extraClose,
             (ig, extraCloseError) -> {

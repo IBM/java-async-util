@@ -6,10 +6,10 @@
 
 package com.ibm.asyncutil.util;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
@@ -21,30 +21,13 @@ import java.util.stream.Collectors;
 public class Combinators {
   private Combinators() {}
 
-  /**
-   * Given a collection of stages all of the same type, returns a new {@link CompletionStage} that
-   * is completed with the result of all input stages when all stages are complete. If the input
-   * collection has a defined order, the order will be preserved in the returned collection. If an
-   * element of {@code stages} completes exceptionally, so too will the CompletionStage returned by
-   * this method.
-   *
-   * @param stages a Collection of {@link CompletionStage} all of type T
-   * @return a {@link CompletionStage} which will complete with a collection of the elements
-   *         produced by {@code stages} when all stages complete
-   * @throws NullPointerException if {@code stages} or any of its elements are null
+  /*
+   * The maximum allowed size of a chain of dependants on a stage. In particular, allOf and collect
+   * may set up a single linear dependency chain. If a CompletionStage implementation does not
+   * support trampolining the notification of dependent stages, this can cause a StackOverflow on
+   * notification
    */
-  @SuppressWarnings("unchecked")
-  public static <T> CompletionStage<Collection<T>> collectAll(
-      final Collection<? extends CompletionStage<T>> stages) {
-    final CompletableFuture<T>[] futures = stages.toArray(new CompletableFuture[0]);
-    return CompletableFuture
-        .allOf(futures)
-        .thenApply(
-            ig -> Arrays
-                .stream(futures)
-                .map(CompletableFuture::join)
-                .collect(Collectors.toList()));
-  }
+  private final static int MAX_DEPENDANT_DEPTH = 256;
 
   /**
    * Given a collection of stages, returns a new {@link CompletionStage} that is completed when all
@@ -59,8 +42,113 @@ public class Combinators {
   @SuppressWarnings("unchecked")
   public static CompletionStage<Void> allOf(
       final Collection<? extends CompletionStage<?>> stages) {
-    final CompletableFuture[] futures = stages.toArray(new CompletableFuture[0]);
-    return CompletableFuture.allOf(futures);
+
+    final Iterator<? extends CompletionStage<?>> backingIt = stages.iterator();
+    final int size = stages.size();
+    final Iterator<? extends CompletionStage<?>> it =
+        size > MAX_DEPENDANT_DEPTH
+            ? new Iterator<CompletionStage<?>>() {
+              @Override
+              public boolean hasNext() {
+                return backingIt.hasNext();
+              }
+
+              @Override
+              public CompletionStage<?> next() {
+                return backingIt.next().toCompletableFuture();
+              }
+            }
+            : backingIt;
+    return allOfImpl(it);
+  }
+
+  /*
+   * Put every stage in the collection into a single dependant chain. CompletableFuture trampolines
+   * the notification of the chain, so it is safe - for other implementations this may cause a
+   * StackOverflow
+   */
+  private static <T> CompletionStage<Void> allOfImpl(
+      final Iterator<? extends CompletionStage<?>> it) {
+    CompletionStage<Void> accumulator = StageSupport.voidFuture();
+    while (it.hasNext()) {
+      accumulator = accumulator.thenCombine(it.next(), (l, r) -> null);
+    }
+    return accumulator;
+  }
+
+  /**
+   * Given a collection of stages all of the same type, returns a new {@link CompletionStage} that
+   * is completed with a collection of the results of all input stages when all stages complete. If
+   * the input collection has a defined order, the order will be preserved in the returned
+   * collection. If an element of {@code stages} completes exceptionally, so too will the
+   * CompletionStage returned by this method.
+   *
+   * @param stages a Collection of {@link CompletionStage} all of type T
+   * @return a {@link CompletionStage} which will complete with a collection of the elements
+   *         produced by {@code stages} when all stages complete
+   * @throws NullPointerException if {@code stages} or any of its elements are null
+   */
+  @SuppressWarnings("unchecked")
+  public static <T> CompletionStage<Collection<T>> collect(
+      final Collection<? extends CompletionStage<T>> stages) {
+    final int size = stages.size();
+    final Iterator<? extends CompletionStage<T>> backingIt = stages.iterator();
+    final Iterator<? extends CompletionStage<T>> it =
+        size > MAX_DEPENDANT_DEPTH
+            ? new Iterator<CompletionStage<T>>() {
+              @Override
+              public boolean hasNext() {
+                return backingIt.hasNext();
+              }
+
+              @Override
+              public CompletionStage<T> next() {
+                return backingIt.next().toCompletableFuture();
+              }
+            }
+            : backingIt;
+    return collectImpl(it, size);
+  }
+
+  private static <T> CompletionStage<Collection<T>> collectImpl(
+      final Iterator<? extends CompletionStage<T>> it,
+      final int size) {
+    CompletionStage<Collection<T>> acc =
+        StageSupport.completedStage(new ArrayList<>(size));
+    while (it.hasNext()) {
+      acc = acc.thenCombine(it.next(), (l, r) -> {
+        l.add(r);
+        return l;
+      });
+    }
+    return acc;
+
+  }
+
+
+  /**
+   * Applies a collector to the results of all {@code stages} after all complete, returning a
+   * {@link CompletionStage} of the collected result. There is no need nor benefit for the Collector
+   * to have the {@link java.util.stream.Collector.Characteristics CONCURRENT characteristic}, the
+   * {@code collector} will be applied in a single thread. If any of the input stages completes
+   * exceptionally, so too will the CompletionStage returned by this method.
+   *
+   * @param stages a Collection of stages all of type T
+   * @param collector a {@link Collector} which will be applied to the results of {@code stages} to
+   *        produce the final R result.
+   * @param <T> The type of the elements in {@code stages} which will be collected by {@code
+   *     collector}
+   * @param <A> The intermediate collection type
+   * @param <R> The final type returned by {@code collector}
+   * @return a {@link CompletionStage} which will complete with the R typed object that is produced
+   *         by {@code collector} when all input {@code stages} have completed.
+   * @throws NullPointerException if {@code stages} or any of its elements are null
+   */
+  @SuppressWarnings("unchecked")
+  public static <T, A, R> CompletionStage<R> collect(
+      final Collection<? extends CompletionStage<T>> stages,
+      final Collector<? super T, A, R> collector) {
+    return collect(stages).thenApply(res -> res.stream().collect(collector));
   }
 
   /**
@@ -102,28 +190,5 @@ public class Combinators {
                 e -> e.getValue().toCompletableFuture().join())));
   }
 
-  /**
-   * Applies a collector to the results of all {@code stages} after all complete, returning a
-   * {@link CompletionStage} of the collected result. There is no need nor benefit for the Collector
-   * to have the {@link java.util.stream.Collector.Characteristics CONCURRENT characteristic}, the
-   * {@code collector} will be applied in a single thread. If any of the input stages completes
-   * exceptionally, so too will the CompletionStage returned by this method.
-   *
-   * @param stages a Collection of stages all of type T
-   * @param collector a {@link Collector} which will be applied to the results of {@code stages} to
-   *        produce the final R result.
-   * @param <T> The type of the elements in {@code stages} which will be collected by {@code
-   *     collector}
-   * @param <A> The intermediate collection type
-   * @param <R> The final type returned by {@code collector}
-   * @return a {@link CompletionStage} which will complete with the R typed object that is produced
-   *         by {@code collector} when all input {@code stages} have completed.
-   * @throws NullPointerException if {@code stages} or any of its elements are null
-   */
-  @SuppressWarnings("unchecked")
-  public static <T, A, R> CompletionStage<R> collect(
-      final Collection<? extends CompletionStage<T>> stages,
-      final Collector<? super T, A, R> collector) {
-    return collectAll(stages).thenApply(res -> res.stream().collect(collector));
-  }
+
 }
