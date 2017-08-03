@@ -6,6 +6,7 @@
 
 package com.ibm.asyncutil.iteration;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -1325,9 +1326,10 @@ public interface AsyncIterator<T> extends AsyncCloseable {
 
       @Override
       public CompletionStage<Void> close() {
-        return CompletableFuture.allOf(
-            AsyncIterators.convertSynchronousException(tIt::close).toCompletableFuture(),
-            AsyncIterators.convertSynchronousException(uIt::close).toCompletableFuture());
+        return Combinators
+            .allOf(Arrays.asList(
+                AsyncIterators.convertSynchronousException(tIt::close),
+                AsyncIterators.convertSynchronousException(uIt::close)));
       }
     };
   }

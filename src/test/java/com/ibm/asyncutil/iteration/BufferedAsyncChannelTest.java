@@ -103,7 +103,7 @@ public class BufferedAsyncChannelTest extends AbstractAsyncChannelTest {
         .collect(Collectors.toList());
 
     Assert.assertTrue(
-        Combinators.allOf(immediate).toCompletableFuture().join().stream().allMatch(b -> b));
+        Combinators.collectAll(immediate).toCompletableFuture().join().stream().allMatch(b -> b));
 
     final List<CompletableFuture<Boolean>> delayeds = IntStream
         .range(0, BUFFER)

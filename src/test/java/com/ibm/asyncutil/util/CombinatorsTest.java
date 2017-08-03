@@ -32,18 +32,10 @@ public class CombinatorsTest {
   @SuppressWarnings("unchecked")
   public void testAllOf() {
     final List<Integer> results = Arrays.asList(1, 2, 3);
-    @SuppressWarnings("rawtypes")
-    final CompletionStage[] arr =
-        results.stream().map(StageSupport::completedStage).toArray(CompletionStage[]::new);
     final List<CompletionStage<Integer>> collect =
         results.stream().map(StageSupport::completedStage).collect(Collectors.toList());
 
-    Assert.assertEquals(results, Combinators
-        .allOf(Arrays.stream(arr)
-            .map(CompletionStage::toCompletableFuture)
-            .toArray(CompletableFuture[]::new))
-        .toCompletableFuture().join());
-    Assert.assertEquals(results, Combinators.allOf(collect).toCompletableFuture().join());
+    Assert.assertEquals(results, Combinators.collectAll(collect).toCompletableFuture().join());
     Assert.assertEquals(results,
         Combinators.collect(collect, Collectors.toList()).toCompletableFuture().join());
   }
@@ -55,8 +47,8 @@ public class CombinatorsTest {
         Arrays.asList(
             StageSupport.completedStage(1).toCompletableFuture(),
             StageSupport.<Integer>exceptionalStage(new TestException()).toCompletableFuture());
-    assertError(Combinators.allOf(futures.toArray(new CompletableFuture[0])));
     assertError(Combinators.allOf(futures));
+    assertError(Combinators.collectAll(futures));
     assertError(Combinators.collect(futures, Collectors.toList()));
   }
 
@@ -69,19 +61,18 @@ public class CombinatorsTest {
             delayed,
             StageSupport.<Integer>exceptionalStage(new TestException()).toCompletableFuture());
 
-    final CompletionStage<Collection<Integer>> arrAll =
-        Combinators.allOf(futures.toArray(new CompletableFuture[0]));
-    final CompletionStage<Collection<Integer>> collAll = Combinators.allOf(futures);
+    final CompletionStage<Void> voidAll = Combinators.allOf(futures);
+    final CompletionStage<Collection<Integer>> collAll = Combinators.collectAll(futures);
     final CompletionStage<List<Integer>> collCollect =
         Combinators.collect(futures, Collectors.toList());
 
-    assertIncomplete(arrAll);
+    assertIncomplete(voidAll);
     assertIncomplete(collAll);
     assertIncomplete(collCollect);
 
     delayed.complete(1);
 
-    assertError(arrAll);
+    assertError(voidAll);
     assertError(collAll);
     assertError(collCollect);
   }

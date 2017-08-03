@@ -6,13 +6,13 @@
 
 package com.ibm.asyncutil.util;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Utility methods for combining more than one {@link CompletionStage} into a single
@@ -20,28 +20,6 @@ import java.util.stream.Stream;
  */
 public class Combinators {
   private Combinators() {}
-
-  /**
-   * Given an array of futures all of of the same type, returns a new {@link CompletionStage} that
-   * is completed with the result of all input futures when all futures are complete. The order of
-   * elements in the returned collection reflects the order of the elements in {@code futures}. If
-   * an element of {@code futures} completes exceptionally, so too will the CompletionStage returned
-   * by this method.
-   *
-   * @param futures an array of {@link CompletableFuture} all of type T
-   * @return a {@link CompletionStage} which will complete with a collection of the elements
-   *         produced by {@code futures} when all futures complete
-   * @throws NullPointerException if {@code futures} or any of it elements are null
-   * @see CompletableFuture#allOf(CompletableFuture[])
-   */
-  @SafeVarargs
-  public static <T> CompletionStage<Collection<T>> allOf(final CompletableFuture<T>... futures) {
-    return CompletableFuture.allOf(futures)
-        .thenApply(ignored -> Stream
-            .of(futures)
-            .map(CompletableFuture::join)
-            .collect(Collectors.toList()));
-  }
 
   /**
    * Given a collection of stages all of the same type, returns a new {@link CompletionStage} that
@@ -53,14 +31,36 @@ public class Combinators {
    * @param stages a Collection of {@link CompletionStage} all of type T
    * @return a {@link CompletionStage} which will complete with a collection of the elements
    *         produced by {@code stages} when all stages complete
-   * @throws NullPointerException if {@code stages} or any of it elements are null
+   * @throws NullPointerException if {@code stages} or any of its elements are null
    */
   @SuppressWarnings("unchecked")
-  public static <T> CompletionStage<Collection<T>> allOf(
+  public static <T> CompletionStage<Collection<T>> collectAll(
       final Collection<? extends CompletionStage<T>> stages) {
-    return Combinators.allOf(stages.stream()
-        .map(CompletionStage::toCompletableFuture)
-        .toArray(CompletableFuture[]::new));
+    final CompletableFuture<T>[] futures = stages.toArray(new CompletableFuture[0]);
+    return CompletableFuture
+        .allOf(futures)
+        .thenApply(
+            ig -> Arrays
+                .stream(futures)
+                .map(CompletableFuture::join)
+                .collect(Collectors.toList()));
+  }
+
+  /**
+   * Given a collection of stages, returns a new {@link CompletionStage} that is completed when all
+   * input stages are complete. If any stage completes exceptionally, the returned stage will
+   * complete exceptionally.
+   *
+   * @param stages a Collection of {@link CompletionStage}
+   * @return a {@link CompletionStage} which will complete after every stage in {@code stages}
+   *         completes
+   * @throws NullPointerException if {@code stages} or any of its elements are null
+   */
+  @SuppressWarnings("unchecked")
+  public static CompletionStage<Void> allOf(
+      final Collection<? extends CompletionStage<?>> stages) {
+    final CompletableFuture[] futures = stages.toArray(new CompletableFuture[0]);
+    return CompletableFuture.allOf(futures);
   }
 
   /**
@@ -87,6 +87,7 @@ public class Combinators {
    * @param <K> the input and output key type
    * @param <V> the value type for the map that will be produced by the returned
    *        {@link CompletionStage}
+   * @throws NullPointerException if {@code stageMap} or any of its values are null
    * @return a {@link CompletionStage} that will be completed with a map mapping keys of type K to
    *         the values returned by the CompletionStages in {@code stageMap}
    */
@@ -94,9 +95,7 @@ public class Combinators {
   public static <K, V> CompletionStage<Map<K, V>> keyedAll(
       final Map<K, ? extends CompletionStage<V>> stageMap) {
     return Combinators
-        .allOf(stageMap.values().stream()
-            .map(CompletionStage::toCompletableFuture)
-            .toArray(CompletableFuture[]::new))
+        .allOf(stageMap.values())
         .thenApply(ignore -> stageMap.entrySet().stream()
             .collect(Collectors.toMap(
                 e -> e.getKey(),
@@ -119,18 +118,12 @@ public class Combinators {
    * @param <R> The final type returned by {@code collector}
    * @return a {@link CompletionStage} which will complete with the R typed object that is produced
    *         by {@code collector} when all input {@code stages} have completed.
+   * @throws NullPointerException if {@code stages} or any of its elements are null
    */
   @SuppressWarnings("unchecked")
   public static <T, A, R> CompletionStage<R> collect(
       final Collection<? extends CompletionStage<T>> stages,
       final Collector<? super T, A, R> collector) {
-    @SuppressWarnings("rawtypes")
-    final CompletableFuture[] arr =
-        stages.stream().map(CompletionStage::toCompletableFuture).toArray(CompletableFuture[]::new);
-    return CompletableFuture.allOf(arr).thenApply(ignored -> {
-      return Stream.of((CompletableFuture<T>[]) arr)
-          .map(CompletableFuture::join)
-          .collect(collector);
-    });
+    return collectAll(stages).thenApply(res -> res.stream().collect(collector));
   }
 }

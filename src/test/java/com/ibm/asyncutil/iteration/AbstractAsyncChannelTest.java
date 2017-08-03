@@ -32,6 +32,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.ibm.async_util.util.Combinators;
+
 public abstract class AbstractAsyncChannelTest {
   private final static int NUM_THREADS = 5;
   private final static int ITEMS_PER_THREAD = 2000;
@@ -153,7 +155,7 @@ public abstract class AbstractAsyncChannelTest {
         }
       }));
     }
-    CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+    Combinators.allOf(futures).toCompletableFuture().join();
 
     // all senders finished, end the stream
     terminate();
@@ -201,7 +203,7 @@ public abstract class AbstractAsyncChannelTest {
         }));
       }
       // wait for all threads
-      CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get(2, TimeUnit.SECONDS);
+      Combinators.allOf(futures).toCompletableFuture().get(2, TimeUnit.SECONDS);
     }
 
     // all senders finished, end the stream
@@ -257,7 +259,7 @@ public abstract class AbstractAsyncChannelTest {
         }
       }));
     }
-    CompletableFuture.allOf(producers.toArray(new CompletableFuture[0])).join();
+    Combinators.allOf(producers).toCompletableFuture().join();
     final List<Integer> lis = future.toCompletableFuture().join();
     Assert.assertFalse(lis.contains(-1));
 
