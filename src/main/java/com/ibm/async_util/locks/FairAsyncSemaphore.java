@@ -33,7 +33,7 @@ import com.ibm.async_util.util.StageSupport;
  * their predecessor to be fulfilled. This is the same behavior as a synchronous
  * {@link java.util.concurrent.Semaphore Semaphore} with the fairness parameter set to true.
  * <p>
- * The internal permit representation employs fewer than 64 bits to store the (possibly negative)
+ * The internal permit representation may employ fewer than 64 bits to store the (possibly negative)
  * permit count; as a result, the bounds of available permits are restricted. Methods which take a
  * number of permits as an argument are generally restricted to a maximum value of
  * {@link FairAsyncSemaphore#MAX_PERMITS}. Similarly, the initial permit value provided to the
@@ -44,87 +44,96 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
   /*
    * This AsyncSemaphore's implementation consists of a series of linked nodes which each hold some
    * count of permits. The sum of the permits across the nodes denotes the (possibly negative) count
-   * of permits in the semaphore.
-   *
+   * of permits in the semaphore. If the semaphore has positive permits, these permits all reside on
+   * the last node within the queue; this invariant enforces the fairness policy, where a node with
+   * negative permits must be fulfilled before positive permits may sit idle.
+   * 
    * Initially, the semaphore begins with 1 node, populated with the value given by the constructor
-   * parameter. This node is set as the head and tail for the internal FIFO queue. If the semaphore
-   * has positive permits, there can only be 1 valid (non-marked-zero, see below) node within the
-   * queue; this is an invariant to support the fairness policy, where a node with negative permits
-   * must be fulfilled before positive permits may sit idle. If such a positive node has enough
-   * permits to satisfy an incoming acquisition, that acquisition will atomically subtract its
-   * request from the node's permits and return a complete future.
-   *
-   * In general, acquisitions begin at the tail of the queue. If the tail node does not have
-   * sufficient permits to satisfy an incoming acquisition, the acquisition will atomically subtract
-   * its permits (yielding a negative permit count) and set a mark bit on the node's permit value.
-   * This mark bit serves to uniquely claim that node for the acquisition; other acquire calls may
-   * not subtract from the marked node's permits, and the node's future is exclusively reserved for
-   * a single caller. Once the mark bit is set on a node it may never be unset. Upon marking a node,
-   * the acquisition must then insert a new (unmarked) zero-value node onto the tail for subsequent
-   * acquisitions and releases to process. Consequently, a marked node must have a successor; this
-   * observations raises 2 points:
-   *
-   * 1) an acquisition may find the tail node is marked, because marking and inserting a successor
-   * are not performed atomically. This acquisition may spin in wait for the new node to be
-   * installed as successor to the marked node
-   *
-   * 2) a release cannot restore the permit count of a marked node above zero, because there must be
-   * a successor (though possibly not a marked one). To enforce fairness, the release's permits must
-   * continue to fulfill any remaining nodes in the queue after bringing a marked node up to zero.
-   *
-   * Releases begin traversal at the head of the queue. If a marked node is encountered, the
-   * releaser adds from its permits to the node's permit deficit (up to zero, as mentioned in (2)).
-   * Any remaining permits are used to continue traversal from the successor node. If a node's value
-   * is brought up to zero, the node's future is triggered at the end of the release traversal.
-   * Marked nodes with zero permits, or ones brought up to zero, are removed from the queue by
-   * advancing the head beyond that node. If an unmarked node is encountered, its permits may be
-   * incremented freely as it cannot have any successors and traversal may end.
-   *
+   * parameter. This node is set as the head and tail for the internal FIFO queue.
+   * 
+   * Acquisitions begin at the tail of the queue. If the encountered node is not yet reserved (see
+   * below) the requested permits are atomically subtracted from the node's current permits. If the
+   * resulting value is non-negative, the acquisition was successful, and the method returns a
+   * completed future. If the result is negative, (i.e. the node does not have sufficient permits to
+   * satisfy the incoming acquisition) the node is uniquely reserved for the acquisition; other
+   * acquire calls may not subtract from the negative node's permits, and the node's future is
+   * exclusively reserved for this single caller. Once a node's permits are negative, they may never
+   * be restored to zero or more. The acquisition must then insert a new zero-value node onto the
+   * tail for subsequent acquisitions and releases to process. Consequently, a negative node must
+   * have a successor; this observations raises 2 points:
+   * 
+   * 1) an acquisition may find the tail node is negative, because subtracting and inserting a
+   * successor are not performed atomically. This acquisition may spin in wait for the new node to
+   * be installed as successor to the reserved node
+   * 
+   * 2) a release cannot restore the permit count of a reserved node to zero or more, because that
+   * node must have a successor which may need permits itself. To enforce fairness, the release's
+   * permits must continue to fulfill any remaining nodes in the queue after fulfilling a reserved
+   * node.
+   * 
+   * Releases begin traversal at the head of the queue. If a negative node is encountered, the
+   * releaser adds from its permits to the node's permit deficit, up to a value of zero. Any
+   * remaining permits are used to continue traversal from the successor node. If the deficit is now
+   * zero, the permit value is instead marked as COMPLETED, which is a special marker value used to
+   * ignore nodes which have completed their lifecycle. These nodes are removed from the queue by
+   * advancing the head beyond that node, then completing their associated future. If a positive
+   * node is encountered by a releaser, its permits may be incremented freely as it cannot have any
+   * successors and traversal may end.
+   * 
    * The head and tail references are not required to be strictly maintained. A number of steps may
    * be necessary to reach the first relevant node in the direction of traversal from head or tail,
    * similar to ConcurrentLinkedQueue. Likewise, it is possible for tail to lag behind head.
-   *
-   * Marking a node's value is accomplished by setting the high bit of the long. In order to express
-   * permits of both positive and negative values in the lower 63 bits, an encoding process is used
-   * to translate the range [0, 9223372036854775807] into a corresponding range with negative
-   * values, [-4611686018427387904, 4611686018427387903]. This halves the number of possible
-   * available permits in the semaphore, but is preferred over the alternative solution of
-   * atomically swapping a boxed (boolean, long) pair which would introduce undesirable indirection
-   * and object allocation for every update. The encoding process is simply addition of a constant,
-   * with decoding performed by applying a mask to eliminate the high bit and then subtracting the
-   * same encoding constant. Because the transformation is addition, when the marked bit is
-   * disregarded, non-encoded values may safely be added to or subtracted from encoded values
-   * without any intermediate decoding. Similarly, comparing encoded values against one another is
-   * equivalent to comparing their non-encoded counterparts (disregarding the marked bit). This is
-   * useful in comparing against the encoded value of zero.
-   *
-   * Stack unrolling of the triggered-by-release futures is accomplished using a ThreadLocal list
-   * container. The first call to release on the given thread stack will populate the thread local,
-   * noting that the list is empty to indicate that it is the first releaser on the thread. This
+   * 
+   * Without proper precautions, releasing an AsyncSemaphore can cause unbounded recursion if
+   * dependents perform only synchronous work and release the same semaphore themselves. Here we
+   * prevent this implicit recursion by completing futures with a ThreadLocal trampoline mechanism.
+   * The first call to release on the given thread stack will populate the thread local list, noting
+   * that the list is empty to indicate that it is the first releaser on the thread. This
    * "thread leader" then adds all futures from fulfilled nodes during its traversal to the list.
    * After traversal, the leader begins triggering futures from this list in insertion order. If any
-   * observers also trigger a recursive release on the same thread, that method call will find this
+   * dependents also trigger a recursive release on the same thread, that method call will find this
    * same list from the ThreadLocal container and insert its futures on the end. Because the inner
    * call did not receive an empty list, it is not the thread leader and thus does not perform any
    * triggering itself. The method may then return and the thread leader continues triggering
    * futures once the stack unwinds.
+   * 
+   * Note that a user could create a permit deficit greater than MIN_PERMITS -- in fact, the deficit
+   * can grow arbitrarily large by repeated calls to acquire(MAX_PERMITS), where each node will
+   * happily count negative MAX_PERMITS. There are no restrictions in place to prohibit this, and
+   * theoretically it is sound, but it's generally discouraged. Methods like getAvailablePermits may
+   * throw exceptions in encountering overflow, for example, and separate acquisitions will not be
+   * atomic for values exceeding the defined maximums.
    */
 
-  private static final long MARK_BIT = 0x8000000000000000L;
+  /**
+   * finished value for nodes which have been fulfilled, i.e. released from a deficit. must be
+   * negative to indicate a non-reservable node
+   */
+  private static final long COMPLETED = Long.MIN_VALUE;
 
-  private static final long ENCODE_OFFSET = MARK_BIT >>> 1L;
-  private static final long ENCODE_MASK = MARK_BIT - 1L;
+  /**
+   * The greatest deficit of permits with which this semaphore implementation can be initialized.
+   */
+  public static final long MIN_PERMITS = COMPLETED + 1;
 
-  private static final long ENCODED_MAX = ENCODE_MASK;
-  private static final long ENCODED_ZERO = ENCODE_OFFSET;
-  private static final long ENCODED_MIN = 0L;
+  /**
+   * The greatest number of permits with which this semaphore implementation can be initialized and
+   * can be {@link #acquire(long) acquired} or {@link #release(long) released} with a single
+   * operation.
+   */
+  /*
+   * This value was chosen to meet 2 criteria: 1) 0 - MAX_PERMITS >= MIN_PERMITS, to prevent issues
+   * with overflow 2) MAX_PERMITS != Long.MAX_VALUE, because 'acquire(Long.MAX_VALUE)' is a common
+   * habit among users who don't read this class's docs, and want to use some absurd value to ensure
+   * that no one else acquires the semaphore. There was a time when this implementation did not
+   * support acquiring Long.max permits, and we reserve the right to return to that standard if
+   * necessary. It's better that a user fails an arg check now and hopefully starts using this
+   * field, rather than possibly introducing an arg check failure later into user code that
+   * previously worked fine
+   */
+  public static final long MAX_PERMITS = -MIN_PERMITS - 1;
 
-  public static final long MAX_PERMITS = FairAsyncSemaphore.decode(ENCODED_MAX);
-  public static final long MIN_PERMITS = FairAsyncSemaphore.decode(ENCODED_MIN);
-
-  // specifically array list in order to imply indexablility, used in manually avoiding
-  // ConcurrentModificationException
-  private static final ThreadLocal<ArrayList<CompletableFuture<Void>>> UNROLL_FUTURES =
+  private static final ThreadLocal<ArrayList<CompletableFuture<Void>>> TRAMPOLINE_FUTURES =
       ThreadLocal.withInitial(ArrayList::new);
 
   private static final AtomicReferenceFieldUpdater<FairAsyncSemaphore, Node> HEAD_UPDATER =
@@ -132,53 +141,59 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
   private static final AtomicReferenceFieldUpdater<FairAsyncSemaphore, Node> TAIL_UPDATER =
       AtomicReferenceFieldUpdater.newUpdater(FairAsyncSemaphore.class, Node.class, "tail");
 
+  private static final Node NULL_PREDECESSOR;
+
+  static {
+    final Node n = new Node(null, COMPLETED);
+    n.getFuture().complete(null);
+    NULL_PREDECESSOR = n;
+  }
+
   private volatile Node head, tail;
 
   /**
    * Creates a new asynchronous semaphore with the given initial number of permits. This value may
    * be negative in order to require {@link #release(long) releases} before {@link #acquire(long)
    * acquisitions}
-   *
+   * 
    * @param initialPermits The initial number of permits available in the semaphore. This value must
    *        be within the interval [{@link #MIN_PERMITS}, {@link #MAX_PERMITS}]
    */
   public FairAsyncSemaphore(final long initialPermits) {
-    FairAsyncSemaphore.checkPermitsFullBounds(initialPermits);
-    this.head = this.tail = new Node(FairAsyncSemaphore.encode(initialPermits));
-  }
-
-  private static boolean checkPermitsFullBounds(final long permits) {
-    return FairAsyncSemaphore.checkPermits(permits, MIN_PERMITS, MAX_PERMITS);
-  }
-
-  private static boolean checkPermitsPositiveBounds(final long permits) {
-    return FairAsyncSemaphore.checkPermits(permits, 1L, MAX_PERMITS);
-  }
-
-  /**
-   * returns boolean for use in assertions; true iff valid, throws otherwise
-   */
-  private static boolean checkPermits(final long permits, final long lowerBound,
-      final long upperBound) {
-    if (permits < lowerBound || permits > upperBound) {
+    if (initialPermits < MIN_PERMITS || initialPermits > MAX_PERMITS) {
       throw new IllegalArgumentException(
-          String.format("permits must be within [%d, %d], given %d", lowerBound, upperBound,
-              permits));
+          String.format("initial permits must be within [%d, %d], given %d",
+              MIN_PERMITS, MAX_PERMITS, initialPermits));
     }
-    return true;
+
+    final Node h = new Node(NULL_PREDECESSOR, initialPermits);
+
+    /*
+     * If the initial permits are negative, create a zero node to place at the tail for new
+     * acquisitions, and a negative node (with no observer) at the head, which must be restored
+     * before new acquisitions can be fulfilled. If the initial permits are non-negative, a single
+     * node with this initial value can be placed as the head and the tail
+     */
+    if (initialPermits < 0L) {
+      final Node t = new Node(h);
+      h.lazySetNext(t);
+      this.tail = t;
+    } else {
+      this.tail = h;
+    }
+    this.head = h;
   }
 
-  private static long encode(final long permits) {
-    assert FairAsyncSemaphore.checkPermitsFullBounds(permits);
-    return permits + ENCODE_OFFSET;
-  }
-
-  private static long decode(final long encodedPermits) {
-    return (encodedPermits & ENCODE_MASK) - ENCODE_OFFSET;
+  private static void checkPermitsBounds(final long permits) {
+    if (permits < 0L || permits > MAX_PERMITS) {
+      throw new IllegalArgumentException(
+          String.format("permits must be within [%d, %d], given %d",
+              0L, MAX_PERMITS, permits));
+    }
   }
 
   private Node successorSpin(final Node n) {
-    assert (n.getValue() & MARK_BIT) != 0L : "Only marked nodes can have successors";
+    assert n.getPermits() < 0L : "Only reserved nodes can have successors";
     Node next;
     while ((next = n.getNext()) == null) {
       // there is a brief period after marking during which successor is null
@@ -202,41 +217,59 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
    * all the requested permits cannot be fulfilled immediately, the acquisition will enter a FIFO
    * queue. Any subsequent acquisitions will also enter this queue until the head has been fulfilled
    * by sufficient releases.
-   *
-   * @param permits The number of permits to acquire. This value must be greater than {@code 0} and
-   *        no greater than {@link #MAX_PERMITS}
+   * <p>
+   * It is possible to request an acquisition of {@code 0} permits, which in this implementation has
+   * a specific meaning: if there are no queued waiters and zero or more permits available, the
+   * acquisition will complete immediately; if there are queued waiters or a permit deficit, the
+   * zero-acquisition will complete after the last queued waiter (at the time of acquisition) is
+   * released. No permits will be reserved by the zero-acquisition in either of these cases. This
+   * behavior can be used to wait for pending acquisitions to complete, without affecting the permit
+   * count.
+   * 
+   * @param permits The number of permits to acquire. This value must be non-negative and no greater
+   *        than {@link #MAX_PERMITS}
    * @see AsyncSemaphore#acquire(long)
    */
   @Override
   public final CompletionStage<Void> acquire(final long permits) {
-    FairAsyncSemaphore.checkPermitsPositiveBounds(permits);
+    FairAsyncSemaphore.checkPermitsBounds(permits);
+
     final Node t = this.tail;
     Node node = t;
     while (true) {
-      final long nodeEncodedPermits = node.getValue();
-      if ((nodeEncodedPermits & MARK_BIT) != 0L) {
-        assert FairAsyncSemaphore
-            .decode(nodeEncodedPermits) <= 0L : "Mark bit cannot be set with positive permits";
-        // this node has been marked i.e. someone is in the process of updating tail
+      final long nodePermits = node.getPermits();
+      if (nodePermits < 0L) {
+        // this node has been reserved i.e. someone is in the process of updating tail
         node = successorSpin(node);
+      } else if (permits == 0L && nodePermits == 0L) {
+        /*
+         * In order to acquire zero permits, the acquirer must find whether any waiters are queued,
+         * and if so, attach to the last one (i.e. return its future). If it finds a positive permit
+         * count at the tail, then all waiters must have been released and the normal CAS path can
+         * be used. If the tail is negative, then a successor to that node must exist (tail is
+         * stale), so it's not known whether this node is the last one or not, and acquire must
+         * advance. If the tail is zero, then the immediately preceding node is the target that
+         * we're looking for, and its future must be returned.
+         */
+        final Node prev = node.getPrevious();
+        // x.prev is nulled when x is COMPLETED (so we've encountered a benign race).
+        // inherently all predecessors are done if the node is done
+        return prev == null ? StageSupport.voidFuture() : prev.getFuture();
       } else {
-        // node wasn't marked; the future can be claimed if there aren't enough permits
+        // node wasn't reserved; the future can be claimed if there aren't enough permits
 
-        // subtract the requested permits entirely; if the result is non-negative, we can return
-        // immediately. if negative, set mark bit then queue a new zero node to receive new acquires
-        final long encodedDiff = nodeEncodedPermits - permits;
-        if (encodedDiff >= ENCODED_ZERO) {
-          // enough permits to satisfy request, attempt CAS
-          if (node.casValue(nodeEncodedPermits, encodedDiff)) {
-            return StageSupport.voidFuture();
-          }
-        } else {
-          // not enough permits to satisfy request. CAS to deficit+mark then enqueue new zero
-          if (node.casValue(nodeEncodedPermits, encodedDiff | MARK_BIT)) {
-            final Node newNode = new Node(ENCODED_ZERO);
+        // subtract the requested permits; if the result is non-negative, we can return
+        // immediately. if negative, enqueue a new zero node to receive new acquires
+        final long diff = nodePermits - permits;
+        if (node.casValue(nodePermits, diff)) {
+          if (diff < 0L) {
+            // not enough permits to satisfy request
+            final Node newNode = new Node(node);
             node.setNext(newNode);
             updateTail(t, newNode);
             return node.getFuture();
+          } else {
+            return StageSupport.voidFuture();
           }
         }
       }
@@ -246,69 +279,64 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
   }
 
   /**
-   * @param permits The number of permits to release. This value must be greater than {@code 0} and
-   *        no greater than {@link #MAX_PERMITS}
+   * @param permits The number of permits to release. This value must be non-negative and no greater
+   *        than {@link #MAX_PERMITS}
    */
   @Override
   public final void release(long permits) {
-    FairAsyncSemaphore.checkPermitsPositiveBounds(permits);
+    FairAsyncSemaphore.checkPermitsBounds(permits);
 
     // lazily initialized list of threadlocal futures to complete
     ArrayList<CompletableFuture<Void>> toComplete = null;
     boolean threadLeader = false;
     final Node h = this.head;
     Node node = h;
+
     while (true) {
-      final long nodeEncodedPermits = node.getValue();
-      if ((nodeEncodedPermits & MARK_BIT) != 0L) {
-        // node is marked, so we can't increment above zero
-        assert FairAsyncSemaphore
-            .decode(nodeEncodedPermits) <= 0L : "Mark bit cannot be set with positive permits";
-        if (nodeEncodedPermits == (ENCODED_ZERO | MARK_BIT)) {
-          // skip zero+marked nodes
+      final long nodePermits = node.getPermits();
+      if (nodePermits < 0L) {
+        // node is reserved, so we might be able to fulfill it
+        if (nodePermits == COMPLETED) {
+          // skip completed nodes, nothing to do
           node = successorSpin(node);
         } else {
-          // only operate if there is a permit deficit (zero+mark nodes have already been claimed)
-
-          final long encodedDiff = nodeEncodedPermits + permits;
-          // here we decode because the mark bit is set
-          final long diff = FairAsyncSemaphore.decode(encodedDiff);
-          if (diff < 0L) {
+          final long sum = nodePermits + permits;
+          if (sum < 0L) {
             // resulting permits on this node are still negative, so we can CAS and stop advancing
-            if (node.casValue(nodeEncodedPermits, encodedDiff)) {
+            if (node.casValue(nodePermits, sum)) {
               break;
             }
           } else {
             // the released permits will release the node
-            // it cannot, however, exceed zero because the node is marked (it has a queued
-            // successor)
-            if (node.casValue(nodeEncodedPermits, ENCODED_ZERO | MARK_BIT)) {
+            // it must remain negative, however, because only the single newly-created tail node may
+            // be non-negative to receive acquisitions
+            if (node.casValue(nodePermits, COMPLETED)) {
+              node.setPrev(null); // unset prev to break chains for GC
               if (toComplete == null) {
                 assert !threadLeader;
-                toComplete = UNROLL_FUTURES.get();
+                toComplete = TRAMPOLINE_FUTURES.get();
                 threadLeader = toComplete.isEmpty();
               }
               toComplete.add(node.getFuture());
-              if (diff == 0L) {
+              if (sum == 0L) {
                 // we're out of permits to restore, done
                 break;
               }
-              permits = diff;
+              permits = sum;
               // advance to next node to continue releasing
               node = successorSpin(node);
             }
           }
         }
       } else {
-        // node is unmarked, we can release all permits
-        if (ENCODED_MAX - permits < nodeEncodedPermits) {
+        // node is not reserved, we can release all permits
+        if (MAX_PERMITS - permits < nodePermits) {
           // overflow conscious limit check
           throw new IllegalStateException(
               String.format("Exceeded maximum allowed semaphore permits: %d + %d > %d",
-                  FairAsyncSemaphore.decode(nodeEncodedPermits), permits, MAX_PERMITS));
+                  nodePermits, permits, MAX_PERMITS));
         }
-        final long encodedUpdate = nodeEncodedPermits + permits;
-        if (node.casValue(nodeEncodedPermits, encodedUpdate)) {
+        if (node.casValue(nodePermits, nodePermits + permits)) {
           break;
         }
       }
@@ -333,7 +361,7 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
         toComplete.get(i).complete(null);
       }
       // we're done unrolling, clear this thread of futures
-      UNROLL_FUTURES.remove();
+      TRAMPOLINE_FUTURES.remove();
     }
   }
 
@@ -344,53 +372,79 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
    * Note that this differs from the behavior of
    * {@link java.util.concurrent.Semaphore#tryAcquire(int)} with a fairness policy. This method will
    * <i>not</i> barge ahead of other waiters.
-   *
-   * @param permits The number of permits to acquire. This value must be greater than {@code 0} and
-   *        no greater than {@link #MAX_PERMITS}
+   * <p>
+   * As with {@link #acquire(long)}, it is possible to {@code tryAcquire} with zero permits. This
+   * will return {@code true} iff there are no queued waiters and zero or more permits are available
+   * in the semaphore.
+   * 
+   * @param permits The number of permits to acquire. This value must be non-negative and no greater
+   *        than {@link #MAX_PERMITS}
    * @see AsyncSemaphore#tryAcquire(long)
    */
   @Override
   public final boolean tryAcquire(final long permits) {
-    FairAsyncSemaphore.checkPermitsPositiveBounds(permits);
+    FairAsyncSemaphore.checkPermitsBounds(permits);
 
     final Node h = this.head;
-    long nodeEncodedPermits, encodedDiff;
-    do {
-      nodeEncodedPermits = h.getValue();
-      if ((nodeEncodedPermits & MARK_BIT) != 0) {
-        // head is marked, can't acquire
+    Node node = h;
+    while (true) {
+      final long nodePermits = node.getPermits();
+
+      if (nodePermits == COMPLETED) {
+        // stale head, advance to something useful
+        node = successorSpin(node);
+        continue;
+      }
+
+      final long diff;
+      if (nodePermits < 0L
+          || (diff = nodePermits - permits) < 0L) {
+        // head is reserved
+        // or not enough permits to satisfy acquire
         return false;
       }
 
-      encodedDiff = nodeEncodedPermits - permits;
-      if (encodedDiff < ENCODED_ZERO) {
-        // not enough permits to satisfy acquire
-        return false;
+      if (node.casValue(nodePermits, diff)) {
+        break;
       }
-    } while (!h.casValue(nodeEncodedPermits, encodedDiff));
+    }
+
+    if (h != node) {
+      updateHead(h, node);
+    }
+
+    if (permits == 0L) {
+      // special case for zero permits, perform the queued waiters check
+      final Node prev = node.getPrevious();
+      return prev == null || prev.getPermits() == COMPLETED;
+    }
+
     return true;
   }
 
   @Override
   public final long drainPermits() {
     final Node h = this.head;
-    long nodeEncodedPermits;
+    long nodePermits;
     do {
-      nodeEncodedPermits = h.getValue();
-      if (nodeEncodedPermits <= ENCODED_ZERO) {
-        // permits are non-positive (possibly marked). can't drain anything
+      nodePermits = h.getPermits();
+      if (nodePermits <= 0L) {
+        // permits are non-positive (possibly reserved). can't drain anything
         return 0L;
       }
-    } while (!h.casValue(nodeEncodedPermits, ENCODED_ZERO));
+    } while (!h.casValue(nodePermits, 0));
 
-    return FairAsyncSemaphore.decode(nodeEncodedPermits);
+    return nodePermits;
   }
 
   @Override
   public final long getAvailablePermits() {
     long sum = 0L;
     for (Node n = this.head; n != null; n = n.getNext()) {
-      sum += FairAsyncSemaphore.decode(n.getValue());
+      final long permits = n.getPermits();
+      if (permits != COMPLETED) {
+        sum = Math.addExact(sum, permits);
+      }
     }
     return sum;
   }
@@ -399,8 +453,8 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
   public final int getQueueLength() {
     int count = 0;
     for (Node n = this.head; n != null; n = n.getNext()) {
-      final long encodedPermits = n.getValue();
-      if ((encodedPermits & MARK_BIT) != 0L && FairAsyncSemaphore.decode(encodedPermits) < 0L) {
+      final long permits = n.getPermits();
+      if (permits < 0L && permits != COMPLETED) {
         count++;
       }
     }
@@ -414,8 +468,11 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
     int count = 0;
     long sum = 0L;
     for (Node n = h; n != null; n = n.getNext()) {
-      sum += FairAsyncSemaphore.decode(n.getValue());
-      count++;
+      final long permits = n.getPermits();
+      if (permits != COMPLETED) {
+        sum = Math.addExact(sum, permits);
+      }
+      count++; // include completed nodes for count
     }
     return "FairAsyncSemaphore [permits=" + sum +
         ", nodes=" + count +
@@ -426,19 +483,23 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
 
   @SuppressWarnings("serial")
   private static final class Node extends AtomicLong {
-    /**
-     *
-     */
-    private static final long serialVersionUID = -6812682839787807417L;
+    private static final AtomicReferenceFieldUpdater<Node, Node> NEXT_UPDATER =
+        AtomicReferenceFieldUpdater.newUpdater(Node.class, Node.class, "next");
     private final CompletableFuture<Void> future = new CompletableFuture<>();
     private volatile Node next;
+    private Node prev;
 
-    Node(final long initialValue) {
+    Node(final Node prev) {
+      this.prev = prev;
+    }
+
+    Node(final Node prev, final long initialValue) {
+      this.prev = prev;
       // lazy because it isn't visible until the node is written to a volatile ref itself
       lazySet(initialValue);
     }
 
-    long getValue() {
+    long getPermits() {
       return get();
     }
 
@@ -450,6 +511,10 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
       return this.future;
     }
 
+    void lazySetNext(final Node n) {
+      NEXT_UPDATER.lazySet(this, n);
+    }
+
     void setNext(final Node n) {
       this.next = n;
     }
@@ -458,10 +523,17 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
       return this.next;
     }
 
+    void setPrev(final Node n) {
+      this.prev = n;
+    }
+
+    Node getPrevious() {
+      return this.prev;
+    }
+
     @Override
     public String toString() {
-      final long val = getValue();
-      return String.format("Node [0x%x (%d)]", val, FairAsyncSemaphore.decode(val));
+      return "Node [" + getPermits() + "]";
     }
   }
 }

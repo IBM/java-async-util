@@ -42,7 +42,7 @@ class SyncAsyncSemaphore implements AsyncSemaphore {
 
   @Override
   public CompletionStage<Void> acquire(final long permits) {
-    if (permits <= 0L) {
+    if (permits < 0L) {
       throw new IllegalArgumentException();
     }
     final int p = Math.toIntExact(permits);
@@ -57,7 +57,7 @@ class SyncAsyncSemaphore implements AsyncSemaphore {
 
   @Override
   public void release(final long permits) {
-    if (permits <= 0L) {
+    if (permits < 0L) {
       throw new IllegalArgumentException();
     }
     this.semaphore.release(Math.toIntExact(permits));
@@ -65,7 +65,7 @@ class SyncAsyncSemaphore implements AsyncSemaphore {
 
   @Override
   public boolean tryAcquire(final long permits) {
-    if (permits <= 0L) {
+    if (permits < 0L) {
       throw new IllegalArgumentException();
     }
     return this.semaphore.tryAcquire(Math.toIntExact(permits));

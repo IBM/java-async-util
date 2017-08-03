@@ -93,28 +93,13 @@ public abstract class AbstractAsyncSemaphoreTest extends AbstractAsyncReadWriteL
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void failZeroAcquire() {
-    createSemaphore(0).acquire(0);
-  }
-
-  @Test(expected = IllegalArgumentException.class)
   public void failNegativeAcquire() {
     createSemaphore(0).acquire(-1);
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void failZeroTryAcquire() {
-    createSemaphore(0).tryAcquire(0);
-  }
-
-  @Test(expected = IllegalArgumentException.class)
   public void failNegativeTryAcquire() {
     createSemaphore(0).tryAcquire(-1);
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void failZeroRelease() {
-    createSemaphore(0).release(0);
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -156,12 +141,24 @@ public abstract class AbstractAsyncSemaphoreTest extends AbstractAsyncReadWriteL
   public void testSimple() throws Exception {
     final AsyncSemaphore as = createSemaphore(10);
 
-    final CompletionStage<Void> acquire = as.acquire(1);
-    TestUtil.join(acquire, 1, TimeUnit.SECONDS);
-    Assert.assertEquals(9, as.getAvailablePermits());
+    {
+      final CompletionStage<Void> acquire = as.acquire(1);
+      TestUtil.join(acquire, 1, TimeUnit.SECONDS);
+      Assert.assertEquals(9, as.getAvailablePermits());
+    }
 
     as.release(1);
     Assert.assertEquals(10, as.getAvailablePermits());
+
+    {
+      final CompletableFuture<Void> acquire = as.acquire(12).toCompletableFuture();
+      Assert.assertFalse(acquire.isDone());
+
+      as.release(1);
+      Assert.assertFalse(acquire.isDone());
+      as.release(1);
+      TestUtil.join(acquire, 1, TimeUnit.SECONDS);
+    }
   }
 
   @Test
@@ -188,7 +185,7 @@ public abstract class AbstractAsyncSemaphoreTest extends AbstractAsyncReadWriteL
     final AsyncSemaphore as = createSemaphore(0);
 
     for (int i = 0; i < 50_000; i++) {
-      as.acquire().thenAccept(ignored -> as.release());
+      as.acquire().whenComplete((t, e) -> as.release());
     }
 
     as.release();
@@ -197,8 +194,7 @@ public abstract class AbstractAsyncSemaphoreTest extends AbstractAsyncReadWriteL
 
   @Test
   public void testGetQueueLength() {
-    // no waiters regardless of initial permits (negative doesn't mean a waiting acquisition)
-    for (final long initPermits : new long[] {0, 1, -1}) {
+    for (final long initPermits : new long[] {0, 1}) {
       final AsyncSemaphore as = createSemaphore(initPermits);
       Assert.assertEquals(0, as.getQueueLength());
     }
@@ -309,6 +305,118 @@ public abstract class AbstractAsyncSemaphoreTest extends AbstractAsyncReadWriteL
 
       Assert.assertEquals(0, as.getAvailablePermits());
     }
+
+    @Test
+    public void testAcquireZeroOnConstructor() throws Exception {
+      {
+        final AsyncSemaphore as = createSemaphore(0);
+        Assert.assertEquals(0, as.getAvailablePermits());
+        TestUtil.join(as.acquire(0), 1, TimeUnit.SECONDS);
+        Assert.assertEquals(0, as.getAvailablePermits());
+      }
+
+      {
+        final AsyncSemaphore as = createSemaphore(1);
+        Assert.assertEquals(1, as.getAvailablePermits());
+        TestUtil.join(as.acquire(0), 1, TimeUnit.SECONDS);
+        Assert.assertEquals(1, as.getAvailablePermits());
+      }
+
+      {
+        final AsyncSemaphore as = createSemaphore(-1);
+        Assert.assertEquals(-1, as.getAvailablePermits());
+        final CompletableFuture<Void> f = as.acquire(0).toCompletableFuture();
+        Assert.assertFalse(f.isDone());
+        as.release(1);
+        TestUtil.join(as.acquire(0), 1, TimeUnit.SECONDS);
+        Assert.assertEquals(0, as.getAvailablePermits());
+      }
+    }
+
+    @Test
+    public void testAcquireZero() throws Exception {
+      final AsyncSemaphore as = createSemaphore(0);
+
+      {
+        Assert.assertEquals(0, as.getAvailablePermits());
+        TestUtil.join(as.acquire(0), 1, TimeUnit.SECONDS);
+        Assert.assertEquals(0, as.getAvailablePermits());
+      }
+
+      {
+        as.release(1);
+        Assert.assertEquals(1, as.getAvailablePermits());
+        TestUtil.join(as.acquire(0), 1, TimeUnit.SECONDS);
+        Assert.assertEquals(1, as.getAvailablePermits());
+      }
+
+      {
+        final CompletableFuture<Void> blockingAcq = as.acquire(3).toCompletableFuture();
+        Assert.assertFalse(blockingAcq.isDone());
+        final CompletableFuture<Void> zeroAcq = as.acquire(0).toCompletableFuture();
+        Assert.assertFalse(zeroAcq.isDone());
+        as.release(1);
+
+        Assert.assertFalse(blockingAcq.isDone());
+        Assert.assertFalse(zeroAcq.isDone());
+        final CompletableFuture<Void> blockingAcq2 = as.acquire(1).toCompletableFuture();
+        final CompletableFuture<Void> zeroAcq2 = as.acquire(0).toCompletableFuture();
+        Assert.assertFalse(blockingAcq2.isDone());
+        Assert.assertFalse(zeroAcq2.isDone());
+
+        as.release(1);
+        TestUtil.join(blockingAcq, 1, TimeUnit.SECONDS);
+        TestUtil.join(zeroAcq, 1, TimeUnit.SECONDS);
+        Assert.assertFalse(blockingAcq2.isDone());
+        Assert.assertFalse(zeroAcq2.isDone());
+
+        as.release(1);
+        TestUtil.join(blockingAcq2, 1, TimeUnit.SECONDS);
+        TestUtil.join(zeroAcq2, 1, TimeUnit.SECONDS);
+      }
+    }
+
+    @Test
+    public void testTryAcquireZeroOnConstructor() throws Exception {
+      {
+        final AsyncSemaphore as = createSemaphore(1);
+        Assert.assertTrue(as.tryAcquire(0));
+        as.acquire(1);
+        Assert.assertTrue(as.tryAcquire(0));
+        as.acquire(1);
+        Assert.assertFalse(as.tryAcquire(0));
+      }
+
+      {
+        final AsyncSemaphore as = createSemaphore(0);
+        Assert.assertTrue(as.tryAcquire(0));
+        as.acquire(1);
+        Assert.assertFalse(as.tryAcquire(0));
+        as.release(1);
+        Assert.assertTrue(as.tryAcquire(0));
+      }
+
+      {
+        final AsyncSemaphore as = createSemaphore(-1);
+        Assert.assertFalse(as.tryAcquire(0));
+        as.release(1);
+        Assert.assertTrue(as.tryAcquire(0));
+      }
+    }
+
+    @Test
+    public void testTryAcquireZero() throws Exception {
+      final AsyncSemaphore as = createSemaphore(1);
+
+      Assert.assertTrue(as.tryAcquire(0));
+      TestUtil.join(as.acquire(1), 1, TimeUnit.SECONDS);
+
+      Assert.assertTrue(as.tryAcquire(0));
+      as.acquire(1);
+      Assert.assertFalse(as.tryAcquire(0));
+      as.release(1);
+      Assert.assertTrue(as.tryAcquire(0));
+    }
   }
 
   public static class SyncFairAsyncSemaphoreTest extends AbstractAsyncSemaphoreFairnessTest {
@@ -331,6 +439,14 @@ public abstract class AbstractAsyncSemaphoreTest extends AbstractAsyncReadWriteL
     // ignore queue length test because the asynchrony with executors is hard to test without races
     @Override
     public void testGetQueueLength() {}
+
+
+    // ignore tryAcquire(0) because barging makes it meaningless to test
+    @Override
+    public void testTryAcquireZero() throws Exception {}
+
+    @Override
+    public void testTryAcquireZeroOnConstructor() throws Exception {}
 
     @BeforeClass
     public static void setupPool() {

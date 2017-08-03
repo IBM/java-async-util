@@ -33,27 +33,7 @@ public class FairAsyncSemaphoreTest
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testExceededMaxConstructor() {
-    createSemaphore(Long.MAX_VALUE);
-  }
-
-  @Test(expected = IllegalArgumentException.class)
   public void testExceededMinConstructor() {
     createSemaphore(Long.MIN_VALUE);
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testExceededMaxAcquire() {
-    createSemaphore(0).acquire(Long.MAX_VALUE);
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testExceededMaxRelease() {
-    createSemaphore(0).release(Long.MAX_VALUE);
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void testExceededMaxTryAcquire() {
-    createSemaphore(0).acquire(Long.MAX_VALUE);
   }
 }

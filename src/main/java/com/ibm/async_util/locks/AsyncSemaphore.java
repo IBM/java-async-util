@@ -42,8 +42,8 @@ public interface AsyncSemaphore {
    * future will complete when sufficient permits have been {@link #release(long) released} and
    * assigned to this acquisition by the governing queue policy.
    *
-   * @param permits A positive number of permits to acquire from the semaphore
-   * @throws IllegalArgumentException if the requested permits are not positive, or exceed any
+   * @param permits A non-negative number of permits to acquire from the semaphore
+   * @throws IllegalArgumentException if the requested permits are negative, or exceed any
    *         restrictions enforced by the given implementation
    */
   CompletionStage<Void> acquire(long permits);
@@ -55,8 +55,8 @@ public interface AsyncSemaphore {
    * acquisitions based on the implementation's release and acquire policies. Consequently, this
    * method may complete a number of waiting futures and execute the corresponding observers.
    *
-   * @param permits A positive number of permits to release to the semaphore
-   * @throws IllegalArgumentException if the released permits are not positive, or exceed any
+   * @param permits A non-negative number of permits to release to the semaphore
+   * @throws IllegalArgumentException if the released permits are negative, or exceed any
    *         restrictions enforced by the given implementation
    */
   void release(long permits);
@@ -71,9 +71,9 @@ public interface AsyncSemaphore {
    * interface only requires that this method will succeed when the given permits are available and
    * there are no other acquisitions queued.
    *
-   * @param permits A positive number of permits to acquire from the semaphore
+   * @param permits A non-negative number of permits to acquire from the semaphore
    * @return true iff all of the requested permits are available, and have been immediately acquired
-   * @throws IllegalArgumentException if the requested permits are not positive, or exceed any
+   * @throws IllegalArgumentException if the requested permits are negative, or exceed any
    *         restrictions enforced by the given implementation
    */
   boolean tryAcquire(long permits);
@@ -140,4 +140,5 @@ public interface AsyncSemaphore {
   default boolean tryAcquire() {
     return tryAcquire(1L);
   }
+
 }
