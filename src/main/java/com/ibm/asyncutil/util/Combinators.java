@@ -11,6 +11,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
+import java.util.function.BiConsumer;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
@@ -67,7 +68,7 @@ public class Combinators {
    * the notification of the chain, so it is safe - for other implementations this may cause a
    * StackOverflow
    */
-  private static <T> CompletionStage<Void> allOfImpl(
+  private static CompletionStage<Void> allOfImpl(
       final Iterator<? extends CompletionStage<?>> it) {
     CompletionStage<Void> accumulator = StageSupport.voidFuture();
     while (it.hasNext()) {
@@ -91,40 +92,36 @@ public class Combinators {
   @SuppressWarnings("unchecked")
   public static <T> CompletionStage<Collection<T>> collect(
       final Collection<? extends CompletionStage<T>> stages) {
-    final int size = stages.size();
-    final Iterator<? extends CompletionStage<T>> backingIt = stages.iterator();
-    final Iterator<? extends CompletionStage<T>> it =
-        size > MAX_DEPENDANT_DEPTH
-            ? new Iterator<CompletionStage<T>>() {
-              @Override
-              public boolean hasNext() {
-                return backingIt.hasNext();
-              }
-
-              @Override
-              public CompletionStage<T> next() {
-                return backingIt.next().toCompletableFuture();
-              }
-            }
-            : backingIt;
-    return collectImpl(it, size);
+    return collect(stages, Collectors.toCollection(() -> new ArrayList<>(stages.size())));
   }
 
-  private static <T> CompletionStage<Collection<T>> collectImpl(
+  /*
+   * Put every stage in the collection into a single dependant chain, accumulating the next element
+   * as each stage completes (from left to right). CompletableFuture trampolines the notification of
+   * the chain, so it is safe - for other implementations this may cause a StackOverflow
+   */
+  @SuppressWarnings("unchecked")
+  private static <T, A, R> CompletionStage<R> collectImpl(
       final Iterator<? extends CompletionStage<T>> it,
-      final int size) {
-    CompletionStage<Collection<T>> acc =
-        StageSupport.completedStage(new ArrayList<>(size));
+      final Collector<? super T, A, R> collector) {
+
+    CompletionStage<A> acc = StageSupport.completedStage(collector.supplier().get());
+    final BiConsumer<A, ? super T> accFun = collector.accumulator();
+
     while (it.hasNext()) {
-      acc = acc.thenCombine(it.next(), (l, r) -> {
-        l.add(r);
-        return l;
+      /*
+       * each additional combination step runs only after all previous steps have completed
+       */
+      acc = acc.thenCombine(it.next(), (a, t) -> {
+        accFun.accept(a, t);
+        return a;
       });
     }
-    return acc;
+    return collector.characteristics().contains(Collector.Characteristics.IDENTITY_FINISH)
+        ? (CompletionStage<R>) acc
+        : acc.thenApply(collector.finisher());
 
   }
-
 
   /**
    * Applies a collector to the results of all {@code stages} after all complete, returning a
@@ -148,7 +145,23 @@ public class Combinators {
   public static <T, A, R> CompletionStage<R> collect(
       final Collection<? extends CompletionStage<T>> stages,
       final Collector<? super T, A, R> collector) {
-    return collect(stages).thenApply(res -> res.stream().collect(collector));
+    final int size = stages.size();
+    final Iterator<? extends CompletionStage<T>> backingIt = stages.iterator();
+    final Iterator<? extends CompletionStage<T>> it =
+        size > MAX_DEPENDANT_DEPTH
+            ? new Iterator<CompletionStage<T>>() {
+              @Override
+              public boolean hasNext() {
+                return backingIt.hasNext();
+              }
+
+              @Override
+              public CompletionStage<T> next() {
+                return backingIt.next().toCompletableFuture();
+              }
+            }
+            : backingIt;
+    return collectImpl(it, collector);
   }
 
   /**
