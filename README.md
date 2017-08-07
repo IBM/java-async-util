@@ -117,3 +117,6 @@ CompletionStage<Result> makeRequest(Request request) {
 The package provides asynchronous versions of read/write locks, stamped locks, semaphores and named locks. The full [locks javadoc](https://pages.github.ibm.com/cs-team-atg/async-util/apidocs/com/ibm/async_util/locks/package-summary.html) contains more information.
 ## Util
 TODO
+
+## Contributing
+Contributions welcome! See [Contributing](CONTRIBUTING.md) for details.
