@@ -14,7 +14,7 @@ Working with plain CompletableFutures becomes more difficult when much of the ch
 TODO maven instructions
 
 ## Iteration
-The classes in this package provide ways to generate and consume results asynchronously. The main mechanism the is `AsyncIterator` interface, which can be considered an asynchronous analog of the Stream API. The full [iteration javadocs](https://pages.github.ibm.com/cs-team-atg/async-util/apidocs/com/ibm/async_util/iteration/package-summary.html) contains more information on `AsyncIterator` as well as other asynchronous iteration constructs.
+The classes in this package provide ways to generate and consume results asynchronously. The main mechanism the is `AsyncIterator` interface, which can be considered an asynchronous analog of the Stream API. The full [iteration javadocs](https://pages.github.ibm.com/cs-team-atg/async-util/apidocs/com/ibm/asyncutil/iteration/package-summary.html) contains more information on `AsyncIterator` as well as other asynchronous iteration constructs.
 
 Consider the following example from the `Stream` documentation
 ```java
@@ -114,7 +114,7 @@ CompletionStage<Result> makeRequest(Request request) {
     );
 }
 ```
-The package provides asynchronous versions of read/write locks, stamped locks, semaphores and named locks. The full [locks javadoc](https://pages.github.ibm.com/cs-team-atg/async-util/apidocs/com/ibm/async_util/locks/package-summary.html) contains more information.
+The package provides asynchronous versions of read/write locks, stamped locks, semaphores and named locks. The full [locks javadoc](https://pages.github.ibm.com/cs-team-atg/async-util/apidocs/com/ibm/asyncutil/locks/package-summary.html) contains more information.
 ## Util
 TODO
 
