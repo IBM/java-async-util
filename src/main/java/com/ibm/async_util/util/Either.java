@@ -144,7 +144,7 @@ public interface Either<L, R> {
    * <pre>
    * {@code
    * Either<Exception, Double> eitherDouble;
-   * Either<Exception, String> eitherString = eitherInt.map(Double::intValue).map(Integer::toString);
+   * Either<Exception, String> eitherString = eitherDouble.map(Double::intValue).map(Integer::toString)
    * }
    * </pre>
    *
