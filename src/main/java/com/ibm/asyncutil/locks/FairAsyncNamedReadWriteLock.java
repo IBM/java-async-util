@@ -37,10 +37,6 @@ public class FairAsyncNamedReadWriteLock<T> implements AsyncNamedReadWriteLock<T
   @SuppressWarnings("serial")
   private final class NamedNode
       extends FairAsyncReadWriteLock.Node {
-    /**
-     *
-     */
-    private static final long serialVersionUID = -4539914522341330733L;
     private final T name;
 
     /**

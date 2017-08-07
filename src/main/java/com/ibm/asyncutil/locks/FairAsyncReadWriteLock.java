@@ -56,10 +56,6 @@ public class FairAsyncReadWriteLock implements AsyncReadWriteLock {
   @SuppressWarnings("serial")
   static class Node extends AbstractSimpleEpoch
       implements ReadLockToken, WriteLockToken, AsyncStampedLock.Stamp {
-    /**
-     *
-     */
-    private static final long serialVersionUID = 2082395072514665800L;
     final CompletableFuture<ReadLockToken> readFuture;
     final CompletableFuture<WriteLockToken> writeFuture;
     Node next;

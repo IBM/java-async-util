@@ -19,27 +19,13 @@ import org.junit.runner.RunWith;
 public class TryWithTest {
   @SuppressWarnings("serial")
   private static class CloseException extends Exception {
-
-    /**
-     *
-     */
-    private static final long serialVersionUID = -2012800811952647868L;
   }
   @SuppressWarnings("serial")
   private static class CloseRuntimeException extends RuntimeException {
 
-    /**
-     *
-     */
-    private static final long serialVersionUID = 6809440040185897343L;
   }
   @SuppressWarnings("serial")
   private static class ActionException extends RuntimeException {
-
-    /**
-     *
-     */
-    private static final long serialVersionUID = 6731901340457855165L;
   }
 
   interface CheckableAutoCloseable extends AutoCloseable {

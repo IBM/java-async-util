@@ -145,11 +145,6 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
 
   @SuppressWarnings("serial")
   private static class LockStateException extends RuntimeException {
-
-    /**
-     *
-     */
-    private static final long serialVersionUID = -9098909095535022560L;
   }
 
   @Test(expected = LockStateException.class)

@@ -549,10 +549,6 @@ public class AsyncIteratorTest {
 
     @SuppressWarnings("serial")
     class LimitedList<T> extends ArrayList<T> {
-      /**
-       *
-       */
-      private static final long serialVersionUID = 6604914508983772665L;
       // this poll will fail if the iterator tries to create more batches than necessary.
       // (not sufficiently lazy)
       final int limit = sizeLimitsQueue.poll();

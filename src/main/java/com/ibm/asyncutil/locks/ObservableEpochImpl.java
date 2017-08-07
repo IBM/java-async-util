@@ -18,10 +18,6 @@ import com.ibm.asyncutil.util.StageSupport;
  */
 @SuppressWarnings("serial")
 class ObservableEpochImpl extends AbstractSimpleEpoch implements ObservableEpoch {
-  /**
-   *
-   */
-  private static final long serialVersionUID = -3263030267313569994L;
   private final CompletableFuture<Boolean> future = new CompletableFuture<>();
 
   @Override
