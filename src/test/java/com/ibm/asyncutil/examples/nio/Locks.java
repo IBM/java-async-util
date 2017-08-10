@@ -39,21 +39,7 @@ public class Locks {
      * @return a stage that will complete with the server's response
      */
     CompletionStage<Integer> intRequest(final int i) {
-
-      // first acquire the lock
-      this.lock.acquireLock().thenCompose(lockToken -> NioBridge
-
-          // write the int into the channel
-          .writeInt(this.connectedChannel, i)
-
-          // read the int response from the server
-          .thenCompose(ignore -> NioBridge.readInt(this.connectedChannel))
-
-          // unconditionally release the lock
-          .whenComplete((j, ex) -> lockToken.releaseLock()));
-
-      // first acquire the lock, unconditionally closing the lock after the stage we produced
-      // completes
+      // acquire the lock, unconditionally closing the token after the stage we produced completes
       return StageSupport.tryComposeWith(this.lock.acquireLock(), token -> NioBridge
 
           // write the int into the channel
