@@ -180,7 +180,7 @@ final AsyncIterator<AsynchronousSocketChannel> clientConnections = AsyncIterator
 
 When we apply a terminal operation to this iterator, we will call accept 4 times and yield 4 connected SocketChannels, only making the next call to accept when the previous call has finished.
 
-Now that we have our `accept` calls sorted out, let's figure out how to process our messages. We have many options, the best way to deal with each stream of incoming messages is heavily use case dependant. Ideally, we would like to avoid the sever business logic from having to deal with the concurrent reception of messages. For example, if we were writing these messages to a file or to an in memory data structure we'd like to avoid having to use locks. We can instead use the `AsyncChannel` primitive to pipe these 4 sources of messages into a single `AsyncIterator` that we can then consume sequentially without having to explicitly deal with concurrency. Given an AsyncIterator of messages (which we've seen how to get from an AsynchronousSocketChannel in the previous section) and an AsyncChannel, we can pipe messages into the channel with `AsyncChannel.send` like so.
+Now that we have our `accept` calls sorted out, let's figure out how to process our messages. We have many options, the best way to deal with each stream of incoming messages is heavily use case dependant. Ideally, we would like to avoid the server business logic from having to deal with the concurrent reception of messages. For example, if we were writing these messages to a file or to an in memory data structure we'd like to avoid having to use locks. We can instead use the `AsyncChannel` primitive to pipe these 4 sources of messages into a single `AsyncIterator` that we can then consume sequentially without having to explicitly deal with concurrency. Given an `AsyncIterator` of messages (which we've seen how to get from an AsynchronousSocketChannel in the previous section) and an `AsyncChannel`, we can pipe messages into the channel with `AsyncChannel.send` like so.
 ```java
 AsyncChannel<Integer> channel = AsyncChannels.unbounded();
 AsyncIterator<Integer> requestIterator = ...
@@ -260,7 +260,7 @@ class Requester {
      * @return a stage that will complete with the server's response
      */
     CompletionStage<Integer> intRequest(final int i) {
-        // TODO
+        ...
     }
 }
 ``` 
