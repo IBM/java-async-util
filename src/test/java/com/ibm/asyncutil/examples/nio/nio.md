@@ -216,9 +216,9 @@ clientConnections
     // returns a stage that completes when -1 has been returned on all connections
     .thenCompose(fillingCompleteStages -> Combinators.allOf(fillingCompleteStages))
 
-    // when we've connected to 4 clients and read to -1 on all 4 of them, terminate our results
-    // channel
-    .thenRun(results::terminate);
+    // when we've connected to 4 clients and either read to -1 or hit an IOException on all 4 of
+    // them, terminate our results channel
+    .whenComplete((t, ex) -> results.terminate());
 ```
 
 Now we can do whatever we want with the results channel.

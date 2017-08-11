@@ -18,6 +18,7 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import com.ibm.asyncutil.iteration.AsyncChannel;
 import com.ibm.asyncutil.iteration.AsyncChannels;
@@ -68,9 +69,9 @@ public class MultiProducerIteration {
         // returns a stage that completes when -1 has been returned on all connections
         .thenCompose(fillingCompleteStages -> Combinators.allOf(fillingCompleteStages))
 
-        // when we've connected to 4 clients and read to -1 on all 4 of them, terminate our results
-        // channel
-        .thenRun(results::terminate);
+        // when we've connected to 4 clients and either read to -1 or hit an IOException on all 4 of
+        // them, terminate our results channel
+        .whenComplete((t, ex) -> results.terminate());
 
     return results;
 
@@ -84,9 +85,12 @@ public class MultiProducerIteration {
 
     // on the client side, concurrently connect to addr 4 times, and write 100 random integers on
     // each connection
-    for (int i = 0; i < 4; i++) {
-      connect(addr).thenComposeAsync(channel -> write100Randoms(channel));
-    }
+    final CompletionStage<Void> writeStage = Combinators.allOf(IntStream
+        .range(0, 4)
+        .mapToObj(i -> connect(addr)
+            .thenComposeAsync(channel -> write100Randoms(channel)))
+        .collect(Collectors.toList()))
+        .thenApply(ig -> null);
 
 
     // on the server side, we'd like to accept 4 connections and route their messages into a single
@@ -102,7 +106,12 @@ public class MultiProducerIteration {
 
 
     // do something with the results! - print each result as it comes from each client
-    results.forEach(i -> System.out.println(i)).toCompletableFuture().join();
+    final CompletionStage<Void> printStage = results.forEach(i -> System.out.println(i));
+
+    // wait for both the clients and the server/printing to complete
+    writeStage.thenAcceptBoth(printStage, (ig1, ig2) -> {
+      System.out.println("completed successfully");
+    });
 
   }
 }
