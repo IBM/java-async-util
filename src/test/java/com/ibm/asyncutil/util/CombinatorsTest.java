@@ -117,6 +117,39 @@ public class CombinatorsTest {
   }
 
   @Test
+  public void testAllLargeCollectionOneWaiter() {
+    final int NUM_FUTURES = 10000;
+
+    final List<Integer> results =
+        IntStream.range(0, NUM_FUTURES).boxed().collect(Collectors.toList());
+
+    // all but one stage is immediately complete
+    final CompletableStage<Integer> first = this.getCompletableStage();
+    final List<CompletionStage<Integer>> collect = IntStream
+        .range(0, NUM_FUTURES)
+        .mapToObj(i -> i == 0 ? first : this.getCompletedStage(i))
+        .collect(Collectors.toList());
+
+    final CompletionStage<Void> allOf = Combinators.allOf(collect);
+    final CompletionStage<Collection<Integer>> collectStage = Combinators.collect(collect);
+
+    first.complete(0);
+
+    try {
+      TestUtil.join(allOf, 2, TimeUnit.SECONDS);
+    } catch (final TimeoutException e) {
+      Assert.fail("allOf stage should be complete");
+    }
+
+    try {
+      Assert.assertArrayEquals(results.toArray(),
+          TestUtil.join(collectStage, 2, TimeUnit.SECONDS).toArray());
+    } catch (final TimeoutException e) {
+      Assert.fail("collect stage should be complete");
+    }
+  }
+
+  @Test
   public void testAllOfError() {
     final List<CompletionStage<Integer>> futures =
         Arrays.asList(
