@@ -351,7 +351,7 @@ static class CloseableRequester implements AsyncCloseable {
      *         requester has already been closed
      */
     Optional<CompletionStage<Integer>> intRequest(final int i) {
-        // TODO
+        ...
     }
 
     /**
@@ -362,7 +362,7 @@ static class CloseableRequester implements AsyncCloseable {
      */
     @Override
     public CompletionStage<Void> close() {
-        // TODO
+        ...
     }
   }
 ```
