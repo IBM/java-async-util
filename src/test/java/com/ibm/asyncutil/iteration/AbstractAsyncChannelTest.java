@@ -32,7 +32,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.ibm.async_util.util.Combinators;
+import com.ibm.asyncutil.util.Combinators;
 
 public abstract class AbstractAsyncChannelTest {
   private final static int NUM_THREADS = 5;

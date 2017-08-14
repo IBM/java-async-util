@@ -1,23 +1,10 @@
-//
-// (C) Copyright IBM Corp. 2005 All Rights Reserved.
-//
-// Contact Information:
-//
-// IBM Corporation
-// Legal Department
-// 222 South Riverside Plaza
-// Suite 1700
-// Chicago, IL 60606, USA
-//
-// END-OF-HEADER
-//
-// -----------------------
-// @author: renar
-//
-// Date: Aug 4, 2017
-// ---------------------
+/*
+ * Copyright (c) IBM Corporation 2017. All Rights Reserved.
+ * Project name: java-async-util
+ * This project is licensed under the Apache License 2.0, see LICENSE.
+ */
 
-package com.ibm.async_util.util;
+package com.ibm.asyncutil.util;
 
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -30,7 +17,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import com.ibm.async_util.util.TestUtil.CompletableStage;
+import com.ibm.asyncutil.util.TestUtil.CompletableStage;
 
 /**
  * A rudimentary implementation of {@link CompletionStage}. Used to validate CompletionStage

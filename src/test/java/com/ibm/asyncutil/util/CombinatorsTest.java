@@ -27,7 +27,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
-import com.ibm.async_util.util.TestUtil.CompletableStage;
+import com.ibm.asyncutil.util.TestUtil.CompletableStage;
 
 @RunWith(Parameterized.class)
 public class CombinatorsTest {
