@@ -7,6 +7,7 @@
 package com.ibm.asyncutil.iteration;
 
 import java.util.ArrayDeque;
+import java.util.List;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
@@ -17,10 +18,12 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 import com.ibm.asyncutil.iteration.AsyncIterator.End;
 import com.ibm.asyncutil.locks.FairAsyncLock;
 import com.ibm.asyncutil.util.Either;
+import com.ibm.asyncutil.util.Combinators;
 import com.ibm.asyncutil.util.StageSupport;
 
 /** Package private methods to use in {@link AsyncIterator} */
@@ -253,19 +256,16 @@ class AsyncIterators {
       return StageSupport.tryComposeWith(this.lock.acquireLock(), token -> {
         this.closed = true;
         // call closeFn on all extra eagerly evaluated results
-        @SuppressWarnings({"rawtypes"})
-        final CompletableFuture[] closeFutures =
-            this.pendingResults
-                .stream()
-                .map(f -> f.thenCompose(
-                    either -> either.fold(
-                        end -> StageSupport.voidFuture(),
-                        this.closeFn)))
-                .map(CompletionStage::toCompletableFuture)
-                .toArray(CompletableFuture[]::new);
+        final List<CompletionStage<Void>> closeFutures = this.pendingResults
+            .stream()
+            .map(f -> f.thenCompose(
+                either -> either.fold(
+                    end -> StageSupport.voidFuture(),
+                    this.closeFn)))
+            .collect(Collectors.toList());
 
         // wait for all to complete
-        final CompletableFuture<Void> extraClose = CompletableFuture.allOf(closeFutures);
+        final CompletionStage<Void> extraClose = Combinators.allOf(closeFutures);
         return StageSupport.thenComposeOrRecover(
             extraClose,
             (ig, extraCloseError) -> {

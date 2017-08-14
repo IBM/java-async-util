@@ -6,6 +6,7 @@
 
 package com.ibm.asyncutil.locks;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
@@ -15,12 +16,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.junit.Assert;
 import org.junit.Test;
 
 import com.ibm.asyncutil.util.StageSupport;
+import com.ibm.asyncutil.util.Combinators;
 
 public class AsyncFunnelTest {
 
@@ -118,8 +121,7 @@ public class AsyncFunnelTest {
       }
       return next;
     }));
-    @SuppressWarnings("rawtypes")
-    final CompletableFuture[] futures = IntStream.range(0, NUM_THREADS).mapToObj(i -> {
+    final List<CompletableFuture<Void>> futures = IntStream.range(0, NUM_THREADS).mapToObj(i -> {
       return CompletableFuture.runAsync(() -> {
         while (running.get()) {
           c.doOrGet(() -> CompletableFuture.supplyAsync(() -> {
@@ -133,7 +135,7 @@ public class AsyncFunnelTest {
           }));
         }
       });
-    }).toArray(CompletableFuture[]::new);
+    }).collect(Collectors.toList());
 
     Assert.assertEquals(count.get(), 1);
     final CompletableFuture<Integer> first =
@@ -154,6 +156,6 @@ public class AsyncFunnelTest {
     Assert.assertEquals(2, second.get(1, TimeUnit.SECONDS).intValue());
 
     running.set(false);
-    CompletableFuture.allOf(futures).get(1, TimeUnit.SECONDS);
+    Combinators.allOf(futures).toCompletableFuture().get(1, TimeUnit.SECONDS);
   }
 }
