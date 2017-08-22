@@ -21,8 +21,16 @@ import com.ibm.asyncutil.locks.AsyncLock;
 import com.ibm.asyncutil.util.Combinators;
 import com.ibm.asyncutil.util.StageSupport;
 
+/**
+ * Example showing usage for {@link AsyncLock}
+ */
 public class Locks {
 
+  /**
+   * An object that can be used to make {@link #intRequest(int) intRequests} into an
+   * {@link AsynchronousSocketChannel}, ensuring that subsequent requests are not sent until the
+   * response for the previous request was received
+   */
   static class Requester {
     private final AsyncLock lock;
     private final AsynchronousSocketChannel connectedChannel;
@@ -54,7 +62,7 @@ public class Locks {
    * Setup a server that will accept a connection from a single client, and then respond to every
    * request sent by the client by incrementing the request by one.
    * 
-   * @return
+   * @return the {@link SocketAddress} of the created server
    * @throws IOException
    */
   static SocketAddress setupServer() throws IOException {

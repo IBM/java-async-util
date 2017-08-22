@@ -9,14 +9,12 @@ package com.ibm.asyncutil.examples.nio;
 import static com.ibm.asyncutil.examples.nio.NioBridge.accept;
 import static com.ibm.asyncutil.examples.nio.NioBridge.connect;
 import static com.ibm.asyncutil.examples.nio.NioBridge.readInt;
-import static com.ibm.asyncutil.examples.nio.NioBridge.writeInt;
 
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -24,18 +22,11 @@ import com.ibm.asyncutil.iteration.AsyncChannel;
 import com.ibm.asyncutil.iteration.AsyncChannels;
 import com.ibm.asyncutil.iteration.AsyncIterator;
 import com.ibm.asyncutil.util.Combinators;
-import com.ibm.asyncutil.util.StageSupport;
 
+/**
+ * Example showing the use of {@link AsyncIterator multi-producer-single-consumer async queues}
+ */
 public class MultiProducerIteration {
-
-  static CompletionStage<Void> write100Randoms(final AsynchronousSocketChannel channel) {
-    final CompletionStage<Void> allItemsWritten = AsyncIterator
-        .generate(() -> StageSupport.completedStage(ThreadLocalRandom.current().nextInt(0, 100)))
-        .thenCompose(i -> writeInt(channel, i))
-        .take(100)
-        .consume();
-    return allItemsWritten.thenCompose(ignore -> writeInt(channel, -1));
-  }
 
   /**
    * Given an AsyncIterator of {@link AsynchronousSocketChannel} representing connected clients,
@@ -88,7 +79,7 @@ public class MultiProducerIteration {
     final CompletionStage<Void> writeStage = Combinators.allOf(IntStream
         .range(0, 4)
         .mapToObj(i -> connect(addr)
-            .thenComposeAsync(channel -> write100Randoms(channel)))
+            .thenComposeAsync(channel -> Iteration.write100Randoms(channel)))
         .collect(Collectors.toList()))
         .thenApply(ig -> null);
 

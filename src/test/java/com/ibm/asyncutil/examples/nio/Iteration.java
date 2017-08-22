@@ -28,7 +28,7 @@ public class Iteration {
   /**
    * Write 100 random integers into {@code channel}, then write -1
    *
-   * @param channel
+   * @param channel An {@link AsynchronousSocketChannel} that will be written into
    * @return A stage that completes when we've finished writing into the channel
    */
   static CompletionStage<Void> write100Randoms(final AsynchronousSocketChannel channel) {
@@ -43,7 +43,7 @@ public class Iteration {
   /**
    * Read one int from the channel at a time.
    *
-   * @param channel
+   * @param channel An {@link AsynchronousSocketChannel} that will be read from
    * @return A stage that completes when we read a -1 off of the channel
    */
   static CompletionStage<List<Integer>> readUntilStopped(

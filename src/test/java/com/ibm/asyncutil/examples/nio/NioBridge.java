@@ -17,6 +17,10 @@ import java.util.concurrent.CompletionStage;
 
 import com.ibm.asyncutil.util.StageSupport;
 
+/**
+ * Static methods to convert the callback based {@link java.nio.channels.AsynchronousChannel} API to
+ * one based on {@link CompletionStage}
+ */
 public class NioBridge {
 
   static CompletionStage<AsynchronousSocketChannel> accept(

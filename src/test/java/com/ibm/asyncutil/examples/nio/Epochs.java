@@ -22,9 +22,13 @@ import com.ibm.asyncutil.util.AsyncCloseable;
  */
 public class Epochs {
 
+  /**
+   * Wrapper over a {@link com.ibm.asyncutil.examples.nio.Locks.Requester} that allows clients to
+   * make {@link #intRequest(int) intRequests} until {@link #close()} is called
+   */
   static class CloseableRequester implements AsyncCloseable {
-    final ObservableEpoch epoch;
-    final Locks.Requester requester;
+    private final ObservableEpoch epoch;
+    private final Locks.Requester requester;
     private final AsynchronousSocketChannel channel;
 
     CloseableRequester(final AsynchronousSocketChannel channel) {
