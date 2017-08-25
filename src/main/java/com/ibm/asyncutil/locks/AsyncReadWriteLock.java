@@ -9,6 +9,8 @@ package com.ibm.asyncutil.locks;
 import java.util.Optional;
 import java.util.concurrent.CompletionStage;
 
+import com.ibm.asyncutil.locks.AsyncLock.LockToken;
+
 /**
  * An asynchronously acquirable read-write lock.
  * <p>
@@ -65,12 +67,20 @@ public interface AsyncReadWriteLock {
    * protected action is completed, the lock may be released by calling
    * {@link ReadLockToken#releaseReadLock()}
    */
-  interface ReadLockToken {
+  interface ReadLockToken extends LockToken {
     /**
      * Release this read lock, possibly allowing writers to enter once all read locks have been
      * released.
      */
     void releaseReadLock();
+
+    /**
+     * @see #releaseReadLock
+     */
+    @Override
+    default void releaseLock() {
+      releaseReadLock();
+    }
   }
 
   /**
@@ -78,7 +88,7 @@ public interface AsyncReadWriteLock {
    * access. Once the protected action is completed, the lock may be released by calling
    * {@link WriteLockToken#releaseWriteLock()}
    */
-  interface WriteLockToken {
+  interface WriteLockToken extends LockToken {
     /**
      * Release this write lock, allowing readers or other writers to acquire it.
      */
@@ -96,6 +106,14 @@ public interface AsyncReadWriteLock {
      * @return a ReadLockToken representing read lock exclusivity on the lock
      */
     ReadLockToken downgradeLock();
+
+    /**
+     * @see #releaseWriteLock
+     */
+    @Override
+    default void releaseLock() {
+      releaseWriteLock();
+    }
   }
 
   /**

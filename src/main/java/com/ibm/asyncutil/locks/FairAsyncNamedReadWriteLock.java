@@ -150,7 +150,7 @@ public class FairAsyncNamedReadWriteLock<T> implements AsyncNamedReadWriteLock<T
         final NamedNode pred = new NamedNode(name, AbstractSimpleEpoch.TERMINATED);
         pred.next = head;
         head.prev = pred;
-        return StageSupport.completedStage(pred);
+        return StageSupport.completedStage(pred.writeLockToken);
       }
 
       readHead: while (true) {
@@ -169,7 +169,7 @@ public class FairAsyncNamedReadWriteLock<T> implements AsyncNamedReadWriteLock<T
             head.next = newHead;
             headRef.set(newHead);
 
-            return head.writeFuture;
+            return head.writeLockToken;
         }
       }
     }
@@ -199,7 +199,7 @@ public class FairAsyncNamedReadWriteLock<T> implements AsyncNamedReadWriteLock<T
       final NamedNode pred = new NamedNode(name, AbstractSimpleEpoch.TERMINATED);
       pred.next = head;
       head.prev = pred;
-      return Optional.of(pred);
+      return Optional.of(pred.writeLockToken);
     } else {
       // the map entry already exists, so someone holds either a reader or writer lock
       return Optional.empty();

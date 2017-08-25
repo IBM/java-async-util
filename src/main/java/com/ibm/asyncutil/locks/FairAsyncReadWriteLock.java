@@ -55,9 +55,36 @@ public class FairAsyncReadWriteLock implements AsyncReadWriteLock {
    */
   @SuppressWarnings("serial")
   static class Node extends AbstractSimpleEpoch
-      implements ReadLockToken, WriteLockToken, AsyncStampedLock.Stamp {
+      implements ReadLockToken, AsyncStampedLock.Stamp {
+
+    class WriteLockFutureToken extends CompletableFuture<WriteLockToken>
+        implements WriteLockToken {
+
+      @Override
+      public void releaseWriteLock() {
+        downgradeLock().releaseReadLock();
+      }
+
+      @Override
+      public ReadLockToken downgradeLock() {
+        final Node n = Node.this.next;
+        if (!n.readFuture.complete(n)) {
+          throw new IllegalStateException("released or downgraded write lock not in locked state");
+        }
+
+        // because writers keep an implicit read lock on the successor, downgrading is trivial
+        return n;
+      }
+
+      private void complete() {
+        if (!complete(this)) {
+          throw new AssertionError();
+        }
+      }
+    }
+
     final CompletableFuture<ReadLockToken> readFuture;
-    final CompletableFuture<WriteLockToken> writeFuture;
+    final WriteLockFutureToken writeLockToken;
     Node next;
 
     // state used in stack unrolling
@@ -71,7 +98,7 @@ public class FairAsyncReadWriteLock implements AsyncReadWriteLock {
      */
     private Node() {
       this.readFuture = null;
-      this.writeFuture = null;
+      this.writeLockToken = null;
     }
 
     /**
@@ -90,28 +117,13 @@ public class FairAsyncReadWriteLock implements AsyncReadWriteLock {
       lazySet(initialEntrants);
       this.prev = predecessor;
       this.readFuture = new CompletableFuture<>();
-      this.writeFuture = new CompletableFuture<>();
+      this.writeLockToken = new WriteLockFutureToken();
     }
 
     @Override
     public final void releaseReadLock() {
       // reader finished -> exit the node's epoch
       close();
-    }
-
-    @Override
-    public final void releaseWriteLock() {
-      downgradeLock().releaseReadLock();
-    }
-
-    @Override
-    public final ReadLockToken downgradeLock() {
-      if (!this.next.readFuture.complete(this.next)) {
-        throw new IllegalStateException("released or downgraded write lock not in locked state");
-      }
-
-      // because writers keep an implicit read lock on the successor, downgrading is trivial
-      return this.next;
     }
 
     @Override
@@ -167,9 +179,7 @@ public class FairAsyncReadWriteLock implements AsyncReadWriteLock {
           toComplete = sentinel.next;
           sentinel.next = null;
 
-          if (!toComplete.writeFuture.complete(toComplete)) {
-            throw new AssertionError();
-          }
+          toComplete.writeLockToken.complete();
 
         } while (sentinel.next != null);
 
@@ -248,7 +258,7 @@ public class FairAsyncReadWriteLock implements AsyncReadWriteLock {
      * block its potential write acquisition by being an implicit reader
      */
     this.head = h.next = new Node(1, h);
-    return h.writeFuture;
+    return h.writeLockToken;
   }
 
   @Override
@@ -256,7 +266,7 @@ public class FairAsyncReadWriteLock implements AsyncReadWriteLock {
     final Node h = this.head;
     if (h.tryWriteLock()) {
       this.head = h.next = new Node(1, h);
-      return Optional.of(h);
+      return Optional.of(h.writeLockToken);
     } else {
       return Optional.empty();
     }
