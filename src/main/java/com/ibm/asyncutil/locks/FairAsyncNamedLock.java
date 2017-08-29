@@ -20,12 +20,12 @@ public class FairAsyncNamedLock<T> implements AsyncNamedLock<T> {
 
   @Override
   public CompletionStage<AsyncLock.LockToken> acquireLock(final T name) {
-    return this.fanrwl.acquireWriteLock(name).thenApply(writeToken -> writeToken::releaseWriteLock);
+    return this.fanrwl.acquireWriteLock(name).thenApply(writeToken -> writeToken::releaseLock);
   }
 
   @Override
   public Optional<AsyncLock.LockToken> tryLock(final T name) {
-    return this.fanrwl.tryWriteLock(name).map(writeToken -> writeToken::releaseWriteLock);
+    return this.fanrwl.tryWriteLock(name).map(writeToken -> writeToken::releaseLock);
   }
 
 }

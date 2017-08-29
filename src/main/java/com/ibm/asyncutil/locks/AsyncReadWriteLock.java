@@ -65,34 +65,28 @@ public interface AsyncReadWriteLock {
   /**
    * A lock token indicating that the associated lock has been acquired for reader access. Once the
    * protected action is completed, the lock may be released by calling
-   * {@link ReadLockToken#releaseReadLock()}
+   * {@link ReadLockToken#releaseLock()}
    */
   interface ReadLockToken extends LockToken {
     /**
      * Release this read lock, possibly allowing writers to enter once all read locks have been
      * released.
      */
-    void releaseReadLock();
-
-    /**
-     * @see #releaseReadLock
-     */
     @Override
-    default void releaseLock() {
-      releaseReadLock();
-    }
+    void releaseLock();
   }
 
   /**
    * A lock token indicating that the associated lock has been exclusively acquired for writer
    * access. Once the protected action is completed, the lock may be released by calling
-   * {@link WriteLockToken#releaseWriteLock()}
+   * {@link WriteLockToken#releaseLock()}
    */
   interface WriteLockToken extends LockToken {
     /**
      * Release this write lock, allowing readers or other writers to acquire it.
      */
-    void releaseWriteLock();
+    @Override
+    void releaseLock();
 
     /**
      * Downgrade this write lock acquisition to a read lock acquisition without any intermediate
@@ -106,14 +100,6 @@ public interface AsyncReadWriteLock {
      * @return a ReadLockToken representing read lock exclusivity on the lock
      */
     ReadLockToken downgradeLock();
-
-    /**
-     * @see #releaseWriteLock
-     */
-    @Override
-    default void releaseLock() {
-      releaseWriteLock();
-    }
   }
 
   /**

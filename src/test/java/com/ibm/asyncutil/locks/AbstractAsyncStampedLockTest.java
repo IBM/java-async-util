@@ -52,7 +52,7 @@ public abstract class AbstractAsyncStampedLockTest extends AbstractAsyncReadWrit
     Assert.assertTrue(stamp0.validate());
     Assert.assertTrue(stamp1.validate());
 
-    readLockToken.releaseReadLock();
+    readLockToken.releaseLock();
     final AsyncReadWriteLock.WriteLockToken writeLockToken = TestUtil.join(writeLock);
 
     Assert.assertFalse(stamp0.validate());
@@ -60,7 +60,7 @@ public abstract class AbstractAsyncStampedLockTest extends AbstractAsyncReadWrit
     final Stamp stamp2 = asl.tryOptimisticRead();
     Assert.assertNull(stamp2);
 
-    writeLockToken.releaseWriteLock();
+    writeLockToken.releaseLock();
 
     final Stamp stamp3 = asl.tryOptimisticRead();
     Assert.assertNotNull(stamp3);

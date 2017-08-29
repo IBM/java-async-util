@@ -58,7 +58,7 @@ public final class AsyncReadWriteLockBenchmarks {
       final AsyncReadWriteLock.ReadLockToken t = TestUtil.join(this.rwlock.acquireReadLock());
       // do some work
       Blackhole.consumeCPU(20);
-      t.releaseReadLock();
+      t.releaseLock();
       return t;
     }
 
@@ -70,7 +70,7 @@ public final class AsyncReadWriteLockBenchmarks {
       final AsyncReadWriteLock.WriteLockToken t = TestUtil.join(this.rwlock.acquireWriteLock());
       // do some work
       Blackhole.consumeCPU(20);
-      t.releaseWriteLock();
+      t.releaseLock();
       return t;
     }
   }
@@ -97,7 +97,7 @@ public final class AsyncReadWriteLockBenchmarks {
     public Object readers() {
       final AsyncReadWriteLock.ReadLockToken t = TestUtil.join(this.rwlock.acquireReadLock());
       Blackhole.consumeCPU(20);
-      t.releaseReadLock();
+      t.releaseLock();
       return t;
     }
 
@@ -110,7 +110,7 @@ public final class AsyncReadWriteLockBenchmarks {
     public Object writers() {
       final AsyncReadWriteLock.WriteLockToken t = TestUtil.join(this.rwlock.acquireWriteLock());
       Blackhole.consumeCPU(20);
-      t.releaseWriteLock();
+      t.releaseLock();
       return t;
     }
   }
@@ -134,11 +134,11 @@ public final class AsyncReadWriteLockBenchmarks {
       implements AsyncReadWriteLock {
     private static final ReadLockToken READ = new ReadLockToken() {
       @Override
-      public void releaseReadLock() {}
+      public void releaseLock() {}
     };
     private static final WriteLockToken WRITE = new WriteLockToken() {
       @Override
-      public void releaseWriteLock() {}
+      public void releaseLock() {}
 
       @Override
       public ReadLockToken downgradeLock() {

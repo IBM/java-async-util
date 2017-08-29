@@ -61,8 +61,8 @@ public class FairAsyncReadWriteLock implements AsyncReadWriteLock {
         implements WriteLockToken {
 
       @Override
-      public void releaseWriteLock() {
-        downgradeLock().releaseReadLock();
+      public void releaseLock() {
+        downgradeLock().releaseLock();
       }
 
       @Override
@@ -121,7 +121,7 @@ public class FairAsyncReadWriteLock implements AsyncReadWriteLock {
     }
 
     @Override
-    public final void releaseReadLock() {
+    public final void releaseLock() {
       // reader finished -> exit the node's epoch
       close();
     }

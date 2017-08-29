@@ -49,25 +49,25 @@ public abstract class AbstractAsyncNamedReadWriteLockTest extends AbstractAsyncR
         narwls.acquireWriteLock(s1).toCompletableFuture();
     Assert.assertFalse(write1_1.isDone());
 
-    TestUtil.join(read1_2).releaseReadLock();
+    TestUtil.join(read1_2).releaseLock();
     Assert.assertFalse(write1_1.isDone());
 
     // s2 can read or write while s1 is occupied
     Assert.assertTrue(narwls.acquireReadLock(s2)
-        .thenAccept(readLock -> readLock.releaseReadLock()).toCompletableFuture().isDone());
+        .thenAccept(readLock -> readLock.releaseLock()).toCompletableFuture().isDone());
     Assert.assertTrue(narwls.acquireWriteLock(s2)
-        .thenAccept(writeLock -> writeLock.releaseWriteLock()).toCompletableFuture().isDone());
+        .thenAccept(writeLock -> writeLock.releaseLock()).toCompletableFuture().isDone());
     Assert.assertTrue(narwls.acquireReadLock(s2)
-        .thenAccept(readLock -> readLock.releaseReadLock()).toCompletableFuture().isDone());
+        .thenAccept(readLock -> readLock.releaseLock()).toCompletableFuture().isDone());
     Assert.assertFalse(isEmpty(narwls));
 
-    TestUtil.join(read1_1).releaseReadLock();
+    TestUtil.join(read1_1).releaseLock();
     Assert.assertTrue(write1_1.isDone());
 
     Assert.assertFalse(narwls.acquireReadLock(s1)
-        .thenAccept(readLock -> readLock.releaseReadLock()).toCompletableFuture().isDone());
+        .thenAccept(readLock -> readLock.releaseLock()).toCompletableFuture().isDone());
 
-    TestUtil.join(write1_1).releaseWriteLock();
+    TestUtil.join(write1_1).releaseLock();
     Assert.assertTrue(isEmpty(narwls));
   }
 
@@ -86,7 +86,7 @@ public abstract class AbstractAsyncNamedReadWriteLockTest extends AbstractAsyncR
     final MutableKey key = new MutableKey();
     final AsyncReadWriteLock.ReadLockToken readToken = TestUtil.join(lock.acquireReadLock(key));
     key.value = 1;
-    readToken.releaseReadLock();
+    readToken.releaseLock();
   }
 
   @Test(expected = ConcurrentModificationException.class)
@@ -95,7 +95,7 @@ public abstract class AbstractAsyncNamedReadWriteLockTest extends AbstractAsyncR
     final MutableKey key = new MutableKey();
     final AsyncReadWriteLock.WriteLockToken writeToken = TestUtil.join(lock.acquireWriteLock(key));
     key.value = 1;
-    writeToken.releaseWriteLock();
+    writeToken.releaseLock();
   }
 
   public static abstract class AbstractAsyncNamedReadWriteLockFairnessTest
@@ -138,7 +138,7 @@ public abstract class AbstractAsyncNamedReadWriteLockTest extends AbstractAsyncR
           narwls.acquireWriteLock(s).toCompletableFuture();
       Assert.assertFalse(write3.isDone());
 
-      TestUtil.join(write1).releaseWriteLock();
+      TestUtil.join(write1).releaseLock();
       Assert.assertTrue(read1.isDone());
       Assert.assertTrue(read2.isDone());
       Assert.assertTrue(read3.isDone());
@@ -148,8 +148,8 @@ public abstract class AbstractAsyncNamedReadWriteLockTest extends AbstractAsyncR
       Assert.assertFalse(read6.isDone());
       Assert.assertFalse(write3.isDone());
 
-      TestUtil.join(read1).releaseReadLock();
-      TestUtil.join(read2).releaseReadLock();
+      TestUtil.join(read1).releaseLock();
+      TestUtil.join(read2).releaseLock();
       Assert.assertTrue(read3.isDone());
       Assert.assertFalse(write2.isDone());
       Assert.assertFalse(read4.isDone());
@@ -172,7 +172,7 @@ public abstract class AbstractAsyncNamedReadWriteLockTest extends AbstractAsyncR
       Assert.assertFalse(read7.isDone());
       Assert.assertFalse(write4.isDone());
 
-      TestUtil.join(read3).releaseReadLock();
+      TestUtil.join(read3).releaseLock();
       Assert.assertTrue(write2.isDone());
       Assert.assertFalse(read4.isDone());
       Assert.assertFalse(read5.isDone());
@@ -181,7 +181,7 @@ public abstract class AbstractAsyncNamedReadWriteLockTest extends AbstractAsyncR
       Assert.assertFalse(read7.isDone());
       Assert.assertFalse(write4.isDone());
 
-      TestUtil.join(write2).releaseWriteLock();
+      TestUtil.join(write2).releaseLock();
       Assert.assertTrue(read4.isDone());
       Assert.assertTrue(read5.isDone());
       Assert.assertTrue(read6.isDone());
@@ -190,19 +190,19 @@ public abstract class AbstractAsyncNamedReadWriteLockTest extends AbstractAsyncR
       Assert.assertFalse(write4.isDone());
 
       TestUtil.join(Combinators.collect(Arrays.asList(read4, read5, read6)))
-          .forEach(readLock -> readLock.releaseReadLock());
+          .forEach(readLock -> readLock.releaseLock());
       Assert.assertTrue(write3.isDone());
       Assert.assertFalse(read7.isDone());
       Assert.assertFalse(write4.isDone());
 
-      TestUtil.join(write3).releaseWriteLock();
+      TestUtil.join(write3).releaseLock();
       Assert.assertTrue(read7.isDone());
       Assert.assertFalse(write4.isDone());
 
-      TestUtil.join(read7).releaseReadLock();
+      TestUtil.join(read7).releaseLock();
       Assert.assertTrue(write4.isDone());
 
-      TestUtil.join(write4).releaseWriteLock();
+      TestUtil.join(write4).releaseLock();
       Assert.assertTrue(isEmpty(narwls));
     }
   }

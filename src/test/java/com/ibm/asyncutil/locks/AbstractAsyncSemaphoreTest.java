@@ -518,7 +518,7 @@ class SemaphoreAsAsyncReadWriteLock implements AsyncReadWriteLock {
     }
 
     @Override
-    public void releaseWriteLock() {
+    public void releaseLock() {
       release();
     }
 

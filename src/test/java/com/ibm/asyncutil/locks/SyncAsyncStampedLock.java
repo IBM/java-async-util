@@ -73,7 +73,7 @@ class SyncAsyncStampedLock implements AsyncStampedLock {
     }
 
     @Override
-    public void releaseWriteLock() {
+    public void releaseLock() {
       SyncAsyncStampedLock.this.lock.unlockWrite(this.stamp);
     }
 

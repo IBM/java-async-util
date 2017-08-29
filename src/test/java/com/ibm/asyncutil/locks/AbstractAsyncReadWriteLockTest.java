@@ -51,16 +51,16 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
           arwl.acquireWriteLock().toCompletableFuture();
       Assert.assertFalse(write1.isDone());
 
-      TestUtil.join(read2).releaseReadLock();
+      TestUtil.join(read2).releaseLock();
       Assert.assertFalse(write1.isDone());
 
-      TestUtil.join(read1).releaseReadLock();
+      TestUtil.join(read1).releaseLock();
       TestUtil.join(write1, 2, TimeUnit.SECONDS);
 
-      Assert.assertFalse(arwl.acquireReadLock().thenAccept(readLock -> readLock.releaseReadLock())
+      Assert.assertFalse(arwl.acquireReadLock().thenAccept(readLock -> readLock.releaseLock())
           .toCompletableFuture().isDone());
 
-      TestUtil.join(write1).releaseWriteLock();
+      TestUtil.join(write1).releaseLock();
     }
 
     // writer, writer, reader
@@ -79,14 +79,14 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
           arwl.acquireReadLock().toCompletableFuture();
       Assert.assertFalse(read1.isDone());
 
-      TestUtil.join(write1).releaseWriteLock();
+      TestUtil.join(write1).releaseLock();
       TestUtil.join(write2, 2, TimeUnit.SECONDS);
       Assert.assertFalse(read1.isDone());
 
-      TestUtil.join(write2).releaseWriteLock();
+      TestUtil.join(write2).releaseLock();
       TestUtil.join(read1, 2, TimeUnit.SECONDS);
 
-      TestUtil.join(read1).releaseReadLock();
+      TestUtil.join(read1).releaseLock();
     }
   }
 
@@ -107,17 +107,17 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
       final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read =
           rwlock.acquireReadLock().toCompletableFuture();
       write.thenAccept(writeLockToken -> {
-        writeLockToken.releaseWriteLock();
-        read.thenAccept(AsyncReadWriteLock.ReadLockToken::releaseReadLock);
+        writeLockToken.releaseLock();
+        read.thenAccept(AsyncReadWriteLock.ReadLockToken::releaseLock);
       });
     }
     lastLock.set(rwlock.acquireWriteLock().thenApply(writeToken -> {
-      writeToken.releaseWriteLock();
+      writeToken.releaseLock();
       return writeToken;
     }));
 
-    TestUtil.join(firstLock).releaseWriteLock();
-    TestUtil.join(firstRead.thenAccept(AsyncReadWriteLock.ReadLockToken::releaseReadLock));
+    TestUtil.join(firstLock).releaseLock();
+    TestUtil.join(firstRead.thenAccept(AsyncReadWriteLock.ReadLockToken::releaseLock));
     TestUtil.join(lastLock.get(), 15, TimeUnit.SECONDS);
   }
 
@@ -132,14 +132,14 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
 
     for (int i = 0; i < 100_000; i++) {
       rwlock.acquireWriteLock()
-          .thenAccept(writeLockToken -> writeLockToken.downgradeLock().releaseReadLock());
+          .thenAccept(writeLockToken -> writeLockToken.downgradeLock().releaseLock());
     }
     lastLock.set(rwlock.acquireWriteLock().thenApply(writeToken -> {
-      writeToken.releaseWriteLock();
+      writeToken.releaseLock();
       return writeToken;
     }));
 
-    TestUtil.join(firstLock).releaseWriteLock();
+    TestUtil.join(firstLock).releaseLock();
     TestUtil.join(lastLock.get(), 15, TimeUnit.SECONDS);
   }
 
@@ -152,9 +152,9 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
     final AsyncReadWriteLock.ReadLockToken token =
         TestUtil.join(getReadWriteLock().acquireReadLock());
 
-    token.releaseReadLock();
+    token.releaseLock();
     try {
-      token.releaseReadLock();
+      token.releaseLock();
     } catch (IllegalStateException | IllegalMonitorStateException expected) {
       throw new LockStateException();
     }
@@ -165,9 +165,9 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
     final AsyncReadWriteLock.WriteLockToken token =
         TestUtil.join(getReadWriteLock().acquireWriteLock());
 
-    token.releaseWriteLock();
+    token.releaseLock();
     try {
-      token.releaseWriteLock();
+      token.releaseLock();
     } catch (IllegalStateException | IllegalMonitorStateException expected) {
       throw new LockStateException();
     }
@@ -193,7 +193,7 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
 
     token.downgradeLock();
     try {
-      token.releaseWriteLock();
+      token.releaseLock();
     } catch (IllegalStateException | IllegalMonitorStateException expected) {
       throw new LockStateException();
     }
@@ -204,9 +204,9 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
     final AsyncReadWriteLock.ReadLockToken token =
         TestUtil.join(getReadWriteLock().acquireWriteLock()).downgradeLock();
 
-    token.releaseReadLock();
+    token.releaseLock();
     try {
-      token.releaseReadLock();
+      token.releaseLock();
     } catch (IllegalStateException | IllegalMonitorStateException expected) {
       throw new LockStateException();
     }
@@ -223,9 +223,9 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
 
       final AsyncReadWriteLock.ReadLockToken downgrade = firstLock.downgradeLock();
 
-      rwlock.tryReadLock().orElseThrow(AssertionError::new).releaseReadLock();
+      rwlock.tryReadLock().orElseThrow(AssertionError::new).releaseLock();
 
-      downgrade.releaseReadLock();
+      downgrade.releaseLock();
     }
     {
       final AsyncReadWriteLock.WriteLockToken firstLock = TestUtil.join(rwlock.acquireWriteLock());
@@ -238,8 +238,8 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
       final AsyncReadWriteLock.ReadLockToken downgrade = firstLock.downgradeLock();
       Assert.assertFalse(secondLock.isDone());
 
-      downgrade.releaseReadLock();
-      TestUtil.join(secondLock, 2, TimeUnit.SECONDS).releaseWriteLock();
+      downgrade.releaseLock();
+      TestUtil.join(secondLock, 2, TimeUnit.SECONDS).releaseLock();
     }
   }
 
@@ -253,10 +253,10 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
     Assert.assertFalse(rwlock.tryWriteLock().isPresent());
 
     // other reads should succeed
-    rwlock.tryReadLock().orElseThrow(AssertionError::new).releaseReadLock();
+    rwlock.tryReadLock().orElseThrow(AssertionError::new).releaseLock();
     final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read2 =
         rwlock.acquireReadLock().toCompletableFuture();
-    TestUtil.join(read2, 2, TimeUnit.SECONDS).releaseReadLock();
+    TestUtil.join(read2, 2, TimeUnit.SECONDS).releaseLock();
 
     // conventional write should also fail
     final CompletableFuture<AsyncReadWriteLock.WriteLockToken> write =
@@ -264,7 +264,7 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
     Assert.assertFalse(write.isDone());
 
     // release last reader
-    read.releaseReadLock();
+    read.releaseLock();
 
     // now writer holds the lock
     TestUtil.join(write, 2, TimeUnit.SECONDS);
@@ -273,7 +273,7 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
     Assert.assertFalse(rwlock.tryWriteLock().isPresent());
     Assert.assertFalse(rwlock.tryReadLock().isPresent());
 
-    TestUtil.join(write).releaseWriteLock();
+    TestUtil.join(write).releaseLock();
 
     final AsyncReadWriteLock.WriteLockToken write2 =
         rwlock.tryWriteLock().orElseThrow(AssertionError::new);
@@ -285,7 +285,7 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
         rwlock.acquireWriteLock().toCompletableFuture();
     Assert.assertFalse(write3.isDone());
 
-    write2.releaseWriteLock();
+    write2.releaseLock();
     TestUtil.join(read3, 2, TimeUnit.SECONDS);
   }
 
@@ -298,17 +298,17 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
       final AsyncReadWriteLock rwlock = getReadWriteLock();
       final AsyncReadWriteLock.ReadLockToken read = TestUtil.join(rwlock.acquireReadLock());
       // tryReadLock may succeed when no writers are waiting
-      rwlock.tryReadLock().orElseThrow(AssertionError::new).releaseReadLock();
+      rwlock.tryReadLock().orElseThrow(AssertionError::new).releaseLock();
 
       final CompletableFuture<AsyncReadWriteLock.WriteLockToken> write =
           rwlock.acquireWriteLock().toCompletableFuture();
       // now tryReadLock should fail because a writer is waiting
       Assert.assertFalse(rwlock.tryReadLock().isPresent());
 
-      read.releaseReadLock();
-      TestUtil.join(write).releaseWriteLock();
+      read.releaseLock();
+      TestUtil.join(write).releaseLock();
       // tryReadLock may once again proceed now that the write lock is released
-      rwlock.tryReadLock().orElseThrow(AssertionError::new).releaseReadLock();
+      rwlock.tryReadLock().orElseThrow(AssertionError::new).releaseLock();
     }
 
     @Test
@@ -348,7 +348,7 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
           narwls.acquireWriteLock().toCompletableFuture();
       Assert.assertFalse(write3.isDone());
 
-      TestUtil.join(write1).releaseWriteLock();
+      TestUtil.join(write1).releaseLock();
       TestUtil.join(CompletableFuture.allOf(read1, read2, read3), 2, TimeUnit.SECONDS);
       Assert.assertTrue(read1.isDone());
       Assert.assertTrue(read2.isDone());
@@ -359,8 +359,8 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
       Assert.assertFalse(read6.isDone());
       Assert.assertFalse(write3.isDone());
 
-      TestUtil.join(read1).releaseReadLock();
-      TestUtil.join(read2).releaseReadLock();
+      TestUtil.join(read1).releaseLock();
+      TestUtil.join(read2).releaseLock();
       TestUtil.join(read3, 2, TimeUnit.SECONDS);
       Assert.assertTrue(read3.isDone());
       Assert.assertFalse(write2.isDone());
@@ -384,7 +384,7 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
       Assert.assertFalse(read7.isDone());
       Assert.assertFalse(write4.isDone());
 
-      TestUtil.join(read3).releaseReadLock();
+      TestUtil.join(read3).releaseLock();
       TestUtil.join(write2, 2, TimeUnit.SECONDS);
       Assert.assertTrue(write2.isDone());
       Assert.assertFalse(read4.isDone());
@@ -394,7 +394,7 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
       Assert.assertFalse(read7.isDone());
       Assert.assertFalse(write4.isDone());
 
-      TestUtil.join(write2).releaseWriteLock();
+      TestUtil.join(write2).releaseLock();
       TestUtil.join(CompletableFuture.allOf(read4, read5, read6), 2, TimeUnit.SECONDS);
       Assert.assertTrue(read4.isDone());
       Assert.assertTrue(read5.isDone());
@@ -404,22 +404,22 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
       Assert.assertFalse(write4.isDone());
 
       Arrays.asList(read4, read5, read6)
-          .forEach(f -> f.thenAccept(readLock -> readLock.releaseReadLock()));
+          .forEach(f -> f.thenAccept(readLock -> readLock.releaseLock()));
       TestUtil.join(write3, 2, TimeUnit.SECONDS);
       Assert.assertTrue(write3.isDone());
       Assert.assertFalse(read7.isDone());
       Assert.assertFalse(write4.isDone());
 
-      TestUtil.join(write3).releaseWriteLock();
+      TestUtil.join(write3).releaseLock();
       TestUtil.join(read7, 2, TimeUnit.SECONDS);
       Assert.assertTrue(read7.isDone());
       Assert.assertFalse(write4.isDone());
 
-      TestUtil.join(read7).releaseReadLock();
+      TestUtil.join(read7).releaseLock();
       TestUtil.join(write4, 2, TimeUnit.SECONDS);
       Assert.assertTrue(write4.isDone());
 
-      TestUtil.join(write4).releaseWriteLock();
+      TestUtil.join(write4).releaseLock();
     }
   }
 
@@ -465,11 +465,11 @@ class RWLockAsAsyncLock implements AsyncLock {
 
   @Override
   public CompletionStage<LockToken> acquireLock() {
-    return this.rwlock.acquireWriteLock().thenApply(wt -> wt::releaseWriteLock);
+    return this.rwlock.acquireWriteLock().thenApply(wt -> wt::releaseLock);
   }
 
   @Override
   public Optional<LockToken> tryLock() {
-    return this.rwlock.tryWriteLock().map(wt -> wt::releaseWriteLock);
+    return this.rwlock.tryWriteLock().map(wt -> wt::releaseLock);
   }
 }

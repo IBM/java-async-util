@@ -52,7 +52,7 @@ package com.ibm.asyncutil.locks;
  *     try {
  *       return this.bits.get(idx) && this.bits.get(idx+1);
  *     } finally {
- *       lockToken.releaseReadLock();
+ *       lockToken.releaseLock();
  *     }
  *   }
  * }
