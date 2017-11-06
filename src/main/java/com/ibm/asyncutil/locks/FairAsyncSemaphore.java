@@ -241,7 +241,7 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
         final Node prev = node.getPrevious();
         // x.prev is nulled when x is COMPLETED (so we've encountered a benign race).
         // inherently all predecessors are done if the node is done
-        return prev == null ? StageSupport.voidFuture() : prev.getFuture();
+        return prev == null ? StageSupport.voidStage() : prev.getFuture();
       } else {
         // node wasn't reserved; the future can be claimed if there aren't enough permits
 
@@ -256,7 +256,7 @@ public class FairAsyncSemaphore implements AsyncSemaphore {
             updateTail(t, newNode);
             return node.getFuture();
           } else {
-            return StageSupport.voidFuture();
+            return StageSupport.voidStage();
           }
         }
       }

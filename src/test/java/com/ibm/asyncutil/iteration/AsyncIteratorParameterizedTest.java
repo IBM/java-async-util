@@ -483,7 +483,7 @@ public class AsyncIteratorParameterizedTest {
             @Override
             public CompletionStage<Void> close() {
               closed.set(true);
-              return StageSupport.voidFuture();
+              return StageSupport.voidStage();
             }
           }.take(10);
       final AsyncIterator<?> intermediateAi = this.intermediate.apply(ai);
@@ -506,7 +506,7 @@ public class AsyncIteratorParameterizedTest {
             @Override
             public CompletionStage<Void> close() {
               closed.set(true);
-              return StageSupport.voidFuture();
+              return StageSupport.voidStage();
             }
           }.take(10);
       final AsyncIterator<?> intermediateAi = this.intermediate.apply(ai);
@@ -574,7 +574,7 @@ public class AsyncIteratorParameterizedTest {
             @Override
             public CompletionStage<Void> close() {
               closed.set(true);
-              return StageSupport.voidFuture();
+              return StageSupport.voidStage();
             }
           }.take(10);
       final AsyncIterator<?> it2 = this.fn.apply(ai);

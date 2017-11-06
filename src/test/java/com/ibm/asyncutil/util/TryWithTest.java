@@ -71,7 +71,7 @@ public class TryWithTest {
     @Override
     public CompletionStage<Void> close() {
       this.closed = true;
-      return StageSupport.voidFuture();
+      return StageSupport.voidStage();
     }
 
     @Override

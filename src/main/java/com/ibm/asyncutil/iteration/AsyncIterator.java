@@ -311,7 +311,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    */
   @Override
   default CompletionStage<Void> close() {
-    return StageSupport.voidFuture();
+    return StageSupport.voidStage();
   }
 
   /**

@@ -35,7 +35,7 @@ public class StageSupport {
    *
    * @return An immediately completed {@link CompletionStage} of {@code Void}
    */
-  public static CompletionStage<Void> voidFuture() {
+  public static CompletionStage<Void> voidStage() {
     return CompletedStage.VOID;
   }
 

@@ -167,7 +167,7 @@ class AsyncIterators {
       this.backingIterator = backingIterator;
       this.executeAhead = executeAhead;
       this.closeFn = closeFn == null
-          ? u -> StageSupport.voidFuture()
+          ? u -> StageSupport.voidStage()
           : u -> AsyncIterators.convertSynchronousException(() -> closeFn.apply(u));
       this.mappingFn = mappingFn;
       this.pendingResults = new ArrayDeque<>(executeAhead);
@@ -219,7 +219,7 @@ class AsyncIterators {
         } else {
           // let our future be tied to the first result that was in the queue
           AsyncIterators.listen(poll, listener);
-          return StageSupport.voidFuture();
+          return StageSupport.voidStage();
         }
       });
     }
@@ -259,7 +259,7 @@ class AsyncIterators {
             .stream()
             .map(f -> f.thenCompose(
                 either -> either.fold(
-                    end -> StageSupport.voidFuture(),
+                    end -> StageSupport.voidStage(),
                     this.closeFn)))
             .collect(Collectors.toList());
 
@@ -277,7 +277,7 @@ class AsyncIterators {
                     } else if (backingCloseError != null) {
                       return StageSupport.<Void>exceptionalStage(backingCloseError);
                     }
-                    return StageSupport.voidFuture();
+                    return StageSupport.voidStage();
                   });
             });
       });

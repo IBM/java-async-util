@@ -36,6 +36,6 @@ class TerminatedEpoch implements AsyncEpoch {
 
   @Override
   public CompletionStage<Void> awaitCompletion() {
-    return StageSupport.voidFuture();
+    return StageSupport.voidStage();
   }
 }
