@@ -16,7 +16,7 @@ import java.util.concurrent.CompletionStage;
  */
 public class FairAsyncReadWriteLock implements AsyncReadWriteLock {
   /*
-   * Locks are maintained as a linked-queue of epoch nodes (see ObservableEpoch for documentation).
+   * Locks are maintained as a linked-queue of epoch nodes (see AsyncEpoch for documentation).
    * The current epoch, at the head of the list, allows readers to enter and exit until a write lock
    * is acquired, which terminates the epoch. Using the epoch mechanism ensures the following
    * properties: 1) exactly 1 writer can acquire a node for writing, sending other writers to the

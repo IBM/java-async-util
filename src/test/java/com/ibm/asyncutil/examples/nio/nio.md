@@ -329,18 +329,18 @@ Achieving this sequential pattern of concurrency is simply one style of asynchro
 
 ## Epochs
 
-One especially useful primitive in the locks package is `ObservableEpoch`. In all of our examples, we have not done a good job managing the resources of the connections we introduced, usually just leaving them open after we were finished with them. Let's modify the `Requester` object in the previous example to support closing the backing connection. A problem arises when we think about what should happen if user tries to initiate a request after close has been called. Furthermore, we'd also like to finish any requests from users who have already made requests before shutting down our connection. We can use `ObservableEpoch` to achieve these semantics.
+One especially useful primitive in the locks package is `AsyncEpoch`. In all of our examples, we have not done a good job managing the resources of the connections we introduced, usually just leaving them open after we were finished with them. Let's modify the `Requester` object in the previous example to support closing the backing connection. A problem arises when we think about what should happen if user tries to initiate a request after close has been called. Furthermore, we'd also like to finish any requests from users who have already made requests before shutting down our connection. We can use `AsyncEpoch` to achieve these semantics.
 
 ```java
 static class CloseableRequester implements AsyncCloseable {
-    final ObservableEpoch epoch;
+    final AsyncEpoch epoch;
     final Locks.Requester requester;
     private final AsynchronousSocketChannel channel;
 
     CloseableRequester(final AsynchronousSocketChannel channel) {
       this.channel = channel;
       this.requester = new Locks.Requester(channel);
-      this.epoch = ObservableEpoch.newEpoch();
+      this.epoch = AsyncEpoch.newEpoch();
     }
 
     /**

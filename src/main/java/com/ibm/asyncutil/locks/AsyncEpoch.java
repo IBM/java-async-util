@@ -15,7 +15,7 @@ import java.util.concurrent.CompletionStage;
  * terminated, new entrants are rejected from entering but the terminator waits for any remaining
  * participants to exit
  */
-public interface ObservableEpoch {
+public interface AsyncEpoch {
 
   /**
    * Attempt to secure a position in the active epoch, failing if it has already been terminated.
@@ -58,18 +58,18 @@ public interface ObservableEpoch {
   CompletionStage<Void> awaitCompletion();
 
   /**
-   * @return a new {@link ObservableEpoch} instance
+   * @return a new {@link AsyncEpoch} instance
    */
-  static ObservableEpoch newEpoch() {
+  static AsyncEpoch newEpoch() {
     // TODO implement hierarchical back-off epoch
-    return new ObservableEpochImpl();
+    return new AsyncEpochImpl();
   }
 
   /**
-   * @return a new {@link ObservableEpoch} instance which is already terminated. This is useful for
+   * @return a new {@link AsyncEpoch} instance which is already terminated. This is useful for
    *         initializing an epoch to something that isn't null, but won't allow anyone to enter it.
    */
-  static ObservableEpoch newTerminatedEpoch() {
+  static AsyncEpoch newTerminatedEpoch() {
     return TerminatedEpoch.INSTANCE;
   }
 
@@ -77,7 +77,7 @@ public interface ObservableEpoch {
    * A token signifying successful entry in the active epoch. This token must be
    * {@link EpochToken#close() closed} when its work has completed in order to exit the epoch.
    *
-   * @see ObservableEpoch
+   * @see AsyncEpoch
    */
   public interface EpochToken extends AutoCloseable {
     /**

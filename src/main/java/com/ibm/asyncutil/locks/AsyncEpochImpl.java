@@ -14,10 +14,10 @@ import com.ibm.asyncutil.util.StageSupport;
 
 
 /**
- * @see ObservableEpoch
+ * @see AsyncEpoch
  */
 @SuppressWarnings("serial")
-class ObservableEpochImpl extends AbstractSimpleEpoch implements ObservableEpoch {
+class AsyncEpochImpl extends AbstractSimpleEpoch implements AsyncEpoch {
   private final CompletableFuture<Boolean> future = new CompletableFuture<>();
 
   @Override

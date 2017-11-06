@@ -10,12 +10,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A base epoch implementation used to construct various epoch mechanisms, e.g.
- * {@link ObservableEpoch}
+ * {@link AsyncEpoch}
  */
 @SuppressWarnings("serial")
 abstract class AbstractSimpleEpoch
     // opportunistically extend AtomicInteger for state
-    extends AtomicInteger implements ObservableEpoch.EpochToken {
+    extends AtomicInteger implements AsyncEpoch.EpochToken {
 
   /*
    * Epoch state is maintained by an atomically adjusted integer. Termination sets the high bit of

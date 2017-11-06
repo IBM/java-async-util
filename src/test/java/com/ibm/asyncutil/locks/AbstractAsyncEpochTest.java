@@ -18,14 +18,14 @@ import org.junit.Test;
 
 import com.ibm.asyncutil.util.TestUtil;
 
-public abstract class AbstractObservableEpochTest {
-  abstract ObservableEpoch newEpoch();
+public abstract class AbstractAsyncEpochTest {
+  abstract AsyncEpoch newEpoch();
 
   @Test
   public void testBlockOnActors() {
-    final ObservableEpoch e = newEpoch();
+    final AsyncEpoch e = newEpoch();
 
-    final ObservableEpoch.EpochToken t1 = e.enter().orElseThrow(AssertionError::new);
+    final AsyncEpoch.EpochToken t1 = e.enter().orElseThrow(AssertionError::new);
     Assert.assertFalse(e.isTerminated());
 
     final AtomicReference<Boolean> firstTerminate = new AtomicReference<>(null);
@@ -46,17 +46,17 @@ public abstract class AbstractObservableEpochTest {
 
   @Test
   public void testManyEntrants() {
-    final ObservableEpoch e = newEpoch();
+    final AsyncEpoch e = newEpoch();
 
     final int count = 100_000;
-    final ObservableEpoch.EpochToken[] tokens = IntStream.range(0, count).parallel()
-        .mapToObj(ignored -> e.enter().get()).toArray(ObservableEpoch.EpochToken[]::new);
+    final AsyncEpoch.EpochToken[] tokens = IntStream.range(0, count).parallel()
+        .mapToObj(ignored -> e.enter().get()).toArray(AsyncEpoch.EpochToken[]::new);
 
     final AtomicBoolean completed = new AtomicBoolean(false);
     e.terminate().thenAccept(ignored -> completed.set(true));
 
     // terminate all but 1
-    Arrays.stream(tokens, 1, tokens.length).parallel().forEach(ObservableEpoch.EpochToken::close);
+    Arrays.stream(tokens, 1, tokens.length).parallel().forEach(AsyncEpoch.EpochToken::close);
     Assert.assertTrue(e.isTerminated());
     Assert.assertFalse(completed.get());
 
@@ -66,8 +66,8 @@ public abstract class AbstractObservableEpochTest {
 
   @Test(expected = IllegalStateException.class)
   public void testExceptionOnExcessClose() {
-    final ObservableEpoch e = newEpoch();
-    final ObservableEpoch.EpochToken t = e.enter().orElseThrow(AssertionError::new);
+    final AsyncEpoch e = newEpoch();
+    final AsyncEpoch.EpochToken t = e.enter().orElseThrow(AssertionError::new);
     t.close();
     t.close();
   }
@@ -76,7 +76,7 @@ public abstract class AbstractObservableEpochTest {
   public void testTerminateWithoutEntrants() {
     // never any entrants
     {
-      final ObservableEpoch e = newEpoch();
+      final AsyncEpoch e = newEpoch();
       Assert.assertFalse(e.isTerminated());
       Assert.assertTrue(e.terminate().toCompletableFuture().isDone());
       Assert.assertTrue(e.isTerminated());
@@ -85,9 +85,9 @@ public abstract class AbstractObservableEpochTest {
     }
     // all entrants exited
     {
-      final ObservableEpoch e = newEpoch();
+      final AsyncEpoch e = newEpoch();
       Assert.assertFalse(e.isTerminated());
-      final ObservableEpoch.EpochToken t = e.enter().orElseThrow(AssertionError::new);
+      final AsyncEpoch.EpochToken t = e.enter().orElseThrow(AssertionError::new);
       e.enter().orElseThrow(AssertionError::new).close();
       t.close();
       Assert.assertFalse(e.isTerminated());
@@ -102,7 +102,7 @@ public abstract class AbstractObservableEpochTest {
   @Test
   public void testAwaitCompletion() {
     {
-      final ObservableEpoch e = newEpoch();
+      final AsyncEpoch e = newEpoch();
       final CompletableFuture<Void> f = e.awaitCompletion().toCompletableFuture();
       Assert.assertFalse(f.isDone());
       TestUtil.join(e.terminate());
@@ -111,10 +111,10 @@ public abstract class AbstractObservableEpochTest {
     }
 
     {
-      final ObservableEpoch e = newEpoch();
+      final AsyncEpoch e = newEpoch();
       final CompletableFuture<Void> f = e.awaitCompletion().toCompletableFuture();
       Assert.assertFalse(f.isDone());
-      final ObservableEpoch.EpochToken token1 = e.enter().orElseThrow(AssertionError::new);
+      final AsyncEpoch.EpochToken token1 = e.enter().orElseThrow(AssertionError::new);
       Assert.assertFalse(f.isDone());
       Assert.assertFalse(e.awaitCompletion().toCompletableFuture().isDone());
       e.terminate();
@@ -126,11 +126,11 @@ public abstract class AbstractObservableEpochTest {
     }
 
     {
-      final ObservableEpoch e = newEpoch();
-      final ObservableEpoch.EpochToken token1 = e.enter().orElseThrow(AssertionError::new);
+      final AsyncEpoch e = newEpoch();
+      final AsyncEpoch.EpochToken token1 = e.enter().orElseThrow(AssertionError::new);
       final CompletableFuture<Void> f = e.awaitCompletion().toCompletableFuture();
       Assert.assertFalse(f.isDone());
-      final ObservableEpoch.EpochToken token2 = e.enter().orElseThrow(AssertionError::new);
+      final AsyncEpoch.EpochToken token2 = e.enter().orElseThrow(AssertionError::new);
       Assert.assertFalse(f.isDone());
       Assert.assertFalse(e.awaitCompletion().toCompletableFuture().isDone());
       e.terminate();
@@ -145,7 +145,7 @@ public abstract class AbstractObservableEpochTest {
     }
 
     {
-      final ObservableEpoch e = newEpoch();
+      final AsyncEpoch e = newEpoch();
       TestUtil.join(e.terminate());
       final Future<Void> f = e.awaitCompletion().toCompletableFuture();
       Assert.assertTrue(f.isDone());
@@ -155,7 +155,7 @@ public abstract class AbstractObservableEpochTest {
 
   @Test
   public void newTerminatedEpoch() {
-    final ObservableEpoch epoch = ObservableEpoch.newTerminatedEpoch();
+    final AsyncEpoch epoch = AsyncEpoch.newTerminatedEpoch();
     final String msg = "Expected epoch to already be termianted";
     Assert.assertTrue(msg, epoch.isTerminated());
     Assert.assertFalse(msg, epoch.enter().isPresent());
