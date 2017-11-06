@@ -22,28 +22,28 @@ import com.ibm.asyncutil.iteration.AsyncIterator.End;
 import com.ibm.asyncutil.util.Combinators;
 import com.ibm.asyncutil.util.Either;
 
-public class BufferedAsyncChannelTest extends AbstractAsyncChannelTest {
+public class BufferedAsyncQueueTest extends AbstractAsyncQueueTest {
   private final static int BUFFER = 5;
-  private BoundedAsyncChannel<Integer> channel;
+  private BoundedAsyncQueue<Integer> queue;
 
   @Before
-  public void makeChannel() {
-    this.channel = AsyncChannels.buffered(BUFFER);
+  public void makeQueue() {
+    this.queue = AsyncQueues.buffered(BUFFER);
   }
 
   @Override
   boolean send(final Integer c) {
-    return this.channel.send(c).toCompletableFuture().join();
+    return this.queue.send(c).toCompletableFuture().join();
   }
 
   @Override
   AsyncIterator<Integer> consumer() {
-    return this.channel;
+    return this.queue;
   }
 
   @Override
   void closeImpl() {
-    this.channel.terminate();
+    this.queue.terminate();
   }
 
 
@@ -51,7 +51,7 @@ public class BufferedAsyncChannelTest extends AbstractAsyncChannelTest {
   public void bufferedTest() {
     // first five futures should be done immediately
     IntStream.range(0, BUFFER)
-        .mapToObj(i -> this.channel.send(i).toCompletableFuture())
+        .mapToObj(i -> this.queue.send(i).toCompletableFuture())
         .forEach(f -> {
           Assert.assertTrue(f.isDone());
           Assert.assertTrue(f.join());
@@ -59,7 +59,7 @@ public class BufferedAsyncChannelTest extends AbstractAsyncChannelTest {
 
     // next 5 should all wait
     final List<CompletableFuture<Boolean>> collect = IntStream.range(0, BUFFER)
-        .mapToObj(this.channel::send)
+        .mapToObj(this.queue::send)
         .map(CompletionStage::toCompletableFuture)
         .map(f -> {
           Assert.assertFalse(f.isDone());
@@ -69,9 +69,9 @@ public class BufferedAsyncChannelTest extends AbstractAsyncChannelTest {
 
     for (int i = 0; i < BUFFER; i++) {
       final CompletableFuture<Either<End, Integer>> fut =
-          this.channel.nextStage().toCompletableFuture();
+          this.queue.nextStage().toCompletableFuture();
 
-      // could change with impl, but with a full channel, futures should already be completed
+      // could change with impl, but with a full queue, futures should already be completed
       Assert.assertTrue(fut.isDone());
       // not closed
       Assert.assertTrue(fut.join().isRight());
@@ -82,15 +82,15 @@ public class BufferedAsyncChannelTest extends AbstractAsyncChannelTest {
       }
     }
 
-    this.channel.terminate();
+    this.queue.terminate();
     for (int i = 0; i < BUFFER * 5; i++) {
       if (i % 2 == 0) {
-        this.channel.terminate();
+        this.queue.terminate();
       } else {
-        this.channel.send(1);
+        this.queue.send(1);
       }
     }
-    this.channel.consume().toCompletableFuture().join();
+    this.queue.consume().toCompletableFuture().join();
   }
 
   @Test
@@ -98,7 +98,7 @@ public class BufferedAsyncChannelTest extends AbstractAsyncChannelTest {
     // accepted right away
     final List<CompletableFuture<Boolean>> immediate = IntStream
         .range(0, BUFFER)
-        .mapToObj(this.channel::send)
+        .mapToObj(this.queue::send)
         .map(CompletionStage::toCompletableFuture)
         .collect(Collectors.toList());
 
@@ -107,24 +107,24 @@ public class BufferedAsyncChannelTest extends AbstractAsyncChannelTest {
 
     final List<CompletableFuture<Boolean>> delayeds = IntStream
         .range(0, BUFFER)
-        .mapToObj(i -> this.channel.send(i + BUFFER))
+        .mapToObj(i -> this.queue.send(i + BUFFER))
         .map(CompletionStage::toCompletableFuture)
         .collect(Collectors.toList());
     Assert.assertFalse(delayeds.stream().map(CompletableFuture::isDone).anyMatch(b -> b));
 
     // terminate
-    final CompletableFuture<Void> closeFuture = this.channel.terminate().toCompletableFuture();
+    final CompletableFuture<Void> closeFuture = this.queue.terminate().toCompletableFuture();
 
     Assert.assertFalse(delayeds.stream().map(Future::isDone).anyMatch(b -> b));
     Assert.assertFalse(closeFuture.isDone());
 
     // send after terminate
-    final CompletableFuture<Boolean> rejected = this.channel.send(3).toCompletableFuture();
+    final CompletableFuture<Boolean> rejected = this.queue.send(3).toCompletableFuture();
 
     for (int i = 0; i < BUFFER; i++) {
       // consume one item
       Assert.assertEquals(i,
-          this.channel.nextStage().toCompletableFuture().join().right().get().intValue());
+          this.queue.nextStage().toCompletableFuture().join().right().get().intValue());
       // delayeds less than item should be done
       Assert.assertTrue(delayeds.stream().limit(i + 1).map(Future::isDone).allMatch(b -> b));
       Assert
@@ -144,9 +144,9 @@ public class BufferedAsyncChannelTest extends AbstractAsyncChannelTest {
     // consume delayed results
     for (int i = BUFFER; i < 2 * BUFFER; i++) {
       Assert.assertEquals(i,
-          this.channel.nextStage().toCompletableFuture().join().right().get().intValue());
+          this.queue.nextStage().toCompletableFuture().join().right().get().intValue());
     }
-    Assert.assertFalse(this.channel.nextStage().toCompletableFuture().join().isRight());
+    Assert.assertFalse(this.queue.nextStage().toCompletableFuture().join().isRight());
     Assert.assertTrue(closeFuture.isDone());
     Assert.assertTrue(rejected.isDone());
     Assert.assertFalse(rejected.join());
@@ -154,7 +154,7 @@ public class BufferedAsyncChannelTest extends AbstractAsyncChannelTest {
 
   @Override
   Optional<Integer> poll() {
-    return this.channel.poll();
+    return this.queue.poll();
   }
 
 }

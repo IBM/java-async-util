@@ -37,15 +37,15 @@ CompletionStage<Integer> sum = AsyncIterator
 ```
 This will make one `getWidget` request at a time, running the rest of the pipeline operations each time a widget is generated on whatever thread processes the response required to generate the widget. When the widget stream is finished (in this case, after recieving 100 red widgets), the CompletionStage `sum` will complete with the result of the reduction operation. `AsyncIterators` have many other capabilities; if getting the weight required asynchronity we could use `thenCompose` instead of `thenApply`, if we needed to collect the weights into a collection we could use `collect(Collector)`, etc. 
 
-It's often limiting to only be able to produce results for consumption iteratively. `AsyncChannel` provides ways to produce these values in parallel without any blocking synchronization:
+It's often limiting to only be able to produce results for consumption iteratively. `AsyncQueue` provides ways to produce these values in parallel without any blocking synchronization:
 ```java
 // implements AsyncIterator
-AsyncChannel widgets = AsyncChannels.unbounded();
+AsyncQueue widgets = AsyncQueues.unbounded();
 
 // dedicate NUM_THREADS threads to producing widgets
 for (int i = 0; i < NUM_THREADS; i++) {
   executor.submit(() -> {
-    // send returns whether the channel is still accepting values
+    // send returns whether the queue is still accepting values
     while (widgets.send(expensiveComputeWidget());
   });
 }
@@ -53,7 +53,7 @@ for (int i = 0; i < NUM_THREADS; i++) {
 // create a pipeline the same way as before
 CompletionStage<Integer> sum = widgets.filter(...)...;
 
-// once we get our sum, we can terminate the channel, stopping widget production
+// once we get our sum, we can terminate the queue, stopping widget production
 sum.thenRun(() -> widgets.terminate());
 ```
 

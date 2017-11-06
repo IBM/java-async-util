@@ -10,33 +10,33 @@ import java.util.Optional;
 
 import org.junit.Before;
 
-public class AsyncChannelTest extends AbstractAsyncChannelTest {
+public class AsyncQueueTest extends AbstractAsyncQueueTest {
 
-  private AsyncChannel<Integer> channel;
+  private AsyncQueue<Integer> queue;
 
   @Before
-  public void makeChannel() {
-    this.channel = AsyncChannels.unbounded();
+  public void makeQueue() {
+    this.queue = AsyncQueues.unbounded();
   }
 
   @Override
   boolean send(final Integer c) {
-    return this.channel.send(c);
+    return this.queue.send(c);
   }
 
   @Override
   AsyncIterator<Integer> consumer() {
-    return this.channel;
+    return this.queue;
   }
 
   @Override
   void closeImpl() {
-    this.channel.terminate();
+    this.queue.terminate();
   }
 
   @Override
   Optional<Integer> poll() {
-    return this.channel.poll();
+    return this.queue.poll();
   }
 
 }

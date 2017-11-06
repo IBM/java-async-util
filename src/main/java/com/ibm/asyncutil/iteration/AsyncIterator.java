@@ -1474,7 +1474,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
       return AsyncIterator.empty();
     }
     final AtomicInteger count = new AtomicInteger();
-    final AsyncChannel<Either<Throwable, T>> channel = AsyncChannels.unbounded();
+    final AsyncQueue<Either<Throwable, T>> channel = AsyncQueues.unbounded();
     for (final CompletionStage<T> future : stages) {
       future.whenComplete((t, ex) -> {
         final Either<Throwable, T> toSend = ex != null ? Either.left(ex) : Either.right(t);
