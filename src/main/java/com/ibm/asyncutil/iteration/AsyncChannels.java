@@ -85,10 +85,9 @@ public final class AsyncChannels {
    *
    * <p>
    * While the Channel is open:
-   * <li>After any call to send or nextFuture completes, there is exactly one uncompleted future in
+   * <li>After any call to send or nextStage completes, there is exactly one uncompleted future in
    * the list
-   * <li>After any call to send or nextFuture completes, the uncompleted future is pointed at by
-   * head
+   * <li>After any call to send or nextStage completes, the uncompleted future is pointed at by head
    *
    * <p>
    * The list starts with an initial uncompleted future. When send is called, the sender attempts to
@@ -146,7 +145,7 @@ public final class AsyncChannels {
     }
 
     @Override
-    public CompletableFuture<Either<End, T>> nextFuture() {
+    public CompletableFuture<Either<End, T>> nextStage() {
       // whenever we get a value from the head future, we should unlink that node, and move the head
       // pointer forward. We know head.next must exist, because a node's next value is always
       // updated before completion.
@@ -229,9 +228,9 @@ public final class AsyncChannels {
     @Override
     // ask for a future from the backing channel, release permit on completion since we
     // dequeued something.
-    public CompletionStage<Either<End, T>> nextFuture() {
+    public CompletionStage<Either<End, T>> nextStage() {
       return this.backingChannel
-          .nextFuture()
+          .nextStage()
           .thenApply(res -> {
             // only need to release if the backing channel is open. after it is closed, senders
             // will

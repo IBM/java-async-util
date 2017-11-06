@@ -46,8 +46,8 @@ public class AsyncIteratorCloseTest {
     }
 
     @Override
-    public CompletionStage<Either<End, Integer>> nextFuture() {
-      return this.backing.nextFuture();
+    public CompletionStage<Either<End, Integer>> nextStage() {
+      return this.backing.nextStage();
     }
 
     @Override
@@ -72,7 +72,7 @@ public class AsyncIteratorCloseTest {
     final CloseableIterator it3 = new CloseableIterator(AsyncIterator.range(0, 3, 1));
     final AsyncIterator<Integer> concat =
         AsyncIterator.concat(Arrays.asList(it1, it2, it3).iterator());
-    concat.nextFuture().toCompletableFuture().join();
+    concat.nextStage().toCompletableFuture().join();
     Assert.assertFalse(it1.closed || it2.closed || it3.closed);
     concat.close().toCompletableFuture().join();
     Assert.assertTrue(it1.closed);
@@ -108,17 +108,17 @@ public class AsyncIteratorCloseTest {
         AsyncIterator.concat(Arrays.asList(it1, it2, it3).iterator());
 
     Assert.assertEquals(
-        1, concat.nextFuture().toCompletableFuture().join().right().get().intValue());
+        1, concat.nextStage().toCompletableFuture().join().right().get().intValue());
     Assert.assertEquals(
-        2, concat.nextFuture().toCompletableFuture().join().right().get().intValue());
+        2, concat.nextStage().toCompletableFuture().join().right().get().intValue());
     try {
-      concat.nextFuture().toCompletableFuture().join();
+      concat.nextStage().toCompletableFuture().join();
       Assert.fail("exception expected");
     } catch (final CompletionException e) {
     }
     // we should be able to ignore the close exception
     Assert.assertEquals(
-        3, concat.nextFuture().toCompletableFuture().join().right().get().intValue());
+        3, concat.nextStage().toCompletableFuture().join().right().get().intValue());
     concat.close().toCompletableFuture().join();
     Assert.assertTrue(it1.closed && it2.closed && it3.closed);
   }
@@ -136,11 +136,11 @@ public class AsyncIteratorCloseTest {
             });
 
     for (int i = 0; i < 4; i++) {
-      flattend.nextFuture().toCompletableFuture().join();
+      flattend.nextStage().toCompletableFuture().join();
     }
     Assert.assertTrue(closeables.get(0).closed);
     for (int i = 0; i < 3; i++) {
-      flattend.nextFuture().toCompletableFuture().join();
+      flattend.nextStage().toCompletableFuture().join();
     }
     Assert.assertTrue(closeables.get(1).closed);
 
@@ -159,7 +159,7 @@ public class AsyncIteratorCloseTest {
         final CloseableIterator it2 =
             new CloseableIterator(AsyncIterator.range(0, 3, 1), it2Failed ? testException : null);
         final AsyncIterator<Integer> zipped = AsyncIterator.zipWith(it1, it2, (i, j) -> i + j);
-        zipped.nextFuture().toCompletableFuture().join();
+        zipped.nextStage().toCompletableFuture().join();
         final boolean expectFailure = it1Failed || it2Failed;
         try {
           zipped.close().toCompletableFuture().join();
@@ -188,7 +188,7 @@ public class AsyncIteratorCloseTest {
               return StageSupport.completedStage(closeable);
             },
             5);
-    final CompletionStage<Either<AsyncIterator.End, Integer>> first = ahead.nextFuture();
+    final CompletionStage<Either<AsyncIterator.End, Integer>> first = ahead.nextStage();
     closeablesGenerated.await();
     // 6: 5 eagerly evaluated items, + 1 we evaluated
     Assert.assertEquals(6, closeables.size());
@@ -196,7 +196,7 @@ public class AsyncIteratorCloseTest {
 
     // if we consume the first iterator we generated (3 elements) it should be closed
     for (int i = 0; i < 3; i++) {
-      ahead.nextFuture().toCompletableFuture().join();
+      ahead.nextStage().toCompletableFuture().join();
     }
     Assert.assertTrue(closeables.getFirst().closed);
 
@@ -219,7 +219,7 @@ public class AsyncIteratorCloseTest {
           return StageSupport.completedStage(objects.size());
         }, 5);
 
-    final CompletionStage<Either<AsyncIterator.End, Integer>> first = ahead.nextFuture();
+    final CompletionStage<Either<AsyncIterator.End, Integer>> first = ahead.nextStage();
     latch.await();
     // 6: 5 eagerly evaluated items, + 1 we evaluated
     Assert.assertEquals(6, objects.size());
@@ -235,12 +235,12 @@ public class AsyncIteratorCloseTest {
     final AsyncIterator<Integer> ahead =
         it.thenComposeAhead(i -> StageSupport.completedStage(i + 1), 5);
 
-    final CompletionStage<Either<AsyncIterator.End, Integer>> first = ahead.nextFuture();
+    final CompletionStage<Either<AsyncIterator.End, Integer>> first = ahead.nextStage();
 
     TestUtil.join(first);
     TestUtil.join(ahead.close());
     try {
-      TestUtil.join(ahead.nextFuture());
+      TestUtil.join(ahead.nextStage());
     } catch (final CompletionException e) {
       throw e.getCause();
     }

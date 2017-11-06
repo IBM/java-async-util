@@ -47,16 +47,16 @@ import com.ibm.asyncutil.util.StageSupport;
  * AsyncIterator, it almost certainly won't do what you want it to do.
  *
  * <p>
- * Implementors of the interface need only implement {@link #nextFuture()}. Alternatively, the
- * static methods {@link #generate(Supplier)}, {@link #supply(Supplier)}, and
+ * Implementors of the interface need only implement {@link #nextStage()}. Alternatively, the static
+ * methods {@link #generate(Supplier)}, {@link #supply(Supplier)}, and
  * {@link #unfold(Object, Function)} can be used to create new AsyncIterators from functions that
  * generate iteration elements.
  *
  * <p>
- * A note on thread safety: This class makes no assumption that {@link #nextFuture()} is thread
- * safe! Many methods that generate transformed iterators assume that nextFuture will not be called
- * concurrently, and even stronger, that nextFuture won't be called again until the previous future
- * returned by nextFuture has completed.
+ * A note on thread safety: This class makes no assumption that {@link #nextStage()} is thread safe!
+ * Many methods that generate transformed iterators assume that nextStage will not be called
+ * concurrently, and even stronger, that nextStage won't be called again until the previous stage
+ * returned by nextStage has completed.
  *
  * <p>
  * Parallelization may still be accomplished using the <i>partially eager</i> methods described
@@ -64,10 +64,10 @@ import com.ibm.asyncutil.util.StageSupport;
  * parallel, <b>not consuming</b> values in parallel.
  *
  * <p>
- * To implement an AsyncIterator you must only implement the {@link #nextFuture()} method- however,
- * it is recommended that users avoid actually using nextFuture to consume the results of iteration.
+ * To implement an AsyncIterator you must only implement the {@link #nextStage()} method- however,
+ * it is recommended that users avoid actually using nextStage to consume the results of iteration.
  * It is less expressive and it can also be error prone; it is easy to cause a stack overflow by
- * incorrectly recursing on calls to nextFuture. You should prefer to use the other higher level
+ * incorrectly recursing on calls to nextStage. You should prefer to use the other higher level
  * methods on this interface.
  *
  * <p>
@@ -155,14 +155,14 @@ import com.ibm.asyncutil.util.StageSupport;
  * recovered from by using {@link #exceptionally(Function)}, however this won't recover exceptions
  * that are produced downstream. A daring user may have applications where they wish to manually
  * iterate past exceptions without converting them. This can be accomplished by using
- * {@link #nextFuture()} directly, see the docs there for more details.
+ * {@link #nextStage()} directly, see the docs there for more details.
  *
  * <p>
  * Unless otherwise noted, methods on this interface are free to throw {@link NullPointerException}
  * if any of the provided arguments are {@code null}.
  *
  * <p>
- * The behavior of an AsyncIterator if {@link #nextFuture()} is called after the end of iteration
+ * The behavior of an AsyncIterator if {@link #nextStage()} is called after the end of iteration
  * marker is returned is left to the implementation. You may ensure that all subsequent calls always
  * return the end marker by using {@link #fuse()}.
  *
@@ -212,7 +212,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
      *         instance
      */
     @SuppressWarnings("unchecked")
-    public static <T> CompletionStage<Either<AsyncIterator.End, T>> endFuture() {
+    public static <T> CompletionStage<Either<AsyncIterator.End, T>> endStage() {
       return (CompletionStage<Either<AsyncIterator.End, T>>) END_FUTURE;
     }
 
@@ -235,36 +235,36 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * <pre>
    * {@code
    * // illegal
-   * pool.execute(() -> nextFuture())
-   * pool.execute(() -> nextFuture())
+   * pool.execute(() -> nextStage())
+   * pool.execute(() -> nextStage())
    *
    * // just as illegal
-   * f1 = nextFuture();
-   * f2 = nextFuture();
+   * f1 = nextStage();
+   * f2 = nextStage();
    *
    * // good
-   * nextFuture().thenCompose(t -> nextFuture());
+   * nextStage().thenCompose(t -> nextStage());
    * }
    * </pre>
    *
    * Though this is not a terminal method, if a terminal method has been called it is no longer safe
-   * to call this method. When nextFuture returns {@link End}, the iterator has no more elements.
-   * After an iterator emits an {@link End} indicator, the result of subsequent calls to nextFuture
+   * to call this method. When nextStage returns {@link End}, the iterator has no more elements.
+   * After an iterator emits an {@link End} indicator, the result of subsequent calls to nextStage
    * is undefined.
    *
    * <p>
    * An AsyncIterator may be capable of producing normally completing stages after having producing
-   * exceptionally completed stages. nextFuture is unique in that it can safely continue to be
-   * called even after a returned stage completes exceptionally, whereas all terminal operations
-   * short circuit when encountering an exception. If a user wishes to continue iteration after
-   * exception, they must use nextFuture directly, or install exception recovery with
+   * exceptionally completed stages. nextStage is unique in that it can safely continue to be called
+   * even after a returned stage completes exceptionally, whereas all terminal operations short
+   * circuit when encountering an exception. If a user wishes to continue iteration after exception,
+   * they must use nextStage directly, or install exception recovery with
    * {@link #exceptionally(Function)}.
    *
    * @return A {@link CompletionStage} of the next element for iteration held in the
    *         {@link Either#right()} position, or an instance of {@link End} held in the
    *         {@link Either#left()} position indicating the end of iteration.
    */
-  CompletionStage<Either<End, T>> nextFuture();
+  CompletionStage<Either<End, T>> nextStage();
 
   /**
    * Relinquishes any resources associated with this iterator.
@@ -272,7 +272,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * <p>
    * This method should be overridden if manual resource management is required, the default
    * implementation does nothing. This method is <b>not</b> thread safe, and must not be called
-   * concurrently with calls to {@link #nextFuture()}. This method is not automatically called by
+   * concurrently with calls to {@link #nextStage()}. This method is not automatically called by
    * terminal methods, and must be explicitly called after iteration is complete if the underlying
    * iterator has resources to release. Similar to the situation with {@link Stream#close()},
    * because the common case requires no resources the user should only call close if it is possible
@@ -489,7 +489,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * {@link #close()} is called on that iterator. If {@link #close()} produces an exception, an
    * exceptional stage will be produced in the returned iterator. If {@link #close()} exceptions
    * should be ignored, they should either be squashed in the iterators produced by {@code fn}, or
-   * the consumer may use manual {@link #nextFuture()} iteration to continue past exceptions on the
+   * the consumer may use manual {@link #nextStage()} iteration to continue past exceptions on the
    * returned iterator. It is still necessary to {@link #close()} the returned iterator, as the last
    * AsyncIterator produced by {@code fn} may have only been partially consumed and would not be
    * closed.
@@ -518,9 +518,9 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * {@link #close()} is called on that iterator. If {@link #close()} produces an exception, an
    * exceptional stage will be produced in the handled iterator. If {@link #close()} exceptions
    * should be ignored, they should either be squashed in the input iterators or the consumer may
-   * use manual {@link #nextFuture()} iteration to continue past exceptions. It is still necessary
-   * to {@link #close()} the returned iterator; this will close {@code this} iterator as well as the
-   * up to {@code executeAhead} iterators that have been eagerly produced by {@code fn}. The
+   * use manual {@link #nextStage()} iteration to continue past exceptions. It is still necessary to
+   * {@link #close()} the returned iterator; this will close {@code this} iterator as well as the up
+   * to {@code executeAhead} iterators that have been eagerly produced by {@code fn}. The
    * {@link CompletionStage} returned from calling {@link #close()} on the returned iterator will
    * not complete until the close completes on all eagerly produced iterators.
    *
@@ -541,7 +541,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
     Objects.requireNonNull(fn);
     final Function<Either<End, T>, CompletionStage<Either<End, AsyncIterator<U>>>> eitherF =
         nt -> nt.fold(
-            stop -> End.endFuture(),
+            stop -> End.endStage(),
             t -> fn.apply(t).thenApply(Either::right));
 
     final AsyncIterator<AsyncIterator<U>> nestedAsyncIterator =
@@ -576,7 +576,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
 
     // apply user function and wrap future result in a Either
     final Function<Either<End, T>, CompletionStage<Either<End, U>>> eitherF =
-        nt -> nt.fold(stop -> End.endFuture(),
+        nt -> nt.fold(stop -> End.endStage(),
             t -> fn.apply(t).thenApply(Either::right));
 
     return new AsyncIterators.PartiallyEagerAsyncIterator<>(this, executeAhead, eitherF, null);
@@ -602,13 +602,13 @@ public interface AsyncIterator<T> extends AsyncCloseable {
 
     return new AsyncIterator<T>() {
       @Override
-      public CompletionStage<Either<End, T>> nextFuture() {
+      public CompletionStage<Either<End, T>> nextStage() {
         return AsyncIterator.this
-            .nextFuture()
+            .nextStage()
             .thenCompose(
                 t -> AsyncTrampoline.asyncWhile(
                     shouldKeepLooking,
-                    c -> AsyncIterator.this.nextFuture(),
+                    c -> AsyncIterator.this.nextStage(),
                     t));
       }
 
@@ -666,11 +666,11 @@ public interface AsyncIterator<T> extends AsyncCloseable {
       int count = 0;
 
       @Override
-      public CompletionStage<Either<End, T>> nextFuture() {
+      public CompletionStage<Either<End, T>> nextStage() {
         if (++this.count > n) {
-          return End.endFuture();
+          return End.endStage();
         } else {
-          return AsyncIterator.this.nextFuture();
+          return AsyncIterator.this.nextStage();
         }
       }
 
@@ -697,9 +697,9 @@ public interface AsyncIterator<T> extends AsyncCloseable {
       boolean predicateFailed = false;
 
       @Override
-      public CompletionStage<Either<End, T>> nextFuture() {
+      public CompletionStage<Either<End, T>> nextStage() {
         return AsyncIterator.this
-            .nextFuture()
+            .nextStage()
             .thenApply(
                 either -> either.flatMap(
                     t -> {
@@ -736,8 +736,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   default AsyncIterator<T> exceptionally(final Function<Throwable, ? extends T> fn) {
     return new AsyncIterator<T>() {
       @Override
-      public CompletionStage<Either<End, T>> nextFuture() {
-        return AsyncIterators.convertSynchronousException(AsyncIterator.this::nextFuture)
+      public CompletionStage<Either<End, T>> nextStage() {
+        return AsyncIterators.convertSynchronousException(AsyncIterator.this::nextStage)
             .exceptionally(ex -> Either.right(fn.apply(ex)));
       }
 
@@ -750,26 +750,26 @@ public interface AsyncIterator<T> extends AsyncCloseable {
 
   /**
    * Fuses the iterator to the {@link End} result after iteration has stopped. It is normally
-   * undefined behavior to call {@link #nextFuture()} after {@link End} has already been returned.
-   * On a fused iterator, nextFuture will just continue to return End.
+   * undefined behavior to call {@link #nextStage()} after {@link End} has already been returned. On
+   * a fused iterator, nextStage will just continue to return End.
    *
    * <p>
    * This is a lazy <i> intermediate </i> method.
    *
-   * @return An iterator where it is safe to call {@link #nextFuture()} after {@link End} has
-   *         already been returned
+   * @return An iterator where it is safe to call {@link #nextStage()} after {@link End} has already
+   *         been returned
    */
   default AsyncIterator<T> fuse() {
     return new AsyncIterator<T>() {
       boolean end = false;
 
       @Override
-      public CompletionStage<Either<End, T>> nextFuture() {
+      public CompletionStage<Either<End, T>> nextStage() {
         if (this.end) {
-          return End.endFuture();
+          return End.endStage();
         }
         return AsyncIterator.this
-            .nextFuture()
+            .nextStage()
             .thenApply(
                 either -> {
                   either.forEach(endMarker -> this.end = true, t -> {
@@ -816,8 +816,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
       final BiPredicate<? super A, ? super T> shouldAddToBatch) {
     return new AsyncIterator<R>() {
       /**
-       * This field holds the result of the latest call to the underlying iterator's 'nextFuture';
-       * At the start of the batching iterator's 'nextFuture' method, this holds the value which was
+       * This field holds the result of the latest call to the underlying iterator's 'nextStage'; At
+       * the start of the batching iterator's 'nextStage' method, this holds the value which was
        * rejected by the last 'addToBatch' call (or empty if the iterator terminated, or null if
        * this is the first call). If non-End, this rejected value should be tested again in the next
        * batch. If End, iteration should terminate
@@ -825,11 +825,11 @@ public interface AsyncIterator<T> extends AsyncCloseable {
       private Either<End, T> lastAdvance = null;
 
       @Override
-      public CompletionStage<Either<End, R>> nextFuture() {
+      public CompletionStage<Either<End, R>> nextStage() {
         // the first call has no preceding value to start the batch, so draw from iter
         return this.lastAdvance == null
             ? AsyncIterator.this
-                .nextFuture()
+                .nextStage()
                 .thenCompose(
                     eitherT -> {
                       this.lastAdvance = eitherT;
@@ -845,7 +845,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
 
       private CompletionStage<Either<End, R>> collectBatch() {
         return this.lastAdvance.fold(
-            end -> End.endFuture(),
+            end -> End.endStage(),
             ignoredT -> {
               final A batch = collector.supplier().get();
 
@@ -859,7 +859,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
                               throw new IllegalStateException();
                             },
                             t -> t));
-                    return AsyncIterator.this.nextFuture();
+                    return AsyncIterator.this.nextStage();
                   },
                   this.lastAdvance)
                   .thenApply(
@@ -1045,7 +1045,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * @return a {@link CompletionStage} that is completed when consumption is finished
    */
   default CompletionStage<Void> consume() {
-    return AsyncTrampoline.asyncWhile(() -> nextFuture().thenApply(Either::isRight));
+    return AsyncTrampoline.asyncWhile(() -> nextStage().thenApply(Either::isRight));
   }
 
   /**
@@ -1100,7 +1100,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    */
   default CompletionStage<Void> forEach(final Consumer<? super T> action) {
     return AsyncTrampoline.asyncWhile(
-        () -> nextFuture()
+        () -> nextStage()
             .thenApply(
                 eitherT -> {
                   eitherT.forEach(
@@ -1123,7 +1123,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    */
   default CompletionStage<Optional<T>> find(final Predicate<? super T> predicate) {
     final CompletionStage<Either<End, T>> future = AsyncIterators
-        .convertSynchronousException(this.filter(predicate)::nextFuture);
+        .convertSynchronousException(this.filter(predicate)::nextStage);
     return future.thenApply((final Either<End, T> e) -> e.right());
   }
 
@@ -1143,7 +1143,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * Once all elements from an input AsyncIterator have been consumed, {@link #close()} is called on
    * that iterator. If {@link #close()} produces an exception, an exceptional stage will be produced
    * in the handled iterator. If {@link #close()} exceptions should be ignored, they should either
-   * be squashed in the input iterators or the consumer may use manual {@link #nextFuture()}
+   * be squashed in the input iterators or the consumer may use manual {@link #nextStage()}
    * iteration to continue past exceptions. It is still necessary to {@link #close()} the returned
    * iterator, as the last used AsyncIterator may only be partially consumed.
    *
@@ -1159,7 +1159,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
       private AsyncIterator<T> current = asyncIterators.next();
 
       @Override
-      public CompletionStage<Either<End, T>> nextFuture() {
+      public CompletionStage<Either<End, T>> nextStage() {
         return AsyncIterators.asyncWhileAsyncInitial(
             et -> !et.isRight() && asyncIterators.hasNext(),
             /*
@@ -1176,9 +1176,9 @@ public interface AsyncIterator<T> extends AsyncCloseable {
                       throwable == null
                           ? asyncIterators.next()
                           : AsyncIterators.errorOnce(throwable);
-                  return this.current.nextFuture();
+                  return this.current.nextStage();
                 }),
-            this.current.nextFuture());
+            this.current.nextStage());
       }
 
       @Override
@@ -1212,7 +1212,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * Once all elements from an input AsyncIterator have been consumed, {@link #close()} is called on
    * that iterator. If {@link #close()} produces an exception, an exceptional stage will be produced
    * in the returned iterator. If {@link #close()} exceptions should be ignored, they should either
-   * be squashed in the input iterators or the consumer may use manual {@link #nextFuture()}
+   * be squashed in the input iterators or the consumer may use manual {@link #nextStage()}
    * iteration to continue past exceptions. It is still necessary to {@link #close()} the returned
    * iterator; this will close both {@code asyncIterators} as well as the last used AsyncIterator if
    * it was only partially consumed.
@@ -1227,21 +1227,21 @@ public interface AsyncIterator<T> extends AsyncCloseable {
       AsyncIterator<T> curr = AsyncIterator.empty();
 
       @Override
-      public CompletionStage<Either<End, T>> nextFuture() {
+      public CompletionStage<Either<End, T>> nextStage() {
         if (this.curr == null) {
           // out of iterators
-          return End.endFuture();
+          return End.endStage();
         }
 
         /*
-         * on each iteration call nextFuture. If it's empty, we should set curr to the next
-         * iterator. If we are out of iterators, curr becomes null, and we stop iterating
+         * on each iteration call nextStage. If it's empty, we should set curr to the next iterator.
+         * If we are out of iterators, curr becomes null, and we stop iterating
          */
         return AsyncIterators.asyncWhileAsyncInitial(
             either -> !either.isRight() && this.curr != null,
             either -> {
               /*
-               * if the result from the last call to nextFuture() is empty, grab another
+               * if the result from the last call to nextStage() is empty, grab another
                * AsyncIterator out of asyncIterators and set curr
                */
               return either.fold(
@@ -1258,7 +1258,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
                          */
                         AsyncIterators.convertSynchronousException(this.curr::close),
                         (t, throwable) -> throwable == null
-                            ? asyncIterators.nextFuture()
+                            ? asyncIterators.nextStage()
                             : StageSupport.completedStage(
                                 Either.right(AsyncIterators.errorOnce(throwable))))
                         .thenCompose(nextIt -> {
@@ -1267,13 +1267,13 @@ public interface AsyncIterator<T> extends AsyncCloseable {
 
                           // return the next future from the newly updated curr
                           return this.curr != null
-                              ? this.curr.nextFuture()
-                              : End.<T>endFuture();
+                              ? this.curr.nextStage()
+                              : End.<T>endStage();
                         });
                   },
                   t -> StageSupport.completedStage(either));
             },
-            this.curr.nextFuture());
+            this.curr.nextStage());
       }
 
       @Override
@@ -1316,12 +1316,12 @@ public interface AsyncIterator<T> extends AsyncCloseable {
     // once all futures are complete, if all are nonempty, then apply fn to the arg
     return new AsyncIterator<V>() {
       @Override
-      public CompletionStage<Either<End, V>> nextFuture() {
-        // call nextFuture before checking for an exception
+      public CompletionStage<Either<End, V>> nextStage() {
+        // call nextStage before checking for an exception
         final CompletionStage<Either<End, T>> tFuture =
-            AsyncIterators.convertSynchronousException(tIt::nextFuture);
+            AsyncIterators.convertSynchronousException(tIt::nextStage);
         final CompletionStage<Either<End, U>> uFuture =
-            AsyncIterators.convertSynchronousException(uIt::nextFuture);
+            AsyncIterators.convertSynchronousException(uIt::nextStage);
         return tFuture.thenCombine(uFuture, (et, eu) -> AsyncIterators.zipWith(et, eu, fn));
       }
 
@@ -1368,7 +1368,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
       Either<End, T> curr = Either.right(t);
 
       @Override
-      public CompletionStage<Either<End, T>> nextFuture() {
+      public CompletionStage<Either<End, T>> nextStage() {
         final Either<End, T> prev = this.curr;
         this.curr = End.end();
         return StageSupport.completedStage(prev);
@@ -1381,7 +1381,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * exception.
    *
    * @param ex the exception which the {@link CompletionStage CompletionStages} of the returned
-   *        future will be completed with
+   *        iterator will be completed with
    * @return an AsyncIterator that produces exceptional CompletionStages
    */
   static <T> AsyncIterator<T> error(final Throwable ex) {
@@ -1408,7 +1408,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * negative, similar to {@code for(i = start; i > end; i+=delta)}.
    *
    * <p>
-   * The futures returned by nextFuture will be already completed.
+   * The stages returned by nextStage will be already completed.
    *
    * @param start the start point of iteration (inclusive)
    * @param end the end point of iteration (exclusive)
@@ -1423,13 +1423,13 @@ public interface AsyncIterator<T> extends AsyncCloseable {
       int counter = start;
 
       @Override
-      public CompletionStage<Either<End, Integer>> nextFuture() {
+      public CompletionStage<Either<End, Integer>> nextStage() {
         if ((delta > 0 && this.counter < end) || (delta < 0 && this.counter > end)) {
           final int ret = this.counter;
           this.counter += delta;
           return StageSupport.completedStage(Either.right(ret));
         } else {
-          return End.endFuture();
+          return End.endStage();
         }
       }
     };
@@ -1450,7 +1450,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
       int counter = start;
 
       @Override
-      public CompletionStage<Either<End, Integer>> nextFuture() {
+      public CompletionStage<Either<End, Integer>> nextStage() {
         final int old = this.counter;
         this.counter += delta;
         return StageSupport.completedStage(Either.right(old));
@@ -1513,7 +1513,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   }
 
   /**
-   * Successively apply the asynchronous function f to the seed until the future returned by f
+   * Successively apply the asynchronous function f to the seed until the stage returned by f
    * contains an empty optional or returns an exception. Creates an iterator of values of
    * applications
    *
@@ -1534,11 +1534,11 @@ public interface AsyncIterator<T> extends AsyncCloseable {
       CompletionStage<Either<End, T>> prev = StageSupport.completedStage(Either.right(seed));
 
       @Override
-      public CompletionStage<Either<End, T>> nextFuture() {
+      public CompletionStage<Either<End, T>> nextStage() {
         // if there was a value, apply f to it
         final CompletionStage<Either<End, T>> ret = this.prev;
         this.prev = this.prev.thenCompose(
-            nxt -> nxt.fold(end -> End.endFuture(), f));
+            nxt -> nxt.fold(end -> End.endStage(), f));
         return ret;
       }
     };

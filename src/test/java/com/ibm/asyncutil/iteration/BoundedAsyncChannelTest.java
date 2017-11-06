@@ -59,15 +59,15 @@ public class BoundedAsyncChannelTest extends AbstractAsyncChannelTest {
 
     // consume a result
     Assert.assertEquals(1,
-        this.channel.nextFuture().toCompletableFuture().join().right().get().intValue());
+        this.channel.nextStage().toCompletableFuture().join().right().get().intValue());
 
     // f2 should be done, and accepted
     Assert.assertTrue(f2.isDone());
     Assert.assertTrue(f2.join());
 
     Assert.assertEquals(2,
-        this.channel.nextFuture().toCompletableFuture().join().right().get().intValue());
-    Assert.assertFalse(this.channel.nextFuture().toCompletableFuture().join().isRight());
+        this.channel.nextStage().toCompletableFuture().join().right().get().intValue());
+    Assert.assertFalse(this.channel.nextStage().toCompletableFuture().join().isRight());
 
     // terminate should be done, f3 should be done and rejected
     Assert.assertTrue(closeFuture.isDone());

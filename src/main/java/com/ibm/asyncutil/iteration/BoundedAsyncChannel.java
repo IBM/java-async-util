@@ -156,7 +156,7 @@ public interface BoundedAsyncChannel<T> extends AsyncIterator<T> {
    * the channel. <br>
    * Notice that the channel being closed is indistinguishable from the channel being transiently
    * empty. To discover that no more results will ever be available, you must use the normal means
-   * on {@link AsyncIterator}: either calling {@link #nextFuture()} and seeing if the result
+   * on {@link AsyncIterator}: either calling {@link #nextStage()} and seeing if the result
    * indicates an end of iteration when the future completes, or using one of the consumer methods
    * that only complete once the channel has been closed.
    *
