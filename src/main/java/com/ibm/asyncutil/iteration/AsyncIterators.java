@@ -22,8 +22,8 @@ import java.util.stream.Collectors;
 
 import com.ibm.asyncutil.iteration.AsyncIterator.End;
 import com.ibm.asyncutil.locks.FairAsyncLock;
-import com.ibm.asyncutil.util.Either;
 import com.ibm.asyncutil.util.Combinators;
+import com.ibm.asyncutil.util.Either;
 import com.ibm.asyncutil.util.StageSupport;
 
 /** Package private methods to use in {@link AsyncIterator} */
@@ -36,8 +36,8 @@ class AsyncIterators {
   private static class EmptyAsyncIterator<T> implements AsyncIterator<T> {
 
     @Override
-    public CompletionStage<Either<End, T>> nextFuture() {
-      return End.endFuture();
+    public CompletionStage<Either<End, T>> nextStage() {
+      return End.endStage();
     }
 
     @Override
@@ -93,8 +93,8 @@ class AsyncIterators {
     assert !synchronous || e == null;
     return new AsyncIterator<U>() {
       @Override
-      public CompletionStage<Either<End, U>> nextFuture() {
-        final CompletionStage<Either<End, T>> next = it.nextFuture();
+      public CompletionStage<Either<End, U>> nextStage() {
+        final CompletionStage<Either<End, T>> next = it.nextStage();
 
         return synchronous
             ? next.thenApply(this::eitherFunction)
@@ -123,8 +123,8 @@ class AsyncIterators {
 
     return new AsyncIterator<U>() {
       @Override
-      public CompletionStage<Either<End, U>> nextFuture() {
-        final CompletionStage<Either<End, T>> nxt = it.nextFuture();
+      public CompletionStage<Either<End, U>> nextStage() {
+        final CompletionStage<Either<End, T>> nxt = it.nextStage();
         return synchronous
             ? nxt.thenCompose(this::eitherFunction)
             : e == null
@@ -138,7 +138,7 @@ class AsyncIterators {
        */
       private CompletionStage<Either<End, U>> eitherFunction(final Either<End, T> either) {
         return either.fold(
-            end -> End.endFuture(),
+            end -> End.endStage(),
             t -> f.apply(t).thenApply(Either::right));
       }
 
@@ -167,7 +167,7 @@ class AsyncIterators {
       this.backingIterator = backingIterator;
       this.executeAhead = executeAhead;
       this.closeFn = closeFn == null
-          ? u -> StageSupport.voidFuture()
+          ? u -> StageSupport.voidStage()
           : u -> AsyncIterators.convertSynchronousException(() -> closeFn.apply(u));
       this.mappingFn = mappingFn;
       this.pendingResults = new ArrayDeque<>(executeAhead);
@@ -178,29 +178,28 @@ class AsyncIterators {
     /* return whether we need to keep filling */
     private CompletionStage<Either<End, T>> fillMore() {
       if (this.pendingResults.size() >= this.executeAhead) {
-        // don't call nextFuture, we already have enough stuff pending
-        return End.endFuture();
+        // don't call nextStage, we already have enough stuff pending
+        return End.endStage();
       } else {
         // keep filling up the ahead queue
         final CompletionStage<Either<End, T>> nxt =
-            AsyncIterators.convertSynchronousException(this.backingIterator::nextFuture);
+            AsyncIterators.convertSynchronousException(this.backingIterator::nextStage);
         this.pendingResults.add(nxt.thenCompose(this.mappingFn));
         return nxt;
       }
     }
 
     /**
-     * Get a nextFuture either from the queue or the backing iterator and apply the mappingFn.
+     * Get a nextStage either from the queue or the backing iterator and apply the mappingFn.
      *
      * @param listener stage is completed when the mapping function finishes
-     * @return stage that is complete when any calls that this method made to nextFuture are
-     *         complete
+     * @return stage that is complete when any calls that this method made to nextStage are complete
      */
     private CompletionStage<Void> attachListener(final CompletableFuture<Either<End, U>> listener) {
       return StageSupport.tryComposeWith(this.lock.acquireLock(), token -> {
         if (this.closed) {
           final IllegalStateException ex =
-              new IllegalStateException("nextFuture called after async iterator was closed");
+              new IllegalStateException("nextStage called after async iterator was closed");
           listener.completeExceptionally(ex);
           throw ex;
         }
@@ -211,7 +210,7 @@ class AsyncIterators {
           // there was nothing in the queue, associate our returned future with a new
           // safeNextFuture call
           final CompletionStage<Either<End, T>> nxt =
-              AsyncIterators.convertSynchronousException(this.backingIterator::nextFuture);
+              AsyncIterators.convertSynchronousException(this.backingIterator::nextStage);
 
           // don't bother adding it to the queue, because we are already listening on it
           AsyncIterators.listen(nxt.thenCompose(this.mappingFn), listener);
@@ -220,13 +219,13 @@ class AsyncIterators {
         } else {
           // let our future be tied to the first result that was in the queue
           AsyncIterators.listen(poll, listener);
-          return StageSupport.voidFuture();
+          return StageSupport.voidStage();
         }
       });
     }
 
     @Override
-    public CompletionStage<Either<End, U>> nextFuture() {
+    public CompletionStage<Either<End, U>> nextStage() {
       final CompletableFuture<Either<End, U>> listener = new CompletableFuture<>();
       final CompletionStage<Void> nextFinished = attachListener(listener);
 
@@ -260,7 +259,7 @@ class AsyncIterators {
             .stream()
             .map(f -> f.thenCompose(
                 either -> either.fold(
-                    end -> StageSupport.voidFuture(),
+                    end -> StageSupport.voidStage(),
                     this.closeFn)))
             .collect(Collectors.toList());
 
@@ -278,7 +277,7 @@ class AsyncIterators {
                     } else if (backingCloseError != null) {
                       return StageSupport.<Void>exceptionalStage(backingCloseError);
                     }
-                    return StageSupport.voidFuture();
+                    return StageSupport.voidStage();
                   });
             });
       });
@@ -293,13 +292,13 @@ class AsyncIterators {
     }
 
     @Override
-    public CompletionStage<Either<End, T>> nextFuture() {
+    public CompletionStage<Either<End, T>> nextStage() {
       if (this.exception != null) {
         final Throwable e = this.exception;
         this.exception = null;
         return StageSupport.exceptionalStage(e);
       } else {
-        return End.endFuture();
+        return End.endStage();
       }
     }
   }

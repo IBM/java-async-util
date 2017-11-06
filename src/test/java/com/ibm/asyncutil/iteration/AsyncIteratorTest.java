@@ -51,9 +51,9 @@ public class AsyncIteratorTest {
   public void testConcatStopsAfterIteratorIsEmpty() throws Exception {
 
     // validation for a bug where concat would call one more time after the previous call
-    // to nextFuture returned empty
+    // to nextStage returned empty
 
-    // iterator throws assertion error if nextFuture is called after iterator empties
+    // iterator throws assertion error if nextStage is called after iterator empties
 
     final AsyncIterator<Integer> touchyIterator = mustRespectEndIterator(1);
     final CompletionStage<List<Integer>> collect =
@@ -119,7 +119,7 @@ public class AsyncIteratorTest {
     Either<End, Integer> curr;
     do {
       try {
-        curr = TestUtil.join(iterator.nextFuture());
+        curr = TestUtil.join(iterator.nextStage());
       } catch (final Exception e1) {
         e = e1;
         break;
@@ -473,13 +473,13 @@ public class AsyncIteratorTest {
     final AsyncIterator<Integer> it = AsyncIterator.unordered(futures);
     // complete 0..5 in random order
     for (final int i : new int[] {1, 4, 2, 0, 3}) {
-      final CompletionStage<Integer> nextFuture = it.nextFuture().thenApply(e -> e.right().get());
+      final CompletionStage<Integer> nextFuture = it.nextStage().thenApply(e -> e.right().get());
       Assert.assertFalse(nextFuture.toCompletableFuture().isDone());
       futures.get(i).complete(i);
       Assert.assertTrue(nextFuture.toCompletableFuture().isDone());
       Assert.assertEquals(i, TestUtil.join(nextFuture).intValue());
     }
-    Assert.assertFalse(TestUtil.join(it.nextFuture()).isRight());
+    Assert.assertFalse(TestUtil.join(it.nextStage()).isRight());
   }
 
   @Test
@@ -565,13 +565,13 @@ public class AsyncIteratorTest {
                 });
 
     Assert.assertEquals(expected, TestUtil.join(iter.collect(Collectors.toList())));
-    Assert.assertFalse(TestUtil.join(iter.nextFuture()).isRight());
+    Assert.assertFalse(TestUtil.join(iter.nextStage()).isRight());
   }
 
   @Test
   public void testBatchEmpty() throws Exception {
     Assert.assertFalse(
-        TestUtil.join(AsyncIterator.empty().batch(Collectors.toList(), (a, b) -> true).nextFuture())
+        TestUtil.join(AsyncIterator.empty().batch(Collectors.toList(), (a, b) -> true).nextStage())
             .isRight());
   }
 
@@ -585,7 +585,7 @@ public class AsyncIteratorTest {
         TestUtil.join(
             AsyncIterator.empty()
                 .batch(Collectors.toCollection(supplier), (a, b) -> true)
-                .nextFuture())
+                .nextStage())
             .isRight());
   }
 
@@ -671,7 +671,7 @@ public class AsyncIteratorTest {
     }
     {
       final List<Integer> unfolded =
-          AsyncIterator.unfold(0, i -> End.endFuture())
+          AsyncIterator.unfold(0, i -> End.endStage())
               .collect(Collectors.toList())
               .toCompletableFuture()
               .join();
@@ -694,10 +694,10 @@ public class AsyncIteratorTest {
   @Test
   public void testFuse() {
     final AsyncIterator<Integer> it = mustRespectEndIterator(1).fuse();
-    Assert.assertEquals(0, it.nextFuture().toCompletableFuture().join().right().get().intValue());
-    Assert.assertTrue(it.nextFuture().toCompletableFuture().join().isLeft());
-    Assert.assertTrue(it.nextFuture().toCompletableFuture().join().isLeft());
-    Assert.assertTrue(it.nextFuture().toCompletableFuture().join().isLeft());
+    Assert.assertEquals(0, it.nextStage().toCompletableFuture().join().right().get().intValue());
+    Assert.assertTrue(it.nextStage().toCompletableFuture().join().isLeft());
+    Assert.assertTrue(it.nextStage().toCompletableFuture().join().isLeft());
+    Assert.assertTrue(it.nextStage().toCompletableFuture().join().isLeft());
   }
 
   @Test
@@ -723,11 +723,11 @@ public class AsyncIteratorTest {
         () -> {
           final int curr = count.getAndDecrement();
           if (curr == 0) {
-            return End.endFuture();
+            return End.endStage();
           } else if (curr > 0) {
             return StageSupport.completedStage(Either.right(0));
           }
-          Assert.fail("called nextFuture() after previous call returned empty");
+          Assert.fail("called nextStage() after previous call returned empty");
           return null;
         });
   }
@@ -737,7 +737,7 @@ public class AsyncIteratorTest {
     final CompletionStage<Either<End, Object>> future = AsyncIterator
         .range(0, 15, 1)
         .thenFlatten(i -> null)
-        .nextFuture();
+        .nextStage();
     try {
       TestUtil.join(future);
     } catch (final CompletionException e) {
@@ -750,7 +750,7 @@ public class AsyncIteratorTest {
     final CompletionStage<Either<End, Object>> future = AsyncIterator
         .range(0, 15, 1)
         .thenFlattenAhead(i -> StageSupport.completedStage(null), 5)
-        .nextFuture();
+        .nextStage();
     try {
       TestUtil.join(future);
     } catch (final CompletionException e) {
@@ -783,12 +783,12 @@ public class AsyncIteratorTest {
   // assert the iterator is the ascending range from 0 to expected size
   private void verifySorted(final AsyncIterator<Integer> concat, final int expectedSize)
       throws Exception {
-    Either<End, Integer> curr = TestUtil.join(concat.nextFuture());
+    Either<End, Integer> curr = TestUtil.join(concat.nextStage());
     int i = 0;
     while (curr.isRight()) {
       Assert.assertEquals(i, curr.right().get().intValue());
       i++;
-      curr = TestUtil.join(concat.nextFuture());
+      curr = TestUtil.join(concat.nextStage());
     }
     Assert.assertEquals(expectedSize, i);
   }

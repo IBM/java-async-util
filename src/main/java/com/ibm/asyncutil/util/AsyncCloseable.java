@@ -6,6 +6,8 @@
 
 package com.ibm.asyncutil.util;
 
+import com.ibm.asyncutil.locks.AsyncEpoch;
+
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 
@@ -19,7 +21,7 @@ import java.util.function.Function;
  * release operation may possibly be async. For example, if an object is thread-safe and has many
  * consumers, an implementation may require all current ongoing operations to complete before
  * resources are relinquished. A common way to implement this pattern for a thread-safe object with
- * asynchronous methods is by using an {@link com.ibm.asyncutil.locks.ObservableEpoch}.
+ * asynchronous methods is by using an {@link AsyncEpoch}.
  *
  * <p>
  * May be used with the methods {@link StageSupport#tryWith(AsyncCloseable, Function)},

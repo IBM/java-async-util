@@ -13,11 +13,11 @@ import java.util.Optional;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 
-import com.ibm.asyncutil.locks.ObservableEpoch;
+import com.ibm.asyncutil.locks.AsyncEpoch;
 import com.ibm.asyncutil.util.AsyncCloseable;
 
 /**
- * Example using {@link ObservableEpoch} to wait for ongoing tasks to finish before cleaning up
+ * Example using {@link AsyncEpoch} to wait for ongoing tasks to finish before cleaning up
  * resources
  */
 public class Epochs {
@@ -27,14 +27,14 @@ public class Epochs {
    * make {@link #intRequest(int) intRequests} until {@link #close()} is called
    */
   static class CloseableRequester implements AsyncCloseable {
-    private final ObservableEpoch epoch;
+    private final AsyncEpoch epoch;
     private final Locks.Requester requester;
     private final AsynchronousSocketChannel channel;
 
     CloseableRequester(final AsynchronousSocketChannel channel) {
       this.channel = channel;
       this.requester = new Locks.Requester(channel);
-      this.epoch = ObservableEpoch.newEpoch();
+      this.epoch = AsyncEpoch.newEpoch();
     }
 
     /**

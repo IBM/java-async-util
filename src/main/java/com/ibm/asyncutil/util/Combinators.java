@@ -70,7 +70,7 @@ public class Combinators {
    */
   private static CompletionStage<Void> allOfImpl(
       final Iterator<? extends CompletionStage<?>> it) {
-    CompletionStage<Void> accumulator = StageSupport.voidFuture();
+    CompletionStage<Void> accumulator = StageSupport.voidStage();
     while (it.hasNext()) {
       accumulator = accumulator.thenCombine(it.next(), (l, r) -> null);
     }

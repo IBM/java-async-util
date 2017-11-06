@@ -476,14 +476,14 @@ public class AsyncIteratorParameterizedTest {
       final AsyncIterator<Integer> ai =
           new AsyncIterator<Integer>() {
             @Override
-            public CompletionStage<Either<End, Integer>> nextFuture() {
+            public CompletionStage<Either<End, Integer>> nextStage() {
               return StageSupport.completedStage(Either.right(1));
             }
 
             @Override
             public CompletionStage<Void> close() {
               closed.set(true);
-              return StageSupport.voidFuture();
+              return StageSupport.voidStage();
             }
           }.take(10);
       final AsyncIterator<?> intermediateAi = this.intermediate.apply(ai);
@@ -499,14 +499,14 @@ public class AsyncIteratorParameterizedTest {
       final AsyncIterator<Integer> ai =
           new AsyncIterator<Integer>() {
             @Override
-            public CompletionStage<Either<End, Integer>> nextFuture() {
+            public CompletionStage<Either<End, Integer>> nextStage() {
               throw testException;
             }
 
             @Override
             public CompletionStage<Void> close() {
               closed.set(true);
-              return StageSupport.voidFuture();
+              return StageSupport.voidStage();
             }
           }.take(10);
       final AsyncIterator<?> intermediateAi = this.intermediate.apply(ai);
@@ -539,9 +539,9 @@ public class AsyncIteratorParameterizedTest {
           () -> StageSupport.completedStage(Either.right(i.incrementAndGet()));
       final AsyncIterator<?> intermediate = this.fn.apply(it);
       Assert.assertEquals(0, i.get());
-      intermediate.nextFuture().toCompletableFuture().join();
+      intermediate.nextStage().toCompletableFuture().join();
       Assert.assertEquals(1, i.get());
-      intermediate.nextFuture().toCompletableFuture().join();
+      intermediate.nextStage().toCompletableFuture().join();
       Assert.assertEquals(2, i.get());
     }
 
@@ -567,14 +567,14 @@ public class AsyncIteratorParameterizedTest {
       final AsyncIterator<Integer> ai =
           new AsyncIterator<Integer>() {
             @Override
-            public CompletionStage<Either<End, Integer>> nextFuture() {
+            public CompletionStage<Either<End, Integer>> nextStage() {
               return StageSupport.completedStage(Either.right(1));
             }
 
             @Override
             public CompletionStage<Void> close() {
               closed.set(true);
-              return StageSupport.voidFuture();
+              return StageSupport.voidStage();
             }
           }.take(10);
       final AsyncIterator<?> it2 = this.fn.apply(ai);
@@ -589,7 +589,7 @@ public class AsyncIteratorParameterizedTest {
       final AsyncIterator<Integer> ai =
           new AsyncIterator<Integer>() {
             @Override
-            public CompletionStage<Either<End, Integer>> nextFuture() {
+            public CompletionStage<Either<End, Integer>> nextStage() {
               return StageSupport.completedStage(Either.right(1));
             }
 
@@ -600,7 +600,7 @@ public class AsyncIteratorParameterizedTest {
           };
       final AsyncIterator<?> it2 = this.fn.apply(ai);
       try {
-        it2.nextFuture().toCompletableFuture().join();
+        it2.nextStage().toCompletableFuture().join();
       } catch (final Exception e) {
         Assert.fail(e.getMessage());
       }
@@ -621,12 +621,12 @@ public class AsyncIteratorParameterizedTest {
                   .iterator());
       final AsyncIterator<?> it2 = this.fn.apply(it);
       try {
-        it2.nextFuture().toCompletableFuture().join();
+        it2.nextStage().toCompletableFuture().join();
         Assert.fail("expected exception");
       } catch (final CompletionException e) {
         // expected
       }
-      it2.nextFuture().toCompletableFuture().join();
+      it2.nextStage().toCompletableFuture().join();
       it2.consume().toCompletableFuture().join();
       it2.close().toCompletableFuture().join();
     }

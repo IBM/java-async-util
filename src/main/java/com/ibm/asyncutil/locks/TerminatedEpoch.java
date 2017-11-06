@@ -12,9 +12,9 @@ import java.util.concurrent.CompletionStage;
 import com.ibm.asyncutil.util.StageSupport;
 
 /**
- * @see ObservableEpoch#newTerminatedEpoch()
+ * @see AsyncEpoch#newTerminatedEpoch()
  */
-class TerminatedEpoch implements ObservableEpoch {
+class TerminatedEpoch implements AsyncEpoch {
   static final TerminatedEpoch INSTANCE = new TerminatedEpoch();
 
   private TerminatedEpoch() {}
@@ -36,6 +36,6 @@ class TerminatedEpoch implements ObservableEpoch {
 
   @Override
   public CompletionStage<Void> awaitCompletion() {
-    return StageSupport.voidFuture();
+    return StageSupport.voidStage();
   }
 }

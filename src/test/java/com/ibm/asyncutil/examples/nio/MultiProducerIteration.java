@@ -18,9 +18,9 @@ import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import com.ibm.asyncutil.iteration.AsyncChannel;
-import com.ibm.asyncutil.iteration.AsyncChannels;
 import com.ibm.asyncutil.iteration.AsyncIterator;
+import com.ibm.asyncutil.iteration.AsyncQueue;
+import com.ibm.asyncutil.iteration.AsyncQueues;
 import com.ibm.asyncutil.util.Combinators;
 
 /**
@@ -39,8 +39,8 @@ public class MultiProducerIteration {
   static AsyncIterator<Integer> routeClientMessages(
       final AsyncIterator<AsynchronousSocketChannel> clientConnections) {
 
-    // we'll collect the results of all connections into this channel
-    final AsyncChannel<Integer> results = AsyncChannels.unbounded();
+    // we'll collect the results of all connections into this queue
+    final AsyncQueue<Integer> results = AsyncQueues.unbounded();
 
     clientConnections
         .thenApply(socketChannel -> AsyncIterator
@@ -61,7 +61,7 @@ public class MultiProducerIteration {
         .thenCompose(fillingCompleteStages -> Combinators.allOf(fillingCompleteStages))
 
         // when we've connected to 4 clients and either read to -1 or hit an IOException on all 4 of
-        // them, terminate our results channel
+        // them, terminate our results queue
         .whenComplete((t, ex) -> results.terminate());
 
     return results;

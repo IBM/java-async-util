@@ -34,7 +34,7 @@ import org.junit.Test;
 
 import com.ibm.asyncutil.util.Combinators;
 
-public abstract class AbstractAsyncChannelTest {
+public abstract class AbstractAsyncQueueTest {
   private final static int NUM_THREADS = 5;
   private final static int ITEMS_PER_THREAD = 2000;
   private final static int NUM_ITEMS = (NUM_THREADS * ITEMS_PER_THREAD);

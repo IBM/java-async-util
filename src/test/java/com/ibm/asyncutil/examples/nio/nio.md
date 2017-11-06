@@ -180,23 +180,23 @@ final AsyncIterator<AsynchronousSocketChannel> clientConnections = AsyncIterator
 
 When we apply a terminal operation to this iterator, we will call accept 4 times and yield 4 connected SocketChannels, only making the next call to accept when the previous call has finished.
 
-Now that we have our `accept` calls sorted out, let's figure out how to process our messages. We have many options, the best way to deal with each stream of incoming messages is heavily use case dependant. Ideally, we would like to avoid the server business logic from having to deal with the concurrent reception of messages. For example, if we were writing these messages to a file or to an in memory data structure we'd like to avoid having to use locks. We can instead use the `AsyncChannel` primitive to pipe these 4 sources of messages into a single `AsyncIterator` that we can then consume sequentially without having to explicitly deal with concurrency. Given an `AsyncIterator` of messages (which we've seen how to get from an AsynchronousSocketChannel in the previous section) and an `AsyncChannel`, we can pipe messages into the channel with `AsyncChannel.send` like so.
+Now that we have our `accept` calls sorted out, let's figure out how to process our messages. We have many options, the best way to deal with each stream of incoming messages is heavily use case dependant. Ideally, we would like to avoid the server business logic from having to deal with the concurrent reception of messages. For example, if we were writing these messages to a file or to an in memory data structure we'd like to avoid having to use locks. We can instead use the `AsyncQueue` primitive to pipe these 4 sources of messages into a single `AsyncIterator` that we can then consume sequentially without having to explicitly deal with concurrency. Given an `AsyncIterator` of messages (which we've seen how to get from an AsynchronousSocketChannel in the previous section) and an `AsyncQueue`, we can pipe messages into the queue with `AsyncQueue.send` like so.
 ```java
-AsyncChannel<Integer> channel = AsyncChannels.unbounded();
+AsyncQueue<Integer> asyncQueue = AsyncQueues.unbounded();
 AsyncIterator<Integer> requestIterator = ...
 requestIterator
-    .forEach(i -> channel.send(i))
-    .thenRun(() -> System.out.println("all messages from " + requestIterator + " have made it into channel"));
+    .forEach(i -> asyncQueue.send(i))
+    .thenRun(() -> System.out.println("all messages from " + requestIterator + " have made it into asyncQueue"));
 ``` 
 Because `send` is thread safe, we can repeat this procedure with as many iterators of requests as we'd like. So now we have a general strategy:
 1. Use `accept` in a sequential fashion to get four connected clients
-2. When each client connection is established start routing all of that client's messages into the shared `AsyncChannel`
-3. When all four client connections have finished sending their ints (indicated with -1), we can terminate the `AsyncChannel`
-3. Consume the `AsyncChannel` sequentially like a standard `AsyncIterator`
+2. When each client connection is established start routing all of that client's messages into the shared `AsyncQueue`
+3. When all four client connections have finished sending their ints (indicated with -1), we can terminate the `AsyncQueue`
+3. Consume the `AsyncQueue` sequentially like a standard `AsyncIterator`
 
 ```java
-// we'll collect the results of all connections into this channel
-final AsyncChannel<Integer> results = AsyncChannels.unbounded();
+// we'll collect the results of all connections into this queue
+final AsyncQueue<Integer> results = AsyncQueues.unbounded();
 
 clientConnections
     .thenApply(socketChannel -> AsyncIterator
@@ -217,11 +217,11 @@ clientConnections
     .thenCompose(fillingCompleteStages -> Combinators.allOf(fillingCompleteStages))
 
     // when we've connected to 4 clients and either read to -1 or hit an IOException on all 4 of
-    // them, terminate our results channel
+    // them, terminate our results queue
     .whenComplete((t, ex) -> results.terminate());
 ```
 
-Now we can do whatever we want with the results channel.
+Now we can do whatever we want with the results queue.
 
 ```java
 // do something with the results! - print each result as it comes from each client connection
@@ -329,18 +329,18 @@ Achieving this sequential pattern of concurrency is simply one style of asynchro
 
 ## Epochs
 
-One especially useful primitive in the locks package is `ObservableEpoch`. In all of our examples, we have not done a good job managing the resources of the connections we introduced, usually just leaving them open after we were finished with them. Let's modify the `Requester` object in the previous example to support closing the backing connection. A problem arises when we think about what should happen if user tries to initiate a request after close has been called. Furthermore, we'd also like to finish any requests from users who have already made requests before shutting down our connection. We can use `ObservableEpoch` to achieve these semantics.
+One especially useful primitive in the locks package is `AsyncEpoch`. In all of our examples, we have not done a good job managing the resources of the connections we introduced, usually just leaving them open after we were finished with them. Let's modify the `Requester` object in the previous example to support closing the backing connection. A problem arises when we think about what should happen if user tries to initiate a request after close has been called. Furthermore, we'd also like to finish any requests from users who have already made requests before shutting down our connection. We can use `AsyncEpoch` to achieve these semantics.
 
 ```java
 static class CloseableRequester implements AsyncCloseable {
-    final ObservableEpoch epoch;
+    final AsyncEpoch epoch;
     final Locks.Requester requester;
     private final AsynchronousSocketChannel channel;
 
     CloseableRequester(final AsynchronousSocketChannel channel) {
       this.channel = channel;
       this.requester = new Locks.Requester(channel);
-      this.epoch = ObservableEpoch.newEpoch();
+      this.epoch = AsyncEpoch.newEpoch();
     }
 
     /**

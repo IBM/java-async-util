@@ -6,10 +6,10 @@
 
 package com.ibm.asyncutil.locks;
 
-public class ObservableEpochImplTest extends AbstractObservableEpochTest {
+public class AsyncEpochImplTest extends AbstractAsyncEpochTest {
   @Override
-  ObservableEpoch newEpoch() {
-    return new ObservableEpochImpl();
+  AsyncEpoch newEpoch() {
+    return new AsyncEpochImpl();
   }
 }
 
