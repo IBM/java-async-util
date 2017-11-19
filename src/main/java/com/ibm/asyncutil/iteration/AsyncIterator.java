@@ -77,7 +77,7 @@ import com.ibm.asyncutil.util.StageSupport;
  * {@link #unfold(Object, Function)}, etc)), followed by zero or more intermediate operations (such
  * as {@link #filter(Predicate)}, {@link #thenApply(Function)}), and completed with a terminal
  * operation which returns a {@link CompletionStage} (such as {@link #forEach(Consumer)} or
- * {@link #fold(BinaryOperator, Object)}). For example, suppose we wanted to accomplish the
+ * {@link #fold(Object, BinaryOperator)}). For example, suppose we wanted to accomplish the
  * following (blocking) procedure:
  *
  * <pre>
@@ -987,7 +987,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * Sequentially accumulates the elements of type T in this iterator into a U. This provides an
    * immutable style terminal reduction operation as opposed to the mutable style supported by
    * {@link #collect}. For example, to sum the lengths of Strings in an AsyncIterator, {@code
-   * stringIt.fold((acc, s) -> acc + s.length(), 0)}.
+   * stringIt.fold(0, (acc, s) -> acc + s.length())}.
    *
    * <p>
    * This is a <i>terminal method</i>.
@@ -999,7 +999,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    *         accumulator
    */
   default <U> CompletionStage<U> fold(
-      final BiFunction<U, ? super T, U> accumulator, final U identity) {
+      final U identity,
+      final BiFunction<U, ? super T, U> accumulator) {
     @SuppressWarnings("unchecked")
     final U[] uarr = (U[]) new Object[] {identity};
     return this.collect(() -> uarr, (u, t) -> uarr[0] = accumulator.apply(uarr[0], t))
@@ -1009,8 +1010,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   /**
    * Sequentially accumulates the elements of type T in this iterator into a single T value. This
    * provides an immutable style terminal reduction operation as opposed to the mutable style
-   * supported by {@link #collect}. For example, to sum an iterator of ints, {@code intIt.fold((acc,
-   * i) -> acc + i, 0)}.
+   * supported by {@link #collect}. For example, to sum an iterator of ints, {@code intIt.fold(0, (acc,
+   * i) -> acc + i)}.
    *
    * <p>
    * This is a <i>terminal method</i>.
@@ -1021,7 +1022,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * @return a {@link CompletionStage} containing the resulting T from repeated application of
    *         accumulator
    */
-  default CompletionStage<T> fold(final BinaryOperator<T> accumulator, final T identity) {
+  default CompletionStage<T> fold(final T identity, final BinaryOperator<T> accumulator) {
 
     // don't make this a lambda - otherwise it will look like a BinaryOperator instead of a
     // BiFunction and we'll recurse
@@ -1032,7 +1033,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
             return accumulator.apply(t, u);
           }
         };
-    return fold(biAccumulator, identity);
+    return fold(identity, biAccumulator);
   }
 
   /**

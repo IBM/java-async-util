@@ -383,7 +383,7 @@ public class AsyncIteratorTest {
   public void testFold() {
     final int count = 100000;
     final AsyncIterator<Integer> it = intIterator(count);
-    final int actual = TestUtil.join(it.fold((a, b) -> a + b, 0));
+    final int actual = TestUtil.join(it.fold(0, (a, b) -> a + b));
     final int expected = (count * (count - 1)) / 2;
     Assert.assertEquals(expected, actual);
   }

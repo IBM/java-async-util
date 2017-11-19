@@ -46,7 +46,7 @@ public class AsyncIteratorParameterizedTest {
           new Function<AsyncIterator<?>, CompletionStage<?>>() {
             @Override
             public CompletionStage<?> apply(final AsyncIterator<?> it) {
-              return it.fold((i, j) -> new Object(), new Object());
+              return it.fold(new Object(), (i, j) -> new Object());
             }
 
             @Override
@@ -121,10 +121,10 @@ public class AsyncIteratorParameterizedTest {
             @Override
             public CompletionStage<?> apply(final AsyncIterator<Integer> it) {
               return it.fold(
+                  0,
                   (i, j) -> {
                     throw testException;
-                  },
-                  0);
+                  });
             }
 
             @Override
