@@ -108,7 +108,7 @@ import java.util.concurrent.CompletionStage;
 public interface BoundedAsyncQueue<T> extends AsyncIterator<T> {
 
   /**
-   * Send a value into this queue that can be consumed via the {@link AsyncIterator} interface.
+   * Sends a value into this queue that can be consumed via the {@link AsyncIterator} interface.
    *
    * <p>
    * This method is thread safe - multiple threads can send values into this queue concurrently.
@@ -128,7 +128,7 @@ public interface BoundedAsyncQueue<T> extends AsyncIterator<T> {
   CompletionStage<Boolean> send(T item);
 
   /**
-   * Terminate the queue. After termination subsequent attempts to {@link #send} into the queue will
+   * Terminates the queue. After termination subsequent attempts to {@link #send} into the queue will
    * fail.
    *
    * <p>

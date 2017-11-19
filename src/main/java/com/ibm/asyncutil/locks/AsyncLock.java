@@ -19,18 +19,21 @@ import java.util.concurrent.CompletionStage;
 public interface AsyncLock {
 
   /**
-   * Exclusively acquire this lock. If the lock is not currently held, the returned future will be
-   * immediately complete. Otherwise, the returned future will complete when the lock is exclusively
+   * Exclusively acquires this lock. If the lock is not currently held, the returned stage will be
+   * immediately complete. Otherwise, the returned stage will complete when the lock is exclusively
    * acquired by this caller.
    *
    * <p>
-   * The {@link LockToken} held by the returned future is used to release the lock after it has been
+   * The {@link LockToken} held by the returned stage is used to release the lock after it has been
    * acquired and the lock-protected action has completed.
+   *
+   * @return A {@link CompletionStage} which will complete with a {@link LockToken} when the lock
+   *         has been exclusively acquired
    */
   CompletionStage<LockToken> acquireLock();
 
   /**
-   * Attempt to immediately acquire the lock, returning a populated {@link Optional} if the lock is
+   * Attempts to immediately acquire the lock, returning a populated {@link Optional} if the lock is
    * not currently held.
    *
    * @return An {@link Optional} holding a {@link LockToken} if the lock is not held; otherwise an
@@ -44,11 +47,11 @@ public interface AsyncLock {
    * {@link LockToken#releaseLock()}
    */
   interface LockToken extends AutoCloseable {
-    /** Release this lock, allowing others to acquire it. */
+    /** Releases this lock, allowing others to acquire it. */
     void releaseLock();
 
     /**
-     * Release this lock, allowing others to acquire it.
+     * Releases this lock, allowing others to acquire it.
      *
      * <p>
      * {@inheritDoc}

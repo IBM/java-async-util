@@ -181,7 +181,7 @@ public final class AsyncTrampoline {
   }
 
   /**
-   * Repeatedly use the function {@code fn} to produce a {@link CompletionStage} of a boolean,
+   * Repeatedly uses the function {@code fn} to produce a {@link CompletionStage} of a boolean,
    * stopping when then boolean is {@code false}. The asynchronous equivalent of {@code
    * while(fn.get());}. Generally, the function fn must perform some side effect for this method to
    * be useful. If the {@code fn} throws or produces an exceptional {@link CompletionStage}, an
