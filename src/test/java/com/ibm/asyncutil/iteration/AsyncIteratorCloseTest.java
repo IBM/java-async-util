@@ -30,23 +30,23 @@ public class AsyncIteratorCloseTest {
 
   private static final RuntimeException testException = new TestException();
 
-  static class CloseableIterator implements AsyncIterator<Integer> {
-    private final AsyncIterator<Integer> backing;
+  static class CloseableIterator implements AsyncIterator<Long> {
+    private final AsyncIterator<Long> backing;
     private final RuntimeException ex;
     boolean closed;
 
-    CloseableIterator(final AsyncIterator<Integer> backing) {
+    CloseableIterator(final AsyncIterator<Long> backing) {
       this(backing, null);
     }
 
-    CloseableIterator(final AsyncIterator<Integer> backing, final RuntimeException ex) {
+    CloseableIterator(final AsyncIterator<Long> backing, final RuntimeException ex) {
       this.backing = backing;
       this.ex = ex;
       this.closed = false;
     }
 
     @Override
-    public CompletionStage<Either<End, Integer>> nextStage() {
+    public CompletionStage<Either<End, Long>> nextStage() {
       return this.backing.nextStage();
     }
 
@@ -67,10 +67,10 @@ public class AsyncIteratorCloseTest {
   @Test
   public void testConcatNoConsumptionClose() {
     // don't finish any of the concatted iterators
-    final CloseableIterator it1 = new CloseableIterator(AsyncIterator.range(0, 3, 1));
-    final CloseableIterator it2 = new CloseableIterator(AsyncIterator.range(0, 3, 1));
-    final CloseableIterator it3 = new CloseableIterator(AsyncIterator.range(0, 3, 1));
-    final AsyncIterator<Integer> concat =
+    final CloseableIterator it1 = new CloseableIterator(AsyncIterator.range(0, 3));
+    final CloseableIterator it2 = new CloseableIterator(AsyncIterator.range(0, 3));
+    final CloseableIterator it3 = new CloseableIterator(AsyncIterator.range(0, 3));
+    final AsyncIterator<Long> concat =
         AsyncIterator.concat(Arrays.asList(it1, it2, it3).iterator());
     concat.nextStage().toCompletableFuture().join();
     Assert.assertFalse(it1.closed || it2.closed || it3.closed);
@@ -81,10 +81,10 @@ public class AsyncIteratorCloseTest {
 
   @Test
   public void testConcatClose() {
-    final CloseableIterator it1 = new CloseableIterator(AsyncIterator.range(0, 3, 1));
-    final CloseableIterator it2 = new CloseableIterator(AsyncIterator.range(0, 3, 1));
-    final CloseableIterator it3 = new CloseableIterator(AsyncIterator.range(0, 3, 1));
-    final AsyncIterator<Integer> concat =
+    final CloseableIterator it1 = new CloseableIterator(AsyncIterator.range(0, 3));
+    final CloseableIterator it2 = new CloseableIterator(AsyncIterator.range(0, 3));
+    final CloseableIterator it3 = new CloseableIterator(AsyncIterator.range(0, 3));
+    final AsyncIterator<Long> concat =
         AsyncIterator.concat(Arrays.asList(it1, it2, it3).iterator());
 
     concat.consume().toCompletableFuture().join();
@@ -100,11 +100,11 @@ public class AsyncIteratorCloseTest {
 
   @Test
   public void testConcatCloseException() {
-    final CloseableIterator it1 = new CloseableIterator(AsyncIterator.once(1));
+    final CloseableIterator it1 = new CloseableIterator(AsyncIterator.once(1L));
     // close throws an exception
-    final CloseableIterator it2 = new CloseableIterator(AsyncIterator.once(2), testException);
-    final CloseableIterator it3 = new CloseableIterator(AsyncIterator.once(3));
-    final AsyncIterator<Integer> concat =
+    final CloseableIterator it2 = new CloseableIterator(AsyncIterator.once(2L), testException);
+    final CloseableIterator it3 = new CloseableIterator(AsyncIterator.once(3L));
+    final AsyncIterator<Long> concat =
         AsyncIterator.concat(Arrays.asList(it1, it2, it3).iterator());
 
     Assert.assertEquals(
@@ -125,12 +125,12 @@ public class AsyncIteratorCloseTest {
 
   @Test
   public void testFlattenClose() {
-    final AsyncIterator<Integer> it = AsyncIterator.range(0, 3, 1);
+    final AsyncIterator<Long> it = AsyncIterator.range(0, 3);
     final List<CloseableIterator> closeables = new ArrayList<>();
-    final AsyncIterator<Integer> flattend =
+    final AsyncIterator<Long> flattend =
         it.thenFlatten(
             i -> {
-              final CloseableIterator ret = new CloseableIterator(AsyncIterator.range(0, 3, 1));
+              final CloseableIterator ret = new CloseableIterator(AsyncIterator.range(0, 3));
               closeables.add(ret);
               return ret;
             });
@@ -155,10 +155,10 @@ public class AsyncIteratorCloseTest {
     for (final boolean it1Failed : new Boolean[] {false, true}) {
       for (final boolean it2Failed : new Boolean[] {false, true}) {
         final CloseableIterator it1 =
-            new CloseableIterator(AsyncIterator.range(0, 3, 1), it1Failed ? testException : null);
+            new CloseableIterator(AsyncIterator.range(0, 3), it1Failed ? testException : null);
         final CloseableIterator it2 =
-            new CloseableIterator(AsyncIterator.range(0, 3, 1), it2Failed ? testException : null);
-        final AsyncIterator<Integer> zipped = AsyncIterator.zipWith(it1, it2, (i, j) -> i + j);
+            new CloseableIterator(AsyncIterator.range(0, 3), it2Failed ? testException : null);
+        final AsyncIterator<Long> zipped = AsyncIterator.zipWith(it1, it2, (i, j) -> i + j);
         zipped.nextStage().toCompletableFuture().join();
         final boolean expectFailure = it1Failed || it2Failed;
         try {
@@ -175,20 +175,20 @@ public class AsyncIteratorCloseTest {
 
   @Test
   public void testEagerFlattenClose() throws InterruptedException {
-    final AsyncIterator<Integer> it = AsyncIterator.range(0, 15, 1);
+    final AsyncIterator<Long> it = AsyncIterator.range(0, 15);
     final Deque<CloseableIterator> closeables = new ConcurrentLinkedDeque<CloseableIterator>();
     final CountDownLatch closeablesGenerated = new CountDownLatch(1);
-    final AsyncIterator<Integer> ahead =
+    final AsyncIterator<Long> ahead =
         it.thenFlattenAhead(
             i -> {
               final CloseableIterator closeable =
-                  new CloseableIterator(AsyncIterator.range(0, 3, 1));
+                  new CloseableIterator(AsyncIterator.range(0, 3));
               closeables.addLast(closeable);
               closeablesGenerated.countDown();
               return StageSupport.completedStage(closeable);
             },
             5);
-    final CompletionStage<Either<AsyncIterator.End, Integer>> first = ahead.nextStage();
+    final CompletionStage<Either<AsyncIterator.End, Long>> first = ahead.nextStage();
     closeablesGenerated.await();
     // 6: 5 eagerly evaluated items, + 1 we evaluated
     Assert.assertEquals(6, closeables.size());
@@ -208,7 +208,7 @@ public class AsyncIteratorCloseTest {
 
   @Test
   public void testEagerComposeClose() throws InterruptedException {
-    final AsyncIterator<Integer> it = AsyncIterator.range(0, 15, 1);
+    final AsyncIterator<Long> it = AsyncIterator.range(0, 15);
 
     final CountDownLatch latch = new CountDownLatch(1);
     final Collection<Integer> objects = new ArrayList<>();
@@ -231,11 +231,11 @@ public class AsyncIteratorCloseTest {
 
   @Test(expected = IllegalStateException.class)
   public void testNextFutureAfterCloseIllegal() throws Throwable {
-    final AsyncIterator<Integer> it = AsyncIterator.range(0, 15, 1);
-    final AsyncIterator<Integer> ahead =
+    final AsyncIterator<Long> it = AsyncIterator.range(0, 15);
+    final AsyncIterator<Long> ahead =
         it.thenComposeAhead(i -> StageSupport.completedStage(i + 1), 5);
 
-    final CompletionStage<Either<AsyncIterator.End, Integer>> first = ahead.nextStage();
+    final CompletionStage<Either<AsyncIterator.End, Long>> first = ahead.nextStage();
 
     TestUtil.join(first);
     TestUtil.join(ahead.close());

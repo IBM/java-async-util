@@ -95,28 +95,28 @@ public class AsyncIteratorTest {
 
   @Test
   public void testConcatException() throws Exception {
-    final Supplier<List<AsyncIterator<Integer>>> it =
+    final Supplier<List<AsyncIterator<Long>>> it =
         () -> {
-          final List<AsyncIterator<Integer>> iterators = new ArrayList<>();
+          final List<AsyncIterator<Long>> iterators = new ArrayList<>();
           for (int i = 0; i < 3; i++) {
             if (i == 1) {
               iterators.add(AsyncIterator.error(new Exception("test")));
             } else {
-              iterators.add(AsyncIterator.range(0, 10, 1));
+              iterators.add(AsyncIterator.range(0, 10));
             }
           }
           return iterators;
         };
-    AsyncIterator<Integer> concat = AsyncIterator.concat(it.get().iterator());
+    AsyncIterator<Long> concat = AsyncIterator.concat(it.get().iterator());
     verifyExceptionThrown(concat);
 
     concat = AsyncIterator.concat(AsyncIterator.fromIterator(it.get().iterator()));
     verifyExceptionThrown(concat);
   }
 
-  private void verifyExceptionThrown(final AsyncIterator<Integer> iterator) {
+  private void verifyExceptionThrown(final AsyncIterator<Long> iterator) {
     Exception e = null;
-    Either<End, Integer> curr;
+    Either<End, Long> curr;
     do {
       try {
         curr = TestUtil.join(iterator.nextStage());
@@ -390,27 +390,18 @@ public class AsyncIteratorTest {
 
   @Test
   public void testRange() throws Exception {
-    List<Integer> range = TestUtil.join(AsyncIterator.range(5, 0, -1).collect(Collectors.toList()));
-    Assert.assertEquals(Arrays.asList(5, 4, 3, 2, 1), range);
-
-    range = TestUtil.join(AsyncIterator.range(0, 0, 1).collect(Collectors.toList()));
+    List<Long> range = TestUtil.join(AsyncIterator.range(0, 0).collect(Collectors.toList()));
     Assert.assertEquals(Arrays.asList(), range);
 
-    range = TestUtil.join(AsyncIterator.range(0, 5, 1).collect(Collectors.toList()));
-    Assert.assertEquals(Arrays.asList(0, 1, 2, 3, 4), range);
+    range = TestUtil.join(AsyncIterator.range(0, 5).collect(Collectors.toList()));
+    Assert.assertEquals(Arrays.asList(0L, 1L, 2L, 3L, 4L), range);
 
-    range = TestUtil.join(AsyncIterator.range(0, 5, 2).collect(Collectors.toList()));
-    Assert.assertEquals(Arrays.asList(0, 2, 4), range);
+    range = TestUtil.join(AsyncIterator.range(-3, 3).collect(Collectors.toList()));
+    Assert.assertEquals(Arrays.asList(-3L, -2L, -1L, 0L, 1L, 2L), range);
 
-    range = TestUtil.join(AsyncIterator.range(-3, 0, 1).collect(Collectors.toList()));
-    Assert.assertEquals(Arrays.asList(-3, -2, -1), range);
+    range = TestUtil.join(AsyncIterator.range(Long.MAX_VALUE - 3, Long.MAX_VALUE).collect(Collectors.toList()));
+    Assert.assertEquals(Arrays.asList(Long.MAX_VALUE - 3, Long.MAX_VALUE - 2, Long.MAX_VALUE - 1), range);
 
-    try {
-      TestUtil.join(AsyncIterator.range(-3, 0, 0).collect(Collectors.toList()));
-      Assert.fail("expected illegal arg exception");
-    } catch (final IllegalArgumentException e) {
-      // expected
-    }
   }
 
   @Test
@@ -735,7 +726,7 @@ public class AsyncIteratorTest {
   @Test(expected = NullPointerException.class)
   public void testFlattenNull() throws Throwable {
     final CompletionStage<Either<End, Object>> future = AsyncIterator
-        .range(0, 15, 1)
+        .range(0, 15)
         .thenFlatten(i -> null)
         .nextStage();
     try {
@@ -748,7 +739,7 @@ public class AsyncIteratorTest {
   @Test(expected = NullPointerException.class)
   public void testFlattenAheadNull() throws Throwable {
     final CompletionStage<Either<End, Object>> future = AsyncIterator
-        .range(0, 15, 1)
+        .range(0, 15)
         .thenFlattenAhead(i -> StageSupport.completedStage(null), 5)
         .nextStage();
     try {

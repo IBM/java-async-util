@@ -16,6 +16,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
@@ -115,11 +116,11 @@ public class AsyncIteratorParameterizedTest {
             }
           });
 
-  static final List<Function<AsyncIterator<Integer>, CompletionStage<?>>> exceptionalTerminalMethods =
+  static final List<Function<AsyncIterator<Long>, CompletionStage<?>>> exceptionalTerminalMethods =
       Arrays.asList(
-          new Function<AsyncIterator<Integer>, CompletionStage<?>>() {
+          new Function<AsyncIterator<Long>, CompletionStage<?>>() {
             @Override
-            public CompletionStage<?> apply(final AsyncIterator<Integer> it) {
+            public CompletionStage<?> apply(final AsyncIterator<Long> it) {
               return it.fold(
                   0,
                   (i, j) -> {
@@ -132,18 +133,18 @@ public class AsyncIteratorParameterizedTest {
               return "fold";
             }
           },
-          new Function<AsyncIterator<Integer>, CompletionStage<?>>() {
+          new Function<AsyncIterator<Long>, CompletionStage<?>>() {
             @Override
-            public CompletionStage<?> apply(final AsyncIterator<Integer> it) {
+            public CompletionStage<?> apply(final AsyncIterator<Long> it) {
               return it.collect(
-                  new Collector<Integer, Object, Object>() {
+                  new Collector<Long, Object, Object>() {
                     @Override
                     public Supplier<Object> supplier() {
                       throw testException;
                     }
 
                     @Override
-                    public BiConsumer<Object, Integer> accumulator() {
+                    public BiConsumer<Object, Long> accumulator() {
                       return null;
                     }
 
@@ -169,18 +170,18 @@ public class AsyncIteratorParameterizedTest {
               return "collect(supply-error)";
             }
           },
-          new Function<AsyncIterator<Integer>, CompletionStage<?>>() {
+          new Function<AsyncIterator<Long>, CompletionStage<?>>() {
             @Override
-            public CompletionStage<?> apply(final AsyncIterator<Integer> it) {
+            public CompletionStage<?> apply(final AsyncIterator<Long> it) {
               return it.collect(
-                  new Collector<Integer, Object, Object>() {
+                  new Collector<Long, Object, Object>() {
                     @Override
                     public Supplier<Object> supplier() {
                       return Object::new;
                     }
 
                     @Override
-                    public BiConsumer<Object, Integer> accumulator() {
+                    public BiConsumer<Object, Long> accumulator() {
                       return (o, i) -> {
                         throw testException;
                       };
@@ -208,11 +209,11 @@ public class AsyncIteratorParameterizedTest {
               return "collect(accumulate-error)";
             }
           },
-          new Function<AsyncIterator<Integer>, CompletionStage<?>>() {
+          new Function<AsyncIterator<Long>, CompletionStage<?>>() {
             @Override
-            public CompletionStage<?> apply(final AsyncIterator<Integer> it) {
+            public CompletionStage<?> apply(final AsyncIterator<Long> it) {
               return it.collect(
-                  ArrayList<Integer>::new,
+                  ArrayList<Long>::new,
                   (acc, t) -> {
                     throw testException;
                   });
@@ -223,9 +224,9 @@ public class AsyncIteratorParameterizedTest {
               return "collect(accumulate-error-2)";
             }
           },
-          new Function<AsyncIterator<Integer>, CompletionStage<?>>() {
+          new Function<AsyncIterator<Long>, CompletionStage<?>>() {
             @Override
-            public CompletionStage<?> apply(final AsyncIterator<Integer> it) {
+            public CompletionStage<?> apply(final AsyncIterator<Long> it) {
               return it.forEach(
                   i -> {
                     throw testException;
@@ -237,9 +238,9 @@ public class AsyncIteratorParameterizedTest {
               return "forEach";
             }
           },
-          new Function<AsyncIterator<Integer>, CompletionStage<?>>() {
+          new Function<AsyncIterator<Long>, CompletionStage<?>>() {
             @Override
-            public CompletionStage<?> apply(final AsyncIterator<Integer> it) {
+            public CompletionStage<?> apply(final AsyncIterator<Long> it) {
               return it.find(
                   i -> {
                     throw testException;
@@ -252,11 +253,11 @@ public class AsyncIteratorParameterizedTest {
             }
           });
 
-  static final List<Function<AsyncIterator<Integer>, AsyncIterator<?>>> intermediateMethods =
+  static final List<Function<AsyncIterator<Long>, AsyncIterator<?>>> intermediateMethods =
       Arrays.asList(
-          new Function<AsyncIterator<Integer>, AsyncIterator<?>>() {
+          new Function<AsyncIterator<Long>, AsyncIterator<?>>() {
             @Override
-            public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
+            public AsyncIterator<?> apply(final AsyncIterator<Long> it) {
               return it.thenApply(i -> i);
             }
 
@@ -265,9 +266,9 @@ public class AsyncIteratorParameterizedTest {
               return "thenApply";
             }
           },
-          new Function<AsyncIterator<Integer>, AsyncIterator<?>>() {
+          new Function<AsyncIterator<Long>, AsyncIterator<?>>() {
             @Override
-            public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
+            public AsyncIterator<?> apply(final AsyncIterator<Long> it) {
               return it.thenApplyAsync(i -> i);
             }
 
@@ -276,9 +277,9 @@ public class AsyncIteratorParameterizedTest {
               return "thenApplyAsync";
             }
           },
-          new Function<AsyncIterator<Integer>, AsyncIterator<?>>() {
+          new Function<AsyncIterator<Long>, AsyncIterator<?>>() {
             @Override
-            public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
+            public AsyncIterator<?> apply(final AsyncIterator<Long> it) {
               return it.thenCompose(
                   i -> StageSupport.completedStage(i));
             }
@@ -288,9 +289,9 @@ public class AsyncIteratorParameterizedTest {
               return "thenCompose";
             }
           },
-          new Function<AsyncIterator<Integer>, AsyncIterator<?>>() {
+          new Function<AsyncIterator<Long>, AsyncIterator<?>>() {
             @Override
-            public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
+            public AsyncIterator<?> apply(final AsyncIterator<Long> it) {
               return it.thenComposeAsync(
                   i -> StageSupport.completedStage(i));
             }
@@ -300,10 +301,10 @@ public class AsyncIteratorParameterizedTest {
               return "thenComposeAsync";
             }
           },
-          new Function<AsyncIterator<Integer>, AsyncIterator<?>>() {
+          new Function<AsyncIterator<Long>, AsyncIterator<?>>() {
             @Override
-            public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
-              return it.thenFlatten(i -> AsyncIterator.<Integer>once(i));
+            public AsyncIterator<?> apply(final AsyncIterator<Long> it) {
+              return it.thenFlatten(i -> AsyncIterator.<Long>once(i));
             }
 
             @Override
@@ -311,9 +312,9 @@ public class AsyncIteratorParameterizedTest {
               return "thenFlatten";
             }
           },
-          new Function<AsyncIterator<Integer>, AsyncIterator<?>>() {
+          new Function<AsyncIterator<Long>, AsyncIterator<?>>() {
             @Override
-            public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
+            public AsyncIterator<?> apply(final AsyncIterator<Long> it) {
               return it.filter(i -> true);
             }
 
@@ -322,9 +323,9 @@ public class AsyncIteratorParameterizedTest {
               return "filter";
             }
           },
-          new Function<AsyncIterator<Integer>, AsyncIterator<?>>() {
+          new Function<AsyncIterator<Long>, AsyncIterator<?>>() {
             @Override
-            public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
+            public AsyncIterator<?> apply(final AsyncIterator<Long> it) {
               return it.filterApply(Optional::of);
             }
 
@@ -333,9 +334,9 @@ public class AsyncIteratorParameterizedTest {
               return "filterApply";
             }
           },
-          new Function<AsyncIterator<Integer>, AsyncIterator<?>>() {
+          new Function<AsyncIterator<Long>, AsyncIterator<?>>() {
             @Override
-            public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
+            public AsyncIterator<?> apply(final AsyncIterator<Long> it) {
               return it.filterCompose(
                   i -> StageSupport.completedStage(Optional.of(i)));
             }
@@ -345,9 +346,9 @@ public class AsyncIteratorParameterizedTest {
               return "filterCompose";
             }
           },
-          new Function<AsyncIterator<Integer>, AsyncIterator<?>>() {
+          new Function<AsyncIterator<Long>, AsyncIterator<?>>() {
             @Override
-            public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
+            public AsyncIterator<?> apply(final AsyncIterator<Long> it) {
               return it.take(5);
             }
 
@@ -356,9 +357,9 @@ public class AsyncIteratorParameterizedTest {
               return "take";
             }
           },
-          new Function<AsyncIterator<Integer>, AsyncIterator<?>>() {
+          new Function<AsyncIterator<Long>, AsyncIterator<?>>() {
             @Override
-            public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
+            public AsyncIterator<?> apply(final AsyncIterator<Long> it) {
               return it.takeWhile(i -> true);
             }
 
@@ -378,9 +379,9 @@ public class AsyncIteratorParameterizedTest {
           // return "batch";
           // }
           // },
-          new Function<AsyncIterator<Integer>, AsyncIterator<?>>() {
+          new Function<AsyncIterator<Long>, AsyncIterator<?>>() {
             @Override
-            public AsyncIterator<?> apply(final AsyncIterator<Integer> it) {
+            public AsyncIterator<?> apply(final AsyncIterator<Long> it) {
               return it.fuse();
             }
 
@@ -393,7 +394,7 @@ public class AsyncIteratorParameterizedTest {
   @RunWith(Parameterized.class)
   public static class PipelineTest {
     @Parameterized.Parameter
-    public Function<AsyncIterator<Integer>, AsyncIterator<?>> intermediate;
+    public Function<AsyncIterator<Long>, AsyncIterator<?>> intermediate;
 
     @Parameterized.Parameter(1)
     public Function<AsyncIterator<?>, CompletionStage<?>> terminal;
@@ -411,7 +412,7 @@ public class AsyncIteratorParameterizedTest {
 
     @Test
     public void testPipeline() {
-      final AsyncIterator<Integer> ai = AsyncIterator.range(0, 10, 1);
+      final AsyncIterator<Long> ai = AsyncIterator.range(0, 10);
       this.terminal.apply(this.intermediate.apply(ai)).toCompletableFuture().join();
     }
 
@@ -437,12 +438,12 @@ public class AsyncIteratorParameterizedTest {
     public void testDelayedExceptionalPipeline() throws Throwable {
       try {
 
-        final AsyncIterator<Integer> concat =
+        final AsyncIterator<Long> concat =
             AsyncIterator.concat(
                 Arrays.asList(
-                    AsyncIterator.repeat(0).take(3),
-                    AsyncIterator.<Integer>error(testException),
-                    AsyncIterator.repeat(1).take(3))
+                    AsyncIterator.repeat(0L).take(3),
+                    AsyncIterator.<Long>error(testException),
+                    AsyncIterator.repeat(1L).take(3))
                     .iterator());
         this.terminal
             .apply(this.intermediate.apply(concat))
@@ -457,12 +458,12 @@ public class AsyncIteratorParameterizedTest {
     public void testExceptionalPipelineShortcircuit() throws Throwable {
       try {
 
-        final AsyncIterator<Integer> concat =
+        final AsyncIterator<Long> concat =
             AsyncIterator.concat(
                 Arrays.asList(
-                    AsyncIterator.repeat(0).take(3),
-                    AsyncIterator.<Integer>error(testException),
-                    AsyncIterator.repeat(1)) // infinite
+                    AsyncIterator.repeat(0L).take(3),
+                    AsyncIterator.<Long>error(testException),
+                    AsyncIterator.repeat(1L)) // infinite
                     .iterator());
         this.terminal.apply(this.intermediate.apply(concat)).toCompletableFuture().join();
       } catch (final CompletionException e) {
@@ -473,11 +474,11 @@ public class AsyncIteratorParameterizedTest {
     @Test
     public void testClosePipeline() {
       final AtomicBoolean closed = new AtomicBoolean();
-      final AsyncIterator<Integer> ai =
-          new AsyncIterator<Integer>() {
+      final AsyncIterator<Long> ai =
+          new AsyncIterator<Long>() {
             @Override
-            public CompletionStage<Either<End, Integer>> nextStage() {
-              return StageSupport.completedStage(Either.right(1));
+            public CompletionStage<Either<End, Long>> nextStage() {
+              return StageSupport.completedStage(Either.right(1L));
             }
 
             @Override
@@ -496,10 +497,10 @@ public class AsyncIteratorParameterizedTest {
     @Test
     public void testCloseAfterExceptionalPipeline() {
       final AtomicBoolean closed = new AtomicBoolean();
-      final AsyncIterator<Integer> ai =
-          new AsyncIterator<Integer>() {
+      final AsyncIterator<Long> ai =
+          new AsyncIterator<Long>() {
             @Override
-            public CompletionStage<Either<End, Integer>> nextStage() {
+            public CompletionStage<Either<End, Long>> nextStage() {
               throw testException;
             }
 
@@ -525,7 +526,7 @@ public class AsyncIteratorParameterizedTest {
   public static class IntermediateTest {
 
     @Parameterized.Parameter
-    public Function<AsyncIterator<Integer>, AsyncIterator<?>> fn;
+    public Function<AsyncIterator<Long>, AsyncIterator<?>> fn;
 
     @Parameterized.Parameters(name = "{index} intermediate: {0}")
     public static Collection<Object[]> data() {
@@ -534,8 +535,8 @@ public class AsyncIteratorParameterizedTest {
 
     @Test
     public void testLazy() {
-      final AtomicInteger i = new AtomicInteger();
-      final AsyncIterator<Integer> it =
+      final AtomicLong i = new AtomicLong();
+      final AsyncIterator<Long> it =
           () -> StageSupport.completedStage(Either.right(i.incrementAndGet()));
       final AsyncIterator<?> intermediate = this.fn.apply(it);
       Assert.assertEquals(0, i.get());
@@ -548,12 +549,12 @@ public class AsyncIteratorParameterizedTest {
     @Test(expected = TestException.class)
     public void testExceptionPropagation() throws Throwable {
       try {
-        final AsyncIterator<Integer> concat =
+        final AsyncIterator<Long> concat =
             AsyncIterator.concat(
                 Arrays.asList(
-                    AsyncIterator.repeat(0).take(3),
-                    AsyncIterator.<Integer>error(testException),
-                    AsyncIterator.repeat(1).take(3))
+                    AsyncIterator.repeat(0L).take(3),
+                    AsyncIterator.<Long>error(testException),
+                    AsyncIterator.repeat(1L).take(3))
                     .iterator());
         this.fn.apply(concat).consume().toCompletableFuture().join();
       } catch (final CompletionException e) {
@@ -564,11 +565,11 @@ public class AsyncIteratorParameterizedTest {
     @Test
     public void testClosePropagation() {
       final AtomicBoolean closed = new AtomicBoolean();
-      final AsyncIterator<Integer> ai =
-          new AsyncIterator<Integer>() {
+      final AsyncIterator<Long> ai =
+          new AsyncIterator<Long>() {
             @Override
-            public CompletionStage<Either<End, Integer>> nextStage() {
-              return StageSupport.completedStage(Either.right(1));
+            public CompletionStage<Either<End, Long>> nextStage() {
+              return StageSupport.completedStage(Either.right(1L));
             }
 
             @Override
@@ -586,11 +587,11 @@ public class AsyncIteratorParameterizedTest {
 
     @Test(expected = TestException.class)
     public void testExceptionalCloseTest() throws Throwable {
-      final AsyncIterator<Integer> ai =
-          new AsyncIterator<Integer>() {
+      final AsyncIterator<Long> ai =
+          new AsyncIterator<Long>() {
             @Override
-            public CompletionStage<Either<End, Integer>> nextStage() {
-              return StageSupport.completedStage(Either.right(1));
+            public CompletionStage<Either<End, Long>> nextStage() {
+              return StageSupport.completedStage(Either.right(1L));
             }
 
             @Override
@@ -613,11 +614,11 @@ public class AsyncIteratorParameterizedTest {
 
     @Test
     public void testRecoverAfterException() {
-      final AsyncIterator<Integer> it =
+      final AsyncIterator<Long> it =
           AsyncIterator.concat(
               Arrays.asList(
-                  AsyncIterators.<Integer>errorOnce(testException),
-                  AsyncIterator.range(1, 5, 1))
+                  AsyncIterators.<Long>errorOnce(testException),
+                  AsyncIterator.range(1, 5))
                   .iterator());
       final AsyncIterator<?> it2 = this.fn.apply(it);
       try {
@@ -636,7 +637,7 @@ public class AsyncIteratorParameterizedTest {
   public static class ExceptionThrowingTerminalOperationTest {
 
     @Parameterized.Parameter
-    public Function<AsyncIterator<Integer>, CompletionStage<?>> fn;
+    public Function<AsyncIterator<Long>, CompletionStage<?>> fn;
 
     @Parameterized.Parameters(name = "{index} terminal: {0}")
     public static Collection<Object[]> data() {
@@ -649,7 +650,7 @@ public class AsyncIteratorParameterizedTest {
     @Test(expected = TestException.class)
     public void testErrorTerminal() throws Throwable {
       try {
-        this.fn.apply(AsyncIterator.repeat(0).take(5)).toCompletableFuture().join();
+        this.fn.apply(AsyncIterator.repeat(0L).take(5)).toCompletableFuture().join();
       } catch (final CompletionException e) {
         throw e.getCause();
       }
@@ -658,7 +659,7 @@ public class AsyncIteratorParameterizedTest {
     @Test(expected = TestException.class)
     public void testErrorTerminalShortCircuit() throws Throwable {
       try {
-        this.fn.apply(AsyncIterator.repeat(0)).toCompletableFuture().join();
+        this.fn.apply(AsyncIterator.repeat(0L)).toCompletableFuture().join();
       } catch (final CompletionException e) {
         throw e.getCause();
       }

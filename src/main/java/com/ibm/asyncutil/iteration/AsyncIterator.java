@@ -475,8 +475,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * <pre>
    * {@code
    * CompletableFuture<Z> lookupCoord(int x, int y);
-   * AsyncIterator<Z> zs = AsyncIterator.range(0, xmax, 1)
-   *  .thenFlatten(x -> AsyncIterator.range(0, ymax, 1)
+   * AsyncIterator<Z> zs = AsyncIterator.range(0, xmax)
+   *  .thenFlatten(x -> AsyncIterator.range(0, ymax)
    *    .thenCompose(y -> lookupCoord(x, y)));
    *
    * // would print z result for (0, 0), (0, 1), (0, 2) ....
@@ -1135,8 +1135,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * {@code
    * // returns an AsyncInterator of 0,1,2,3,4
    * AsyncIterators.concat(Arrays.asList(
-   *   AsyncIterators.range(0, 3, 1),
-   *   AsyncIterators.range(3, 5, 1)))
+   *   AsyncIterators.range(0, 3),
+   *   AsyncIterators.range(3, 5)))
    * }
    * </pre>
    *
@@ -1205,7 +1205,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * <pre>
    * {@code
    * // returns an AsyncIterator of 0,1,2,0,1,2,0,1,2
-   * AsyncIterators.concat(AsyncIterators.generate(() -> AsyncIterators.range(0, 3, 1)).take(3))
+   * AsyncIterators.concat(AsyncIterators.generate(() -> AsyncIterators.range(0, 3)).take(3))
    * }
    * </pre>
    *
@@ -1404,30 +1404,26 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * Creates an AsyncIterator for a range.
    *
    * <p>
-   * If delta is positive, similar to {@code for(i = start; i < end; i+=delta)}. If delta is
-   * negative, similar to {@code for(i = start; i > end; i+=delta)}.
+   * Similar to {@code for(i = start; i < end; i++)}.
    *
    * <p>
    * The stages returned by nextStage will be already completed.
    *
    * @param start the start point of iteration (inclusive)
    * @param end the end point of iteration (exclusive)
-   * @param delta the step amount for each iterator, it may be negative
-   * @return an AsyncIterator that will return a integers from start to end incremented by delta
+   * @return an AsyncIterator that will return longs from start to end
    */
-  static AsyncIterator<Integer> range(final int start, final int end, final int delta) {
-    if (delta == 0) {
-      throw new IllegalArgumentException("increment/decrement must be nonzero");
+  static AsyncIterator<Long> range(final long start, final long end) {
+    if (start >= end) {
+      return AsyncIterator.empty();
     }
-    return new AsyncIterator<Integer>() {
-      int counter = start;
+    return new AsyncIterator<Long>() {
+      long counter = start;
 
       @Override
-      public CompletionStage<Either<End, Integer>> nextStage() {
-        if ((delta > 0 && this.counter < end) || (delta < 0 && this.counter > end)) {
-          final int ret = this.counter;
-          this.counter += delta;
-          return StageSupport.completedStage(Either.right(ret));
+      public CompletionStage<Either<End, Long>> nextStage() {
+        if (this.counter < end) {
+          return StageSupport.completedStage(Either.right(this.counter++));
         } else {
           return End.endStage();
         }
@@ -1436,24 +1432,18 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   }
 
   /**
-   * Creates an infinite AsyncIterator for a range.
+   * Creates an infinite AsyncIterator starting at {@code start}.
    *
    * @param start the start point of iteration (inclusive)
-   * @param delta the increment/decrement for each iteration (may be negative)
-   * @return an AsyncIterator that will return a integers starting with start incremented by delta
+   * @return an AsyncIterator that will return longs starting with start
    */
-  static AsyncIterator<Integer> infiniteRange(final int start, final int delta) {
-    if (delta == 0) {
-      throw new IllegalArgumentException("increment/decrement must be nonzero");
-    }
-    return new AsyncIterator<Integer>() {
-      int counter = start;
+  static AsyncIterator<Long> infiniteRange(final long start) {
+    return new AsyncIterator<Long>() {
+      long counter = start;
 
       @Override
-      public CompletionStage<Either<End, Integer>> nextStage() {
-        final int old = this.counter;
-        this.counter += delta;
-        return StageSupport.completedStage(Either.right(old));
+      public CompletionStage<Either<End, Long>> nextStage() {
+        return StageSupport.completedStage(Either.right(counter++));
       }
     };
   }
