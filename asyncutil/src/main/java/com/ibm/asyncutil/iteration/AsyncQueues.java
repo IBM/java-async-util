@@ -123,8 +123,6 @@ public final class AsyncQueues {
     // consumer's future
     private Node<T> head;
 
-    @SuppressWarnings("restriction")
-    @sun.misc.Contended
     private volatile Node<T> tail;
 
     private static class Node<T> extends CompletableFuture<Either<End, T>> {

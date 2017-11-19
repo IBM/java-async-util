@@ -1010,7 +1010,8 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   /**
    * Sequentially accumulates the elements of type T in this iterator into a single T value. This
    * provides an immutable style terminal reduction operation as opposed to the mutable style
-   * supported by {@link #collect}. For example, to sum an iterator of ints, {@code intIt.fold(0, (acc,
+   * supported by {@link #collect}. For example, to sum an iterator of ints,
+   * {@code intIt.fold(0, (acc,
    * i) -> acc + i)}.
    *
    * <p>
@@ -1443,7 +1444,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
 
       @Override
       public CompletionStage<Either<End, Long>> nextStage() {
-        return StageSupport.completedStage(Either.right(counter++));
+        return StageSupport.completedStage(Either.right(this.counter++));
       }
     };
   }

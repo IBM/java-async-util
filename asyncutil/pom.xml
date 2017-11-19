@@ -3,11 +3,18 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.ibm</groupId>
-    <artifactId>asyncutil-aggregator</artifactId>
+    <artifactId>asyncutil</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <packaging>pom</packaging>
+    <packaging>jar</packaging>
 
+    <name>asyncutil</name>
     <url>http://maven.apache.org</url>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+    </properties>
 
     <reporting>
         <plugins>
@@ -19,8 +26,12 @@
         </plugins>
     </reporting>
 
-    <modules>
-        <module>asyncutil</module>
-        <module>asyncutil-flow</module>
-    </modules>
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.11</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 </project>
