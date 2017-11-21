@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletionStage;
 
 import com.ibm.asyncutil.locks.AsyncLock.LockToken;
+import com.ibm.asyncutil.locks.FairAsyncReadWriteLock;
 
 /**
  * An asynchronously acquirable read-write lock.
@@ -20,15 +21,15 @@ import com.ibm.asyncutil.locks.AsyncLock.LockToken;
 public interface AsyncReadWriteLock {
 
   /**
-   * Acquires this read-lock. If the associated write-lock has not been acquired, the returned stage
-   * will be immediately complete. Otherwise, the returned stage will complete when the lock is no
-   * longer exclusively acquired by a writer.
+   * Acquires this read lock. The returned stage will complete when the lock is no longer
+   * exclusively held by a writer, and the read lock has been acquired. The stage may already be
+   * complete if the write lock is not currently held.
    * <p>
    * The {@link ReadLockToken} held by the returned stage is used to release the read lock after it
    * has been acquired and the read-lock-protected action has completed.
    *
    * @return A {@link CompletionStage} which will complete with a {@link ReadLockToken} when the
-   *         read-lock has been acquired
+   *         read lock has been acquired
    */
   CompletionStage<ReadLockToken> acquireReadLock();
 
@@ -47,15 +48,15 @@ public interface AsyncReadWriteLock {
 
 
   /**
-   * Exclusively acquires this write-lock. If another associated write-lock or read-lock has not been
-   * acquired, the returned stage will be immediately complete. Otherwise, the returned stage will
-   * complete when the lock is no longer held by any readers or an exclusive writer.
+   * Exclusively acquires this write lock. The returned stage will complete when the lock is no
+   * longer held by any readers or another writer, and the write lock has been exclusively acquired.
+   * The stage may already be complete if no locks are currently held.
    * <p>
    * The {@link WriteLockToken} held by the returned stage is used to release the write lock after
    * it has been acquired and the write-lock-protected action has completed.
    *
    * @return A {@link CompletionStage} which will complete with a {@link WriteLockToken} when the
-   *         write-lock has been exclusively acquired
+   *         write lock has been exclusively acquired
    */
   CompletionStage<WriteLockToken> acquireWriteLock();
 
@@ -98,7 +99,7 @@ public interface AsyncReadWriteLock {
      * Downgrades this write lock acquisition to a read lock acquisition without any intermediate
      * release. This may allow other waiting readers to proceed with their acquisitions. Other
      * writers, however, may not proceed until the returned read lock token (and any others that
-     * become acquire) is released.
+     * become acquired) is released.
      * <p>
      * The returned {@link ReadLockToken} becomes the principle token for this acquisition; this
      * calling WriteLockToken should not be released afterwards, and may be abandoned freely.

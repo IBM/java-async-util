@@ -31,25 +31,25 @@ import java.util.concurrent.CompletionStage;
 public interface AsyncNamedReadWriteLock<T> {
 
   /**
-   * Acquires the read-lock associated with the given name. If the associated write-lock is not
-   * currently held, the returned stage will be immediately complete. Otherwise, the returned stage
-   * will complete when the lock is no longer exclusively acquired by a writer.
+   * Acquires the read lock associated with the given name. The returned stage will complete when
+   * the lock is no longer exclusively held by a writer, and the read lock has been acquired. The
+   * stage may already be complete if the write lock for the given name is not currently held.
    * <p>
    * The {@link AsyncReadWriteLock.ReadLockToken} held by the returned stage is used to release the
-   * read-lock after it has been acquired and the read-lock-protected action has completed.
+   * read lock after it has been acquired and the read-lock-protected action has completed.
    *
    * @param name to acquire read access for
    * @return A {@link CompletionStage} which will complete with a
-   *         {@link AsyncReadWriteLock.ReadLockToken} when the read-lock associated with
+   *         {@link AsyncReadWriteLock.ReadLockToken} when the read lock associated with
    *         {@code name} has been acquired
    */
   CompletionStage<AsyncReadWriteLock.ReadLockToken> acquireReadLock(T name);
 
   /**
-   * Exclusively acquires the write-lock associated with the given name. If the associated write-lock
-   * or read-lock is not currently held, the returned stage will be immediately complete. Otherwise,
-   * the returned stage will complete when the lock is no longer held by any readers or an exclusive
-   * writer.
+   * Exclusively acquires the write lock associated with the given name. The returned stage will
+   * complete when the lock is no longer held by any readers or another writer, and the write lock
+   * has been exclusively acquired. The stage may already be complete if no locks for the given name
+   * are currently held.
    * <p>
    * The {@link AsyncReadWriteLock.WriteLockToken} held by the returned stage is used to release the
    * write lock after it has been acquired and the write-lock-protected action has completed.
@@ -62,7 +62,7 @@ public interface AsyncNamedReadWriteLock<T> {
   CompletionStage<AsyncReadWriteLock.WriteLockToken> acquireWriteLock(T name);
 
   /**
-   * Attempts to acquire the read-lock associated with the given name. If the associated write-lock
+   * Attempts to acquire the read lock associated with the given name. If the associated write lock
    * is not currently held, the returned Optional will hold a ReadLockToken representing this
    * acquisition. Otherwise, the returned Optional will be empty.
    * <p>
@@ -70,14 +70,14 @@ public interface AsyncNamedReadWriteLock<T> {
    * the read lock after it has been acquired and the read-lock-protected action has completed.
    *
    * @param name to acquire read access for
-   * @return An {@link Optional} holding a {@link AsyncReadWriteLock.ReadLockToken} if the
-   *         write-lock associated with {@code name} is not held; otherwise an empty Optional
+   * @return An {@link Optional} holding a {@link AsyncReadWriteLock.ReadLockToken} if the write
+   *         lock associated with {@code name} is not held; otherwise an empty Optional
    */
   Optional<AsyncReadWriteLock.ReadLockToken> tryReadLock(T name);
 
   /**
-   * Attempts to acquire the write-lock associated with the given name. If the associated write-lock
-   * or read-lock is not currently held, the returned Optional will hold a WriteLockToken
+   * Attempts to acquire the write lock associated with the given name. If the associated write lock
+   * or read lock is not currently held, the returned Optional will hold a WriteLockToken
    * representing this acquisition. Otherwise, the returned Optional will be empty.
    * <p>
    * The {@link AsyncReadWriteLock.WriteLockToken} held by the returned optional is used to release

@@ -18,10 +18,8 @@ public interface AsyncSemaphore {
 
   /**
    * Acquires the given number of permits from the semaphore, returning a stage which will complete
-   * when all of the permits are exclusively acquired.
-   * <p>
-   * If the permits are available immediately, the returned stage may be already complete (but need
-   * not be).
+   * when all of the permits are exclusively acquired. The stage may already be complete if the
+   * permits are available immediately.
    * <p>
    * If the permits are not available immediately, the acquisition will enter a queue and an
    * incomplete stage will be returned. Semantics of the waiter queue, including ordering policies,
@@ -30,7 +28,8 @@ public interface AsyncSemaphore {
    * assigned to this acquisition by the governing queue policy.
    *
    * @param permits A non-negative number of permits to acquire from the semaphore
-   * @return a {@link CompletionStage} which will be completed when all {@code permits} have been acquired
+   * @return a {@link CompletionStage} which will be completed when all {@code permits} have been
+   *         acquired
    * @throws IllegalArgumentException if the requested permits are negative, or exceed any
    *         restrictions enforced by the given implementation
    */
@@ -107,7 +106,8 @@ public interface AsyncSemaphore {
    * Acquires 1 permit from the semaphore as if by calling {@link #acquire(long)} with an argument
    * of 1.
    *
-   * @return a {@link CompletionStage} which will complete when 1 permit has been successfully acquired
+   * @return a {@link CompletionStage} which will complete when 1 permit has been successfully
+   *         acquired
    * @see #acquire(long)
    */
   default CompletionStage<Void> acquire() {

@@ -19,9 +19,8 @@ import java.util.concurrent.CompletionStage;
 public interface AsyncLock {
 
   /**
-   * Exclusively acquires this lock. If the lock is not currently held, the returned stage will be
-   * immediately complete. Otherwise, the returned stage will complete when the lock is exclusively
-   * acquired by this caller.
+   * Exclusively acquires this lock. The returned stage will complete when the lock is exclusively
+   * acquired by this caller. The stage may already be complete if the lock was not held.
    *
    * <p>
    * The {@link LockToken} held by the returned stage is used to release the lock after it has been
