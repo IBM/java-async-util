@@ -17,19 +17,19 @@ import java.util.concurrent.CompletionStage;
 public interface AsyncSemaphore {
 
   /**
-   * Acquires the given number of permits from the semaphore, returning a future which will complete
-   * when all of the permits are exclusively acquired.
-   * <p>
-   * If the permits are available immediately, the returned future may be already complete (but need
-   * not be).
+   * Acquires the given number of permits from the semaphore, returning a stage which will complete
+   * when all of the permits are exclusively acquired. The stage may already be complete if the
+   * permits are available immediately.
    * <p>
    * If the permits are not available immediately, the acquisition will enter a queue and an
-   * incomplete future will be returned. Semantics of the waiter queue, including ordering policies,
+   * incomplete stage will be returned. Semantics of the waiter queue, including ordering policies,
    * are implementation specific and will be defined by the given implementing class. The returned
-   * future will complete when sufficient permits have been {@link #release(long) released} and
+   * stage will complete when sufficient permits have been {@link #release(long) released} and
    * assigned to this acquisition by the governing queue policy.
    *
    * @param permits A non-negative number of permits to acquire from the semaphore
+   * @return a {@link CompletionStage} which will be completed when all {@code permits} have been
+   *         acquired
    * @throws IllegalArgumentException if the requested permits are negative, or exceed any
    *         restrictions enforced by the given implementation
    */
@@ -40,7 +40,7 @@ public interface AsyncSemaphore {
    * <p>
    * If there are unfulfilled acquires pending, this method will release permits to the waiting
    * acquisitions based on the implementation's release and acquire policies. Consequently, this
-   * method may complete a number of waiting futures and execute the corresponding observers.
+   * method may complete a number of waiting stages and execute the corresponding observers.
    *
    * @param permits A non-negative number of permits to release to the semaphore
    * @throws IllegalArgumentException if the released permits are negative, or exceed any
@@ -49,7 +49,7 @@ public interface AsyncSemaphore {
   void release(long permits);
 
   /**
-   * Attempt to acquire the given number of permits from the semaphore, returning a boolean
+   * Attempts to acquire the given number of permits from the semaphore, returning a boolean
    * indicating whether all of the permits were immediately available and have been exclusively
    * acquired.
    * <p>
@@ -77,7 +77,7 @@ public interface AsyncSemaphore {
   long drainPermits();
 
   /**
-   * Returns the number of currently available permits.
+   * Gets the number of currently available permits.
    * <p>
    * The bounds of the returned value are not defined; an implementation may, for example, choose to
    * represent waiting acquisitions as holding negative permits, and thus the value returned by this
@@ -87,14 +87,18 @@ public interface AsyncSemaphore {
    * <p>
    * This value is produced on a best-effort basis, and should not be used for any control logic.
    * Generally it is only useful in testing, debugging, or statistics purposes.
+   *
+   * @return the number of currently available permits
    */
   long getAvailablePermits();
 
   /**
-   * Returns the number of unfulfilled acquisitions waiting on this semaphore's permits.
+   * Gets the number of unfulfilled acquisitions waiting on this semaphore's permits.
    * <p>
    * This value is produced on a best-effort basis, and should not be used for any control logic.
    * Generally it is only useful in testing, debugging, or statistics purposes.
+   *
+   * @return the number of unfulfilled acquisitions waiting on this semaphore's permits
    */
   int getQueueLength();
 
@@ -102,6 +106,8 @@ public interface AsyncSemaphore {
    * Acquires 1 permit from the semaphore as if by calling {@link #acquire(long)} with an argument
    * of 1.
    *
+   * @return a {@link CompletionStage} which will complete when 1 permit has been successfully
+   *         acquired
    * @see #acquire(long)
    */
   default CompletionStage<Void> acquire() {
@@ -122,6 +128,7 @@ public interface AsyncSemaphore {
    * Attempts to acquire 1 permit from the semaphore as if by calling {@link #tryAcquire(long)} with
    * an argument of 1.
    *
+   * @return true iff the single request permit is available, and has been immediately acquired
    * @see #tryAcquire(long)
    */
   default boolean tryAcquire() {

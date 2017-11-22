@@ -31,24 +31,31 @@ import java.util.concurrent.CompletionStage;
 public interface AsyncNamedLock<T> {
 
   /**
-   * Acquire the lock associated with the given name. If the associated lock is not currently held,
-   * the returned future will be immediately complete. Otherwise, the returned future will complete
-   * when the lock is no longer held by other acquisitions.
+   * Acquires the lock associated with the given name. The returned stage will complete when the
+   * lock is exclusively acquired by this caller. The stage may already be complete if the lock was
+   * not held.
    *
    * <p>
-   * The {@link AsyncLock.LockToken} held by the returned future is used to release the lock after
-   * it has been acquired and the lock-protected action has completed.
+   * The {@link AsyncLock.LockToken} held by the returned stage is used to release the lock after it
+   * has been acquired and the lock-protected action has completed.
+   *
+   * @param name to acquire exclusive access for
+   * @return A {@link CompletionStage} which will complete with a {@link AsyncLock.LockToken} when
+   *         the lock associated with {@code name} has been exclusively acquired
    */
   CompletionStage<AsyncLock.LockToken> acquireLock(final T name);
 
   /**
-   * Attempt to acquire the lock associated with the given name. If the associated lock is not
-   * currently held, the returned future will be immediately complete. Otherwise, the returned
-   * future will complete when the lock is no longer held by other acquisitions.
+   * Attempts to immediately acquire the lock associated with the given name, returning a populated
+   * {@link Optional} if the lock is not currently held.
    *
    * <p>
    * The {@link AsyncLock.LockToken} held by the returned Optional is used to release the lock after
    * it has been acquired and the lock-protected action has completed.
+   *
+   * @param name to acquire exclusive access for
+   * @return An {@link Optional} holding a {@link AsyncLock.LockToken} if the lock associated with
+   *         {@code name} is not held; otherwise an empty Optional
    */
   Optional<AsyncLock.LockToken> tryLock(final T name);
 

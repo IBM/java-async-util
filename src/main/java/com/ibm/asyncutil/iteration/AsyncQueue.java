@@ -85,22 +85,22 @@ import java.util.Optional;
  * AsyncQueue queue = AsyncQueues.unbounded();
  * futures = ips.stream()
  *
- *   // get an AsyncIterator of numbers from each server
- *  .map(this::getNumbersFrom)
+ *    // get an AsyncIterator of numbers from each server
+ *   .map(this::getNumbersFrom)
  *
- *   // send each number on each iterator into the queue as they arrive
- *  .forEach(asyncIterator -> asyncIterator.forEach(t -> queue.send(t)))
+ *    // send each number on each iterator into the queue as they arrive
+ *   .forEach(asyncIterator -> asyncIterator.forEach(t -> queue.send(t)))
  *
- *  // bundle futures into a list
- *  .collect(Collectors.toList());
+ *   // bundle futures into a list
+ *   .collect(Collectors.toList());
  *
- *  // terminate the queue whenever we're done sending
- *  Combinators.allOf(futures).thenAccept(ignore -> queue.terminate());
+ * // terminate the queue whenever we're done sending
+ * Combinators.allOf(futures).thenAccept(ignore -> queue.terminate());
  *
- *  // prints each number returned by servers as they arrive
- *  queue
- *    .forEach(num -> System.out.println(num))
- *    .thenAccept(ig -> System.out.println("finished getting all numbers")));
+ * // prints each number returned by servers as they arrive
+ * queue
+ *   .forEach(num -> System.out.println(num))
+ *   .thenAccept(ig -> System.out.println("finished getting all numbers")));
  * }
  * </pre>
  *

@@ -786,7 +786,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   }
 
   /**
-   * Collect the results of this iterator in batches, returning an iterator of those batched
+   * Collects the results of this iterator in batches, returning an iterator of those batched
    * collections.
    *
    * <p>
@@ -1036,7 +1036,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   }
 
   /**
-   * Force the eager evaluation of the entire iterator, stopping only when {@code this} iterator is
+   * Forces the eager evaluation of the entire iterator, stopping only when {@code this} iterator is
    * out of elements or an exception is encountered.
    *
    * <p>
@@ -1049,7 +1049,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   }
 
   /**
-   * Perform a mutable reduction operation using collector and return a CompletionStage of the
+   * Performs a mutable reduction operation using collector and return a CompletionStage of the
    * result.
    *
    * <p>
@@ -1070,7 +1070,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   }
 
   /**
-   * Perform a mutable reduction operation and return a {@link CompletionStage} of the result. A
+   * Performs a mutable reduction operation and return a {@link CompletionStage} of the result. A
    * mutable reduction is one where the accumulator has mutable state and additional elements are
    * incorporated by updating that state.
    *
@@ -1128,8 +1128,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   }
 
   /**
-   * Flatten a collection of AsyncIterators into a single AsyncIterator. If the collection has a
-   * defined order, that order is preserved in the concatenated result.
+   * Flattens an {@link Iterator} of AsyncIterators into a single AsyncIterator.
    *
    * <pre>
    * {@code
@@ -1200,7 +1199,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   }
 
   /**
-   * Flatten an AsyncIterator of AsyncIterators into a single AsyncIterator
+   * Flattens an AsyncIterator of AsyncIterators into a single AsyncIterator
    *
    * <pre>
    * {@code
@@ -1295,7 +1294,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   }
 
   /**
-   * Create an iterator that is the result of fn applied to iteration elements returned by tIt and
+   * Creates an iterator that is the result of fn applied to iteration elements returned by tIt and
    * uI. If either input iterator terminates, the returned iterator will terminate. If either input
    * iterator returns an exception, an exceptional result will be emitted by the returned iterator.
    * In the case of an exception, a single result will still be consumed from both iterators.
@@ -1401,7 +1400,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   }
 
   /**
-   * Create an AsyncIterator for a range.
+   * Creates an AsyncIterator for a range.
    *
    * <p>
    * If delta is positive, similar to {@code for(i = start; i < end; i+=delta)}. If delta is
@@ -1436,7 +1435,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   }
 
   /**
-   * Create an infinite AsyncIterator for a range.
+   * Creates an infinite AsyncIterator for a range.
    *
    * @param start the start point of iteration (inclusive)
    * @param delta the increment/decrement for each iteration (may be negative)
@@ -1459,7 +1458,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   }
 
   /**
-   * Create an AsyncIterator from a collection of {@link CompletionStage CompletionStages}. When a
+   * Creates an AsyncIterator from a collection of {@link CompletionStage CompletionStages}. When a
    * stage completes, the value becomes available for consumption in the returned iterator. If a
    * stage completes exceptionally, the returned iterator will emit an exceptional stage. The order
    * in which values are returned does not reflect the original order of the collection of stages.
@@ -1513,7 +1512,7 @@ public interface AsyncIterator<T> extends AsyncCloseable {
   }
 
   /**
-   * Successively apply the asynchronous function f to the seed until the stage returned by f
+   * Successively applies the asynchronous function f to the seed until the stage returned by f
    * contains an empty optional or returns an exception. Creates an iterator of values of
    * applications
    *

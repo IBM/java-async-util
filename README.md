@@ -82,7 +82,7 @@ int sum = widgets.stream()
   .mapToInt(w -> w.getWeight())
   .sum();
 ```
-Say widgets was not a concrete collection, but instead generating a widget was involved asynchronous network request (or an expensive CPU computation, etc). If we instead make the source of widgets an `AsyncIterator` we can asynchronously apply the pipeline every time a widget becomes available, and return a CompletionStage which will be complete when the pipeline has finished. In this example, let's say we are only interested in the first 100 red widgets.
+Say widgets was not a concrete collection, but instead generating a widget involved an asynchronous network request (or an expensive CPU computation, etc). If we instead make the source of widgets an `AsyncIterator` we can asynchronously apply the pipeline every time a widget becomes available, and return a CompletionStage which will be complete when the pipeline has finished. In this example, let's say we are only interested in the first 100 red widgets.
 ```java
 // make an asynchronous network request that yields a widget
 CompletionStage<Widget> getWidget();
@@ -92,7 +92,7 @@ CompletionStage<Integer> sum = AsyncIterator
   .filter(w -> w.getColor() == RED)
   .take(100)
   .thenApply(w -> w.getWeight())
-  .fold((sum, next) -> sum + next)
+  .collect(Collectors.summingInt(i -> i));
 ```
 This will make one `getWidget` request at a time, running the rest of the pipeline operations each time a widget is generated on whatever thread processes the response required to generate the widget. When the widget stream is finished (in this case, after receiving 100 red widgets), the CompletionStage `sum` will complete with the result of the reduction operation. `AsyncIterators` have many other capabilities; if getting the weight required asynchronity we could use `thenCompose` instead of `thenApply`, if we needed to collect the weights into a collection we could use `collect(Collector)`, etc. 
 

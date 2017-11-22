@@ -26,7 +26,7 @@ package com.ibm.asyncutil.locks;
  * {@code
  * BitSet bits = new BitSet();
  *
- * Future<Boolean> isSet(int idx) {
+ * CompletionStage<Boolean> isSet(int idx) {
  *   // first attempt to optimistically read; if it fails,
  *   // fall back to full read lock
  *   final Stamp stamp = this.lock.tryOptimisticRead();
@@ -42,13 +42,13 @@ package com.ibm.asyncutil.locks;
  *     // the read value can only be considered correct if
  *     // the write lock was not acquired in the interim
  *     if (stamp.validate()) {
- *       return Futures.of(optimistic);
+ *       return StageSupport.completedStage(optimistic);
  *     }
  *   }
  *
  *   // otherwise, if the write lock was already held, or acquired afterwards,
  *   // acquire the full read lock for a consistent result (fall back from optimism)
- *   return this.lock.acquireReadLock().map(lockToken -> {
+ *   return this.lock.acquireReadLock().thenApply(lockToken -> {
  *     try {
  *       return this.bits.get(idx) && this.bits.get(idx+1);
  *     } finally {
@@ -75,7 +75,7 @@ package com.ibm.asyncutil.locks;
 public interface AsyncStampedLock extends AsyncReadWriteLock {
 
   /**
-   * Attempt to acquire a {@link Stamp} in optimistic-read mode if the lock is not already
+   * Attempts to acquire a {@link Stamp} in optimistic-read mode if the lock is not already
    * write-locked. The stamp may subsequently be {@link Stamp#validate() validated} to check whether
    * the write lock has been acquired
    *
@@ -99,7 +99,7 @@ public interface AsyncStampedLock extends AsyncReadWriteLock {
   interface Stamp {
 
     /**
-     * Check whether the associated lock's write mode has been acquired in the time after this stamp
+     * Checks whether the associated lock's write mode has been acquired in the time after this stamp
      * was issued.
      *
      * @return true iff the stamp is still valid i.e. write lock has not been acquired since this
