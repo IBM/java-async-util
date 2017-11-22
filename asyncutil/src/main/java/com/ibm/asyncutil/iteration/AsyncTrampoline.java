@@ -86,15 +86,22 @@ public final class AsyncTrampoline {
 
     private TrampolineInternal(
         final Predicate<? super T> shouldContinue,
-        final Function<? super T, ? extends CompletionStage<T>> f,
-        final T initialValue) {
+        final Function<? super T, ? extends CompletionStage<T>> f) {
       this.shouldContinue = shouldContinue;
       this.f = f;
-      unroll(initialValue, null, null);
+    }
+
+    private static <T> CompletionStage<T> trampoline(
+        final Predicate<? super T> shouldContinue,
+        final Function<? super T, ? extends CompletionStage<T>> f,
+        final T initialValue) {
+      final TrampolineInternal<T> trampolineInternal = new TrampolineInternal<>(shouldContinue, f);
+      trampolineInternal.unroll(initialValue, null, null);
+      return trampolineInternal;
     }
 
     private void unroll(
-        final T completed, final Thread previousThread, final PassBack previousPassBack) {
+        final T completed, final Thread previousThread, final PassBack<T> previousPassBack) {
       final Thread currentThread = Thread.currentThread();
 
       // we need to track termination in case f queues the future and currentThread later picks it
@@ -102,7 +109,7 @@ public final class AsyncTrampoline {
       if (currentThread.equals(previousThread) && previousPassBack.isRunning) {
         previousPassBack.item = completed;
       } else {
-        final PassBack currentPassBack = new PassBack();
+        final PassBack<T> currentPassBack = new PassBack<>();
         T c = completed;
         do {
           try {
@@ -122,18 +129,21 @@ public final class AsyncTrampoline {
             completeExceptionally(e);
             return;
           }
-        } while ((c = currentPassBack.poll()) != null);
+        } while ((c = currentPassBack.poll()) != PassBack.NIL);
         currentPassBack.isRunning = false;
       }
     }
 
-    private class PassBack {
-      boolean isRunning = true;
-      T item = null;
+    @SuppressWarnings("unchecked")
+    private static class PassBack<T> {
+      private static final Object NIL = new Object();
 
-      public T poll() {
+      boolean isRunning = true;
+      T item = (T) NIL;
+
+      T poll() {
         final T c = this.item;
-        this.item = null;
+        this.item = (T) NIL;
         return c;
       }
     }
@@ -177,7 +187,7 @@ public final class AsyncTrampoline {
       final Predicate<? super T> shouldContinue,
       final Function<? super T, ? extends CompletionStage<T>> fn,
       final T initialValue) {
-    return new TrampolineInternal<>(shouldContinue, fn, initialValue);
+    return TrampolineInternal.trampoline(shouldContinue, fn, initialValue);
   }
 
   /**

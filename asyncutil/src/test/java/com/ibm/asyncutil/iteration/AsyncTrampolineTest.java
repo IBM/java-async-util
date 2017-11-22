@@ -7,6 +7,7 @@
 package com.ibm.asyncutil.iteration;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -88,4 +89,53 @@ public class AsyncTrampolineTest {
     Assert.assertEquals(3, sum);
   }
 
+  @Test
+  public void testVoidUnroll() {
+    final AtomicInteger count = new AtomicInteger();
+    Assert.assertEquals(
+        null,
+        AsyncTrampoline.<Void>asyncWhile(
+            ig -> count.incrementAndGet() < 5,
+            ig -> StageSupport.voidStage(),
+            null).toCompletableFuture().join());
+  }
+
+  @Test
+  public void testNullIntermediateValue() {
+    Assert.assertEquals(
+        AsyncTrampoline.<Integer>asyncWhile(
+            i -> i != null && i < 10,
+            i -> {
+              Integer next;
+              if (i == null) {
+                next = 5;
+              } else if (i == 4) {
+                next = null;
+              } else {
+                next = i + 1;
+              }
+              return StageSupport.completedStage(next);
+            },
+            0).toCompletableFuture().join(),
+        null);
+  }
+
+  @Test
+  public void testNullInitialValue() {
+    Assert.assertEquals(
+        AsyncTrampoline.<Integer>asyncWhile(
+            i -> i == null || i < 5,
+            i -> StageSupport.completedStage(i == null ? 0 : i + 1),
+            null).toCompletableFuture().join().intValue(),
+        5);
+  }
+
+  @Test(expected = NullPointerException.class)
+  public void testNullBooleanThrowsException() throws Throwable {
+    try {
+      AsyncTrampoline.asyncWhile(() -> null).toCompletableFuture().join();
+    } catch (CompletionException e) {
+      throw e.getCause();
+    }
+  }
 }
