@@ -4,7 +4,7 @@
 
     <groupId>com.ibm</groupId>
     <artifactId>asyncutil-flow</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.2-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>asyncutil-flow</name>
