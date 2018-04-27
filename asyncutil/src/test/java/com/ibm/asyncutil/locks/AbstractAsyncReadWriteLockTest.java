@@ -317,7 +317,7 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
 
       final CompletableFuture<AsyncReadWriteLock.WriteLockToken> write1 =
           narwls.acquireWriteLock().toCompletableFuture();
-      Assert.assertTrue(write1.isDone());
+      TestUtil.join(write1, 2, TimeUnit.SECONDS);
 
       // under write lock
       final CompletableFuture<AsyncReadWriteLock.ReadLockToken> read1 =
@@ -350,9 +350,6 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
 
       TestUtil.join(write1).releaseLock();
       TestUtil.join(CompletableFuture.allOf(read1, read2, read3), 2, TimeUnit.SECONDS);
-      Assert.assertTrue(read1.isDone());
-      Assert.assertTrue(read2.isDone());
-      Assert.assertTrue(read3.isDone());
       Assert.assertFalse(write2.isDone());
       Assert.assertFalse(read4.isDone());
       Assert.assertFalse(read5.isDone());
@@ -362,7 +359,6 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
       TestUtil.join(read1).releaseLock();
       TestUtil.join(read2).releaseLock();
       TestUtil.join(read3, 2, TimeUnit.SECONDS);
-      Assert.assertTrue(read3.isDone());
       Assert.assertFalse(write2.isDone());
       Assert.assertFalse(read4.isDone());
       Assert.assertFalse(read5.isDone());
@@ -375,7 +371,6 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
       final CompletableFuture<AsyncReadWriteLock.WriteLockToken> write4 =
           narwls.acquireWriteLock().toCompletableFuture();
 
-      Assert.assertTrue(read3.isDone());
       Assert.assertFalse(write2.isDone());
       Assert.assertFalse(read4.isDone());
       Assert.assertFalse(read5.isDone());
@@ -386,7 +381,6 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
 
       TestUtil.join(read3).releaseLock();
       TestUtil.join(write2, 2, TimeUnit.SECONDS);
-      Assert.assertTrue(write2.isDone());
       Assert.assertFalse(read4.isDone());
       Assert.assertFalse(read5.isDone());
       Assert.assertFalse(read6.isDone());
@@ -396,9 +390,6 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
 
       TestUtil.join(write2).releaseLock();
       TestUtil.join(CompletableFuture.allOf(read4, read5, read6), 2, TimeUnit.SECONDS);
-      Assert.assertTrue(read4.isDone());
-      Assert.assertTrue(read5.isDone());
-      Assert.assertTrue(read6.isDone());
       Assert.assertFalse(write3.isDone());
       Assert.assertFalse(read7.isDone());
       Assert.assertFalse(write4.isDone());
@@ -406,18 +397,15 @@ public abstract class AbstractAsyncReadWriteLockTest extends AbstractAsyncLockTe
       Arrays.asList(read4, read5, read6)
           .forEach(f -> f.thenAccept(readLock -> readLock.releaseLock()));
       TestUtil.join(write3, 2, TimeUnit.SECONDS);
-      Assert.assertTrue(write3.isDone());
       Assert.assertFalse(read7.isDone());
       Assert.assertFalse(write4.isDone());
 
       TestUtil.join(write3).releaseLock();
       TestUtil.join(read7, 2, TimeUnit.SECONDS);
-      Assert.assertTrue(read7.isDone());
       Assert.assertFalse(write4.isDone());
 
       TestUtil.join(read7).releaseLock();
       TestUtil.join(write4, 2, TimeUnit.SECONDS);
-      Assert.assertTrue(write4.isDone());
 
       TestUtil.join(write4).releaseLock();
     }
