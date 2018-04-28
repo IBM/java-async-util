@@ -7,15 +7,27 @@
 package com.ibm.asyncutil.locks;
 
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.ibm.asyncutil.locks.AsyncEpoch.EpochToken;
+import com.ibm.asyncutil.util.Combinators;
 import com.ibm.asyncutil.util.TestUtil;
 
 public abstract class AbstractAsyncEpochTest {
@@ -69,7 +81,12 @@ public abstract class AbstractAsyncEpochTest {
     final AsyncEpoch e = newEpoch();
     final AsyncEpoch.EpochToken t = e.enter().orElseThrow(AssertionError::new);
     t.close();
+
+    // incorrect extra close
     t.close();
+
+    // some implementations won't detect close inconsistency until terminate
+    e.terminate().toCompletableFuture().join();
   }
 
   @Test
@@ -162,5 +179,114 @@ public abstract class AbstractAsyncEpochTest {
     Assert.assertFalse(msg, TestUtil.join(epoch.terminate()));
     Assert.assertFalse(msg, TestUtil.join(epoch.terminate()));
     Assert.assertFalse(msg, epoch.enter().isPresent());
+  }
+
+  @Test
+  public void testManyTerminates() {
+    final AsyncEpoch e = newEpoch();
+    final int count = 100_000;
+    final EpochToken[] tokens = IntStream.range(0, count).parallel()
+        .mapToObj(ignored -> e.enter().get())
+        .toArray(EpochToken[]::new);
+
+    // close all
+    Arrays.stream(tokens, 0, tokens.length).parallel().forEach(EpochToken::close);
+    Assert.assertFalse(e.isTerminated());
+
+    // count terminates concurrently terminating
+    final List<CompletionStage<Boolean>> terminates = IntStream.range(0, count).parallel()
+        .mapToObj(ignored -> e.terminate())
+        .collect(Collectors.toList());
+    Assert.assertTrue(e.isTerminated());
+
+    final CompletableFuture<Collection<Boolean>> allDone =
+        Combinators.collect(terminates).toCompletableFuture();
+    Assert.assertTrue(allDone.isDone());
+
+    Assert.assertEquals(1, allDone.join().stream().filter(b -> b).count());
+  }
+
+  @Test
+  public void testConcurrentEnterCloseTerminate()
+      throws InterruptedException, ExecutionException, TimeoutException {
+    final int closeAfter = 10_000;
+    final AsyncEpoch e = newEpoch();
+
+    final ConcurrentLinkedQueue<CompletableFuture<Void>> closes = new ConcurrentLinkedQueue<>();
+    final List<CompletableFuture<Void>> stages =
+        IntStream.range(0, ForkJoinPool.getCommonPoolParallelism())
+            .mapToObj(i -> CompletableFuture.supplyAsync(() -> {
+              int numEnters = 0;
+              while (true) {
+                if (i == 0 && numEnters++ == closeAfter) {
+                  return e.terminate().thenApply(terminated -> {
+                    Assert.assertTrue(terminated);
+                    Assert.assertTrue(e.isTerminated());
+                    return (Void) null;
+                  });
+                }
+                final Optional<EpochToken> token = e.enter();
+                if (token.isPresent()) {
+                  closes.add(CompletableFuture.runAsync(() -> token.get().close()));
+                } else {
+                  return CompletableFuture.<Void>completedFuture(null);
+                }
+              }
+            }).thenCompose(stage -> stage)).collect(Collectors.toList());
+    Combinators.allOf(stages).toCompletableFuture().get(10, TimeUnit.SECONDS);
+
+    // all closes should have been scheduled
+    Combinators.allOf(closes).toCompletableFuture().get(10, TimeUnit.SECONDS);
+
+    Assert.assertTrue(e.isTerminated());
+  }
+
+  @Test
+  public void testThreadBiasedClose() {
+    {
+      final AsyncEpoch e = newEpoch();
+
+      final int count = 100_000;
+      final EpochToken[] tokens = IntStream.range(0, count).parallel()
+          .mapToObj(ignored -> e.enter().get())
+          .toArray(EpochToken[]::new);
+
+      // close all tokens on one thread, then terminate
+      for (final EpochToken token : tokens) {
+        token.close();
+      }
+      final CompletableFuture<Boolean> f = e.terminate().toCompletableFuture();
+      Assert.assertTrue(f.isDone());
+      Assert.assertTrue(f.join());
+
+    }
+
+    {
+      final AsyncEpoch e = newEpoch();
+
+      final int count = 100_000;
+      final EpochToken[] tokens = IntStream.range(0, count).parallel()
+          .mapToObj(ignored -> e.enter().get())
+          .toArray(EpochToken[]::new);
+
+      // terminate competes with more distributed enters
+      final CompletableFuture<Void> closes = CompletableFuture.runAsync(() -> {
+        for (final EpochToken token : tokens) {
+          token.close();
+        }
+      });
+      final EpochToken[] tokens2 = IntStream.range(0, count).parallel()
+          .mapToObj(ignored -> e.enter().get())
+          .toArray(EpochToken[]::new);
+
+      closes.join();
+      final CompletableFuture<Boolean> f = e.terminate().toCompletableFuture();
+      Assert.assertFalse(f.isDone());
+      for (final EpochToken token : tokens2) {
+        token.close();
+      }
+      Assert.assertTrue(f.isDone());
+      Assert.assertTrue(f.join());
+    }
   }
 }

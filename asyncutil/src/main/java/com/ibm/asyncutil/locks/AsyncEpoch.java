@@ -82,11 +82,26 @@ public interface AsyncEpoch {
   CompletionStage<Void> awaitCompletion();
 
   /**
+   * An epoch that works well when most accesses come from the same thread.
+   * 
+   * @return an epoch with a lightweight memory footprint
+   */
+  static AsyncEpoch newUncontendedEpoch() {
+    return new AsyncEpochImpl();
+  }
+
+  /**
+   * @return an epoch that works well with many concurrent calls to {@link #enter()}
+   */
+  static AsyncEpoch newContendedEpoch() {
+    return new StripedEpoch();
+  }
+
+  /**
    * @return a new {@link AsyncEpoch} instance
    */
   static AsyncEpoch newEpoch() {
-    // TODO implement hierarchical back-off epoch
-    return new AsyncEpochImpl();
+    return new StripedEpoch();
   }
 
   /**
