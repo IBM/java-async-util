@@ -8,7 +8,7 @@ The library is broken up into three packages:
 * [Iteration](#iteration)
 * [Util](#util)
 
-Working with plain CompletableFutures becomes more difficult when much of the chained work happens far removed from the source of asynchronity. Special care needs to be taken to avoid blocking or blowing up the stack on certain thread pools, either user code must lose abstraction and be cognizant of where a computation is running, or be forced to spin up more threads and incur additional overhead. These tools make it easy to write high level asynchronous code that avoids explicitly dealing with these problems.
+To get started, you can browse the [javadocs](https://pages.github.ibm.com/cs-team-atg/async-util/apidocs/overview-summary.html) or walk through some [example code](https://github.ibm.com/cs-team-atg/async-util/blob/master/asyncutil/src/test/java/com/ibm/asyncutil/examples/nio/nio.md).
 
 ## Downloading
 TODO maven instructions
