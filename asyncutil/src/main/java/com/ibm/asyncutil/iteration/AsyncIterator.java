@@ -6,6 +6,7 @@
 
 package com.ibm.asyncutil.iteration;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -1134,19 +1135,24 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    *
    * <pre>
    * {@code
-   * // returns an AsyncInterator of 0,1,2,3,4
-   * AsyncIterators.concat(Arrays.asList(
-   *   AsyncIterators.range(0, 3),
-   *   AsyncIterators.range(3, 5)))
+   * AsyncIterators.concat(stream
+   *   .map(value -> getAsyncIterator(value))
+   *   .iterator())
    * }
    * </pre>
    *
-   * Once all elements from an input AsyncIterator have been consumed, {@link #close()} is called on
-   * that iterator. If {@link #close()} produces an exception, an exceptional stage will be produced
-   * in the handled iterator. If {@link #close()} exceptions should be ignored, they should either
-   * be squashed in the input iterators or the consumer may use manual {@link #nextStage()}
-   * iteration to continue past exceptions. It is still necessary to {@link #close()} the returned
-   * iterator, as the last used AsyncIterator may only be partially consumed.
+   * Once all elements from an input AsyncIterator have been consumed, {@link #close()} is
+   * internally called on that iterator. If this internal call to {@link #close()} produces an
+   * exception, an exceptional stage will be included in the returned iterator. It is still
+   * necessary to {@link #close()} the returned iterator, as this will close the most recently
+   * accessed input iterator (which may be only partially consumed). Note that only the constituent
+   * iterators encountered during traversal will be closed -- any remaining elements in the
+   * encompassing synchronous iterator will be untouched if the returned iterator is only partially
+   * traversed.
+   * <p>
+   * If {@link #close()} exceptions should be ignored, they should either be squashed in the input
+   * iterators or the consumer may use manual {@link #nextStage()} iteration to continue past
+   * exceptions.
    *
    * @param asyncIterators an Iterator of AsyncIterators to concatenate
    * @return A single AsyncIterator that is the concatenation of asyncIterators
@@ -1156,48 +1162,64 @@ public interface AsyncIterator<T> extends AsyncCloseable {
       return AsyncIterator.empty();
     }
 
-    class ConcatAsyncIterator implements AsyncIterator<T> {
-      private AsyncIterator<T> current = asyncIterators.next();
+    return new AsyncIterators.ConcatAsyncIterator<>(asyncIterators);
+  }
 
-      @Override
-      public CompletionStage<Either<End, T>> nextStage() {
-        return AsyncIterators.asyncWhileAsyncInitial(
-            et -> !et.isRight() && asyncIterators.hasNext(),
-            /*
-             * when reaching the end of one iterator, it must be closed before opening a new one. if
-             * the `close` future yields an error, an errorOnce iterator is concatenated with that
-             * close's exception, so the poll on the ConcatIter would encounter this exception. By
-             * using an errorOnce iter, the caller could choose to ignore the exception and attempt
-             * iterating again, which will pop the next asyncIterator off the meta iterator
-             */
-            ot -> StageSupport.thenComposeOrRecover(
-                AsyncIterators.convertSynchronousException(this.current::close),
-                (t, throwable) -> {
-                  this.current =
-                      throwable == null
-                          ? asyncIterators.next()
-                          : AsyncIterators.errorOnce(throwable);
-                  return this.current.nextStage();
-                }),
-            this.current.nextStage());
-      }
-
-      @Override
-      public CompletionStage<Void> close() {
-        return this.current.close();
-      }
-
-      @Override
-      public String toString() {
-        return "ConcatCloseableAsyncIter [current="
-            + this.current
-            + ", iter="
-            + asyncIterators
-            + "]";
-      }
+  /**
+   * Flattens a Collection of AsyncIterators into a single AsyncIterator.
+   *
+   * <pre>
+   * // returns an AsyncInterator of 0,1,2,3,4
+   * {@code
+   * AsyncIterators.concat(Arrays.asList(
+   *   AsyncIterators.range(0, 3),
+   *   AsyncIterators.range(3, 5)))
+   * }
+   * </pre>
+   *
+   * Once all elements from an input AsyncIterator have been consumed, {@link #close()} is
+   * internally called on that iterator. If this internal call to {@link #close()} produces an
+   * exception, an exceptional stage will be included in the returned iterator. It is still
+   * necessary to {@link #close()} the returned iterator, as this will close any remaining input
+   * iterators (which may be only partially consumed).
+   * <p>
+   * If {@link #close()} exceptions should be ignored, they should either be squashed in the input
+   * iterators or the consumer may use manual {@link #nextStage()} iteration to continue past
+   * exceptions.
+   * <p>
+   * Unlike {@link #concat(Iterator)} and {@link #concat(AsyncIterator)}, closing the returned
+   * iterator will additionally close any input iterators that were not encountered during
+   * traversal. Because the input is a collection (which is eager unlike iterators) the constituent
+   * iterators have likely been initialized and possibly already hold resources. As a convenience,
+   * this concatenation will close all input iterators so that their references do not need to be
+   * held outside of this concatenation's context. If closing all of the input iterators is not
+   * desired, consider using {@link #concat(Iterator)} on the collection's
+   * {@link Collection#iterator() iterator}
+   *
+   * @param asyncIterators a Collection of AsyncIterators to concatenate
+   * @return A single AsyncIterator that is the concatenation of asyncIterators
+   */
+  static <T> AsyncIterator<T> concat(final Collection<? extends AsyncIterator<T>> asyncIterators) {
+    final Iterator<? extends AsyncIterator<T>> iter = asyncIterators.iterator();
+    if (!iter.hasNext()) {
+      return AsyncIterator.empty();
     }
 
-    return new ConcatAsyncIterator();
+    return new AsyncIterators.ConcatAsyncIterator<T>(iter) {
+      @Override
+      public CompletionStage<Void> close() {
+        final CompletionStage<Void> superClose = super.close();
+        if (iter.hasNext()) {
+          final Collection<CompletionStage<Void>> remainingIters = new ArrayList<>();
+          do {
+            remainingIters.add(iter.next().close());
+          } while (iter.hasNext());
+          return superClose.thenCombine(Combinators.allOf(remainingIters), (ig1, ig2) -> null);
+        } else {
+          return superClose;
+        }
+      }
+    };
   }
 
   /**
@@ -1209,16 +1231,21 @@ public interface AsyncIterator<T> extends AsyncCloseable {
    * AsyncIterators.concat(AsyncIterators.generate(() -> AsyncIterators.range(0, 3)).take(3))
    * }
    * </pre>
+   * 
+   * Once all elements from an input AsyncIterator have been consumed, {@link #close()} is
+   * internally called on that iterator. If this internal call to {@link #close()} produces an
+   * exception, an exceptional stage will be included in the returned iterator. It is still
+   * necessary to {@link #close()} the returned iterator, as this will close the given encompassing
+   * iterator, and the most recently accessed input iterator (which may be only partially consumed).
+   * Note that only the constituent iterators encountered during traversal will be closed -- any
+   * remaining elements in the encompassing iterator will be untouched if the returned iterator is
+   * only partially traversed.
+   * <p>
+   * If {@link #close()} exceptions should be ignored, they should either be squashed in the input
+   * iterators or the consumer may use manual {@link #nextStage()} iteration to continue past
+   * exceptions.
    *
-   * Once all elements from an input AsyncIterator have been consumed, {@link #close()} is called on
-   * that iterator. If {@link #close()} produces an exception, an exceptional stage will be produced
-   * in the returned iterator. If {@link #close()} exceptions should be ignored, they should either
-   * be squashed in the input iterators or the consumer may use manual {@link #nextStage()}
-   * iteration to continue past exceptions. It is still necessary to {@link #close()} the returned
-   * iterator; this will close both {@code asyncIterators} as well as the last used AsyncIterator if
-   * it was only partially consumed.
-   *
-   * @param asyncIterators a AsyncIterator of AsyncIterators
+   * @param asyncIterators an AsyncIterator of AsyncIterators
    * @return A single AsyncIterator that is the concatenation of {@code asyncIterators}
    */
   static <T> AsyncIterator<T> concat(final AsyncIterator<AsyncIterator<T>> asyncIterators) {

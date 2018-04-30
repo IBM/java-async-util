@@ -7,6 +7,7 @@
 package com.ibm.asyncutil.iteration;
 
 import java.util.ArrayDeque;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Queue;
@@ -300,6 +301,54 @@ class AsyncIterators {
       } else {
         return End.endStage();
       }
+    }
+  }
+
+  static class ConcatAsyncIterator<T> implements AsyncIterator<T> {
+    private final Iterator<? extends AsyncIterator<T>> asyncIterators;
+    private AsyncIterator<T> current;
+  
+    public ConcatAsyncIterator(final Iterator<? extends AsyncIterator<T>> asyncIterators) {
+      assert asyncIterators.hasNext();
+      this.asyncIterators = asyncIterators;
+      this.current = asyncIterators.next();
+    }
+  
+    @Override
+    public CompletionStage<Either<AsyncIterator.End, T>> nextStage() {
+      return asyncWhileAsyncInitial(
+          et -> !et.isRight() && this.asyncIterators.hasNext(),
+          /*
+           * when reaching the end of one iterator, it must be closed before opening a new one. if
+           * the `close` future yields an error, an errorOnce iterator is concatenated with that
+           * close's exception, so the poll on the ConcatIter would encounter this exception. By
+           * using an errorOnce iter, the caller could choose to ignore the exception and attempt
+           * iterating again, which will pop the next asyncIterator off the meta iterator
+           */
+          ot -> StageSupport.thenComposeOrRecover(
+              convertSynchronousException(this.current::close),
+              (t, throwable) -> {
+                this.current =
+                    throwable == null
+                        ? this.asyncIterators.next()
+                        : errorOnce(throwable);
+                return this.current.nextStage();
+              }),
+          this.current.nextStage());
+    }
+  
+    @Override
+    public CompletionStage<Void> close() {
+      return this.current.close();
+    }
+  
+    @Override
+    public String toString() {
+      return "ConcatAsyncIter [current="
+          + this.current
+          + ", iter="
+          + this.asyncIterators
+          + "]";
     }
   }
 

@@ -99,6 +99,47 @@ public class AsyncIteratorCloseTest {
   }
 
   @Test
+  public void testConcatCollectionEagerClose() {
+    final CloseableIterator it1 = new CloseableIterator(AsyncIterator.range(0, 3));
+    final CloseableIterator it2 = new CloseableIterator(AsyncIterator.range(0, 3));
+    final CloseableIterator it3 = new CloseableIterator(AsyncIterator.range(0, 3));
+    final AsyncIterator<Long> concat =
+        AsyncIterator.concat(Arrays.asList(it1, it2, it3));
+
+    Assert.assertEquals(0, TestUtil.join(concat.nextStage()).right().get().intValue());
+    Assert.assertEquals(1, TestUtil.join(concat.nextStage()).right().get().intValue());
+    Assert.assertEquals(2, TestUtil.join(concat.nextStage()).right().get().intValue());
+    Assert.assertEquals(0, TestUtil.join(concat.nextStage()).right().get().intValue());
+
+    TestUtil.join(concat.close());
+
+    // even with only partial traversal, the collection concat closes all input iterators
+    Assert.assertTrue(it1.closed);
+    Assert.assertTrue(it2.closed);
+    Assert.assertTrue(it3.closed);
+  }
+
+  @Test
+  public void testConcatCollectionEagerCloseException() {
+    final CloseableIterator it1 = new CloseableIterator(AsyncIterator.range(0, 3));
+    final CloseableIterator it2 = new CloseableIterator(AsyncIterator.range(0, 3), testException);
+    final CloseableIterator it3 = new CloseableIterator(AsyncIterator.range(0, 3));
+    final AsyncIterator<Long> concat =
+        AsyncIterator.concat(Arrays.asList(it1, it2, it3));
+
+    try {
+      TestUtil.join(concat.close());
+      Assert.fail("exception expected");
+    } catch (final RuntimeException expected) {
+    }
+
+    // despite throwing an exception during close, the collection concat closes all input iterators
+    Assert.assertTrue(it1.closed);
+    Assert.assertTrue(it2.closed);
+    Assert.assertTrue(it3.closed);
+  }
+
+  @Test
   public void testConcatCloseException() {
     final CloseableIterator it1 = new CloseableIterator(AsyncIterator.once(1L));
     // close throws an exception
