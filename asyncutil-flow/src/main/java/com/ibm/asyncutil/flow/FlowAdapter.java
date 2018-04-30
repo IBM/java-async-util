@@ -27,6 +27,8 @@ import com.ibm.asyncutil.util.StageSupport;
 
 /**
  * Adapters to convert between {@link Flow.Publisher} and {@link AsyncIterator}.
+ * 
+ * @author Ravi Khadiwala
  */
 public class FlowAdapter {
   private FlowAdapter() {}

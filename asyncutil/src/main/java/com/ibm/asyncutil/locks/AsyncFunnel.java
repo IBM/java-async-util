@@ -48,6 +48,9 @@ import java.util.function.Supplier;
  * }
  * }
  * </pre>
+ * 
+ * @author Ravi Khadiwala
+ * @author Renar Narubin
  */
 public class AsyncFunnel<T> {
   private final AtomicReference<CompletionStage<T>> current = new AtomicReference<>(null);

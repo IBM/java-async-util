@@ -14,6 +14,9 @@ import java.util.function.Function;
 
 /**
  * Utility methods for creating and composing {@link CompletionStage CompletionStages}
+ * 
+ * @author Ravi Khadiwala
+ * @author Renar Narubin
  */
 public class StageSupport {
   private StageSupport() {}

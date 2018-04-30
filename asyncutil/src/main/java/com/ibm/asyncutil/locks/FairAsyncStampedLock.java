@@ -13,6 +13,8 @@ package com.ibm.asyncutil.locks;
  * lock. {@link Stamp#validate() Validation} of an already issued stamp, however, does not abide by
  * this ordering; it will only fail validation once a writer has successfully acquired the lock
  * (irrespective of queued writers)
+ * 
+ * @author Renar Narubin
  */
 public class FairAsyncStampedLock extends FairAsyncReadWriteLock implements AsyncStampedLock {
   /*

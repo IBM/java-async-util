@@ -27,6 +27,9 @@ import java.util.function.Function;
  * May be used with the methods {@link StageSupport#tryWith(AsyncCloseable, Function)},
  * {@link StageSupport#tryComposeWith(AsyncCloseable, Function)} to emulate the behavior of a try
  * with resources block.
+ * 
+ * @author Renar Narubin
+ * @author Ravi Khadiwala
  */
 @FunctionalInterface
 public interface AsyncCloseable {

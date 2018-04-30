@@ -36,6 +36,7 @@ import java.util.function.Function;
  * }
  * </pre>
  *
+ * @author Ravi Khadiwala
  * @param <L> The left type, by convention the error type if being used to represent possible errors
  * @param <R> The right type, by convention the success type if being used to represent possible
  *        errors

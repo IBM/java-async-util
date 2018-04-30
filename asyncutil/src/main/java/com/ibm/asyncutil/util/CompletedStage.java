@@ -25,6 +25,8 @@ import java.util.function.Function;
  * similar methods) except when calling compound methods involving another stage (like
  * {@link #runAfterBothAsync(CompletionStage, Runnable)}) which use the other stage's corresponding
  * Async method to execute the computation
+ * 
+ * @author Renar Narubin
  */
 class CompletedStage<T> implements CompletionStage<T> {
   static final CompletedStage<Void> VOID = CompletedStage.of(null);

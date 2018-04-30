@@ -9,8 +9,9 @@ package com.ibm.asyncutil.locks;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * A base epoch implementation used to construct various epoch mechanisms, e.g.
- * {@link AsyncEpoch}
+ * A base epoch implementation used to construct various epoch mechanisms, e.g. {@link AsyncEpoch}
+ * 
+ * @author Renar Narubin
  */
 @SuppressWarnings("serial")
 abstract class AbstractSimpleEpoch

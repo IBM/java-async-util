@@ -18,6 +18,9 @@ import java.util.stream.Collectors;
 /**
  * Utility methods for combining more than one {@link CompletionStage} into a single
  * {@link CompletionStage}
+ * 
+ * @author Ravi Khadiwala
+ * @author Renar Narubin
  */
 public class Combinators {
   private Combinators() {}

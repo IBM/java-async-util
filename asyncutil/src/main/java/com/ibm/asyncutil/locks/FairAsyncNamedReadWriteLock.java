@@ -20,6 +20,8 @@ import com.ibm.asyncutil.util.StageSupport;
  * acquisitions (i.e. readers will queue behind waiting writers to prevent writer starvation).
  * <p>
  * {@code null} values are not permitted for use as names.
+ * 
+ * @author Renar Narubin
  */
 public class FairAsyncNamedReadWriteLock<T> implements AsyncNamedReadWriteLock<T> {
   /*

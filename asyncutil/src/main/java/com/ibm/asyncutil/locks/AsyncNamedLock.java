@@ -26,6 +26,7 @@ import java.util.concurrent.CompletionStage;
  * release methods of the returned {@link AsyncLock.LockToken} may throw a
  * {@link java.util.ConcurrentModificationException} if such a modification is detected.
  *
+ * @author Renar Narubin
  * @param <T> the type of named objects used to identify locks
  */
 public interface AsyncNamedLock<T> {

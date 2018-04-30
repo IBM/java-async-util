@@ -38,6 +38,8 @@ import java.util.concurrent.CompletionStage;
  * CompletionStage<Void> close() { return epoch.terminate(); }
  * }
  * </pre>
+ * 
+ * @author Renar Narubin
  */
 public interface AsyncEpoch {
 

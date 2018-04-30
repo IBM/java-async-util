@@ -13,6 +13,8 @@ import com.ibm.asyncutil.util.StageSupport;
 
 /**
  * @see AsyncEpoch#newTerminatedEpoch()
+ * 
+ * @author Renar Narubin
  */
 class TerminatedEpoch implements AsyncEpoch {
   static final TerminatedEpoch INSTANCE = new TerminatedEpoch();

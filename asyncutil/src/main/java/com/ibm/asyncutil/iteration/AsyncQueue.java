@@ -114,6 +114,7 @@ import java.util.Optional;
  * you actually use a consumption operation somewhere, otherwise no one will ever read what was sent
  * </ul>
  *
+ * @author Ravi Khadiwala
  * @param <T> The type of the elements in this queue
  * @see AsyncQueues
  * @see BoundedAsyncQueue

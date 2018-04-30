@@ -14,6 +14,7 @@ import com.ibm.asyncutil.util.StageSupport;
 
 
 /**
+ * @author Renar Narubin
  * @see AsyncEpoch
  */
 @SuppressWarnings("serial")

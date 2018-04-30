@@ -46,6 +46,7 @@ import com.ibm.asyncutil.util.StageSupport;
  * similar to the one used by the j.u.c. via the probe field on Thread. See
  * {@link ThreadLocalRandom} for more details.
  * 
+ * @author Ravi Khadiwala
  */
 final class StripedEpoch implements AsyncEpoch, EpochToken {
   /**

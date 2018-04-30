@@ -27,7 +27,12 @@ import com.ibm.asyncutil.util.Combinators;
 import com.ibm.asyncutil.util.Either;
 import com.ibm.asyncutil.util.StageSupport;
 
-/** Package private methods to use in {@link AsyncIterator} */
+/**
+ * Package private methods to use in {@link AsyncIterator}
+ * 
+ * @author Ravi Khadiwala
+ * @author Renar Narubin
+ */
 class AsyncIterators {
 
   private AsyncIterators() {}

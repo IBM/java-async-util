@@ -18,6 +18,7 @@ import com.ibm.asyncutil.util.Either;
 /**
  * Methods to construct various multi-producer-single-consumer (mpsc) AsyncQueues.
  *
+ * @author Ravi Khadiwala
  * @see AsyncQueue
  * @see BoundedAsyncQueue
  */

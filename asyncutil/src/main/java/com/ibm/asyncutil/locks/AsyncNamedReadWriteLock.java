@@ -26,6 +26,7 @@ import java.util.concurrent.CompletionStage;
  * {@link AsyncReadWriteLock.WriteLockToken} may throw a
  * {@link java.util.ConcurrentModificationException} if such a modification is detected.
  *
+ * @author Renar Narubin
  * @param <T> the type of named objects used to identify read-write locks
  */
 public interface AsyncNamedReadWriteLock<T> {

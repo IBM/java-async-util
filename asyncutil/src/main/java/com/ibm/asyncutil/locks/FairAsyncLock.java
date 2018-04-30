@@ -14,6 +14,8 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * An {@link AsyncLock} which enforces fairness in its acquisition ordering
+ * 
+ * @author Renar Narubin
  */
 public class FairAsyncLock implements AsyncLock {
   /*

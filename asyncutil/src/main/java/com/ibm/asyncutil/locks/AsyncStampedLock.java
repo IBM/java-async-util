@@ -69,6 +69,7 @@ package com.ibm.asyncutil.locks;
  * Implementations will specify whether their lock acquisition is fair or not; this interface does
  * not define this requirement.
  *
+ * @author Renar Narubin
  * @see AsyncReadWriteLock
  * @see java.util.concurrent.locks.StampedLock
  */

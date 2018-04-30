@@ -15,6 +15,8 @@ import sun.misc.Unsafe;
 /**
  * A utility class which provides certain functionality that may not be portable (e.g.
  * {@link sun.misc.Unsafe}). Provides automatic fallback to portable alternatives when necessary
+ * 
+ * @author Renar Narubin
  */
 @SuppressWarnings("restriction")
 final class PlatformDependent {

@@ -14,6 +14,8 @@ import java.util.concurrent.CompletionStage;
  * acquisition.
  * <p>
  * {@code null} values are not permitted for use as names.
+ * 
+ * @author Renar Narubin
  */
 public class FairAsyncNamedLock<T> implements AsyncNamedLock<T> {
   private final FairAsyncNamedReadWriteLock<T> fanrwl = new FairAsyncNamedReadWriteLock<>();

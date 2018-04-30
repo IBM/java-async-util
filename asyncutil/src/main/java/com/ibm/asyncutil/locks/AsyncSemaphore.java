@@ -13,6 +13,8 @@ import java.util.concurrent.CompletionStage;
  * <p>
  * Implementations will specify whether their permit acquisition and release is fair or not; this
  * interface does not define this requirement.
+ * 
+ * @author Renar Narubin
  */
 public interface AsyncSemaphore {
 

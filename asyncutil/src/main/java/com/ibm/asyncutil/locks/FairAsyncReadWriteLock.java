@@ -13,6 +13,8 @@ import java.util.concurrent.CompletionStage;
 /**
  * An implementation of the {@link AsyncReadWriteLock} interface which enforces reader/writer
  * fairness -- i.e. new readers will queue behind waiting writers
+ * 
+ * @author Renar Narubin
  */
 public class FairAsyncReadWriteLock implements AsyncReadWriteLock {
   /*

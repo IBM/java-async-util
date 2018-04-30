@@ -180,6 +180,8 @@ import com.ibm.asyncutil.util.StageSupport;
  * case requires no resources the user should only call close if it is possible that the
  * {@link AsyncIterator} has resources.
  *
+ * @author Ravi Khadiwala
+ * @author Renar Narubin
  * @param <T> Type of object being iterated over.
  * @see Stream
  */

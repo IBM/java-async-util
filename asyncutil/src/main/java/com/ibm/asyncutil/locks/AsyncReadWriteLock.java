@@ -10,13 +10,14 @@ import java.util.Optional;
 import java.util.concurrent.CompletionStage;
 
 import com.ibm.asyncutil.locks.AsyncLock.LockToken;
-import com.ibm.asyncutil.locks.FairAsyncReadWriteLock;
 
 /**
  * An asynchronously acquirable read-write lock.
  * <p>
  * Implementations will specify whether their lock acquisition is fair or not; this interface does
  * not define this requirement.
+ * 
+ * @author Renar Narubin
  */
 public interface AsyncReadWriteLock {
 

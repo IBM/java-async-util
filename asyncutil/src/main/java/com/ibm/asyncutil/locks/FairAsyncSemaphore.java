@@ -25,6 +25,8 @@ import com.ibm.asyncutil.util.StageSupport;
  * number of permits as an argument are generally restricted to a maximum value of
  * {@link FairAsyncSemaphore#MAX_PERMITS}. Similarly, the initial permit value provided to the
  * constructor must be at least as great as the defined {@link FairAsyncSemaphore#MIN_PERMITS} value
+ * 
+ * @author Renar Narubin
  */
 public class FairAsyncSemaphore implements AsyncSemaphore {
 

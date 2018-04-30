@@ -100,6 +100,7 @@ import java.util.concurrent.CompletionStage;
  * In practice, this means that if your number of senders is very large you can still consume too
  * much memory even if you are respecting the send interface.
  *
+ * @author Ravi Khadiwala
  * @param <T> the type of the items sent and consumed from this queue
  * @see AsyncIterator
  * @see AsyncQueue

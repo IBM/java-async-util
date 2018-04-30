@@ -73,6 +73,8 @@ import com.ibm.asyncutil.util.StageSupport;
  * example, the preceding snippet can be expressed as {@code
  * AsyncIterator.generate(this::getNextNumber).find(i -> i % 2 != 0)}
  *
+ * @author Renar Narubin
+ * @author Ravi Khadiwala
  * @see AsyncIterator
  */
 public final class AsyncTrampoline {
