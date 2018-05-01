@@ -178,87 +178,111 @@ class CompletedStage<T> implements CompletionStage<T> {
   public <U, V> CompletionStage<V> thenCombine(final CompletionStage<? extends U> other,
       final BiFunction<? super T, ? super U, ? extends V> fn) {
     Objects.requireNonNull(fn);
-    if (this.exception == null) {
-      return other.thenApply(u -> fn.apply(this.result, u));
-    }
-    return typedException();
+    return other.thenApply(
+        this.exception == null
+            ? u -> fn.apply(this.result, u)
+            : u -> {
+              throw CompletedStage.wrapIfNecessary(this.exception);
+            });
   }
 
   @Override
   public <U, V> CompletionStage<V> thenCombineAsync(final CompletionStage<? extends U> other,
       final BiFunction<? super T, ? super U, ? extends V> fn) {
     Objects.requireNonNull(fn);
-    if (this.exception == null) {
-      return other.thenApplyAsync(u -> fn.apply(this.result, u));
-    }
-    return typedException();
+    return other.thenApplyAsync(
+        this.exception == null
+            ? u -> fn.apply(this.result, u)
+            : u -> {
+              throw CompletedStage.wrapIfNecessary(this.exception);
+            });
   }
 
   @Override
   public <U, V> CompletionStage<V> thenCombineAsync(final CompletionStage<? extends U> other,
       final BiFunction<? super T, ? super U, ? extends V> fn, final Executor executor) {
     Objects.requireNonNull(fn);
-    if (this.exception == null) {
-      return other.thenApplyAsync(u -> fn.apply(this.result, u), executor);
-    }
-    return typedException();
+    return other.thenApplyAsync(
+        this.exception == null
+            ? u -> fn.apply(this.result, u)
+            : u -> {
+              throw CompletedStage.wrapIfNecessary(this.exception);
+            },
+        executor);
   }
 
   @Override
   public <U> CompletionStage<Void> thenAcceptBoth(final CompletionStage<? extends U> other,
       final BiConsumer<? super T, ? super U> action) {
     Objects.requireNonNull(action);
-    if (this.exception == null) {
-      return other.thenAccept(u -> action.accept(this.result, u));
-    }
-    return typedException();
+    return other.thenAccept(
+        this.exception == null
+            ? u -> action.accept(this.result, u)
+            : u -> {
+              throw CompletedStage.wrapIfNecessary(this.exception);
+            });
   }
 
   @Override
   public <U> CompletionStage<Void> thenAcceptBothAsync(final CompletionStage<? extends U> other,
       final BiConsumer<? super T, ? super U> action) {
     Objects.requireNonNull(action);
-    if (this.exception == null) {
-      return other.thenAcceptAsync(u -> action.accept(this.result, u));
-    }
-    return typedException();
+    return other.thenAcceptAsync(
+        this.exception == null
+            ? u -> action.accept(this.result, u)
+            : u -> {
+              throw CompletedStage.wrapIfNecessary(this.exception);
+            });
   }
 
   @Override
   public <U> CompletionStage<Void> thenAcceptBothAsync(final CompletionStage<? extends U> other,
       final BiConsumer<? super T, ? super U> action, final Executor executor) {
     Objects.requireNonNull(action);
-    if (this.exception == null) {
-      return other.thenAcceptAsync(u -> action.accept(this.result, u), executor);
-    }
-    return typedException();
+    return other.thenAcceptAsync(
+        this.exception == null
+            ? u -> action.accept(this.result, u)
+            : u -> {
+              throw CompletedStage.wrapIfNecessary(this.exception);
+            },
+        executor);
   }
 
   @Override
   public CompletionStage<Void> runAfterBoth(final CompletionStage<?> other, final Runnable action) {
-    if (this.exception == null) {
-      return other.thenRun(action);
-    }
-    return typedException();
+    Objects.requireNonNull(action);
+    return other.thenRun(
+        this.exception == null
+            ? action
+            : () -> {
+              throw CompletedStage.wrapIfNecessary(this.exception);
+            });
   }
 
   @Override
   public CompletionStage<Void> runAfterBothAsync(final CompletionStage<?> other,
       final Runnable action) {
-    if (this.exception == null) {
-      return other.thenRunAsync(action);
-    }
-    return typedException();
+    Objects.requireNonNull(action);
+    return other.thenRunAsync(
+        this.exception == null
+            ? action
+            : () -> {
+              throw CompletedStage.wrapIfNecessary(this.exception);
+            });
   }
 
   @Override
   public CompletionStage<Void> runAfterBothAsync(final CompletionStage<?> other,
       final Runnable action,
       final Executor executor) {
-    if (this.exception == null) {
-      return other.thenRunAsync(action, executor);
-    }
-    return typedException();
+    Objects.requireNonNull(action);
+    return other.thenRunAsync(
+        this.exception == null
+            ? action
+            : () -> {
+              throw CompletedStage.wrapIfNecessary(this.exception);
+            },
+        executor);
   }
 
   @Override

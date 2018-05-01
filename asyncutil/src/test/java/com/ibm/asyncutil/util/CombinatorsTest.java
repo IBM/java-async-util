@@ -11,14 +11,19 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -31,6 +36,8 @@ import com.ibm.asyncutil.util.TestUtil.CompletableStage;
 
 @RunWith(Parameterized.class)
 public class CombinatorsTest {
+  private static final Executor ASYNC = CompletableFuture::runAsync;
+
   private static class TestException extends RuntimeException {
     private static final long serialVersionUID = 1L;
   }
@@ -155,9 +162,9 @@ public class CombinatorsTest {
         Arrays.asList(
             getCompletedStage(1),
             getExceptionalStage(new TestException()));
-    assertError(Combinators.allOf(futures));
-    assertError(Combinators.collect(futures));
-    assertError(Combinators.collect(futures, Collectors.toList()));
+    CombinatorsTest.assertError(Combinators.allOf(futures));
+    CombinatorsTest.assertError(Combinators.collect(futures));
+    CombinatorsTest.assertError(Combinators.collect(futures, Collectors.toList()));
   }
 
   @Test
@@ -173,15 +180,15 @@ public class CombinatorsTest {
     final CompletionStage<List<Integer>> collCollect =
         Combinators.collect(futures, Collectors.toList());
 
-    assertIncomplete(voidAll);
-    assertIncomplete(collAll);
-    assertIncomplete(collCollect);
+    CombinatorsTest.assertIncomplete(voidAll);
+    CombinatorsTest.assertIncomplete(collAll);
+    CombinatorsTest.assertIncomplete(collCollect);
 
     delayed.complete(1);
 
-    assertError(voidAll);
-    assertError(collAll);
-    assertError(collCollect);
+    CombinatorsTest.assertError(voidAll);
+    CombinatorsTest.assertError(collAll);
+    CombinatorsTest.assertError(collCollect);
   }
 
   @Test
@@ -208,7 +215,7 @@ public class CombinatorsTest {
               }
               return getCompletedStage(i);
             }));
-    assertError(Combinators.keyedAll(stageMap));
+    CombinatorsTest.assertError(Combinators.keyedAll(stageMap));
   }
 
   @Test
@@ -220,7 +227,7 @@ public class CombinatorsTest {
     final CompletionStage<Map<Integer, Integer>> fut = Combinators.keyedAll(stageMap);
     int i = 0;
     for (final CompletableStage<Integer> future : stageMap.values()) {
-      assertIncomplete(fut);
+      CombinatorsTest.assertIncomplete(fut);
       if (i == 3) {
         future.completeExceptionally(new TestException());
       } else {
@@ -228,10 +235,68 @@ public class CombinatorsTest {
       }
       i++;
     }
-    assertError(fut);
+    CombinatorsTest.assertError(fut);
   }
 
-  private <T> void assertError(final CompletionStage<T> stage) {
+  /**
+   * Test that CompletionStage methods which depend on both of two stages always wait for both
+   * stages to complete.
+   */
+  @Test
+  public void testCombineEtAl() {
+    for (final BiFunction<CompletionStage<?>, CompletionStage<?>, CompletionStage<Void>> combineMethod : Stream
+        .<BiFunction<CompletionStage<?>, CompletionStage<?>, CompletionStage<Void>>>of(
+            (a, b) -> a.thenCombine(b, CombinatorsTest.voidFunction()),
+            (a, b) -> a.thenCombineAsync(b, CombinatorsTest.voidFunction()),
+            (a, b) -> a.thenCombineAsync(b, CombinatorsTest.voidFunction(), ASYNC),
+            (a, b) -> a.thenAcceptBoth(b, CombinatorsTest.voidConsumer()),
+            (a, b) -> a.thenAcceptBothAsync(b, CombinatorsTest.voidConsumer()),
+            (a, b) -> a.thenAcceptBothAsync(b, CombinatorsTest.voidConsumer(), ASYNC),
+            (a, b) -> a.runAfterBoth(b, CombinatorsTest.voidRunnable()),
+            (a, b) -> a.runAfterBothAsync(b, CombinatorsTest.voidRunnable()),
+            (a, b) -> a.runAfterBothAsync(b, CombinatorsTest.voidRunnable(), ASYNC))
+        // include all the functions in reverse as well, switch a and b in argument order
+        .flatMap(function -> Stream.of(function, (a, b) -> function.apply(b, a)))
+        .collect(Collectors.toList())) {
+      {
+        final CompletionStage<String> doneNormal = getCompletedStage("a");
+        final CompletableStage<String> incompleteNormal = getCompletableStage();
+
+        final CompletionStage<Void> combine = combineMethod.apply(doneNormal, incompleteNormal);
+
+        CombinatorsTest.assertIncomplete(combine);
+        incompleteNormal.complete("b");
+        TestUtil.join(combine);
+      }
+      {
+        final CompletionStage<String> doneExceptional = getExceptionalStage(new TestException());
+        final CompletableStage<String> incompleteNormal = getCompletableStage();
+
+        final CompletionStage<Void> combine =
+            combineMethod.apply(doneExceptional, incompleteNormal);
+
+        CombinatorsTest.assertIncomplete(combine);
+        incompleteNormal.complete("b");
+        CombinatorsTest.assertError(combine);
+      }
+    }
+  }
+
+  private static <T, V> BiFunction<T, V, Void> voidFunction() {
+    return (ig1, ig2) -> null;
+  }
+
+  private static <T, V> BiConsumer<T, V> voidConsumer() {
+    return (ig1, ig2) -> {
+    };
+  }
+
+  private static Runnable voidRunnable() {
+    return () -> {
+    };
+  }
+
+  private static <T> void assertError(final CompletionStage<T> stage) {
     try {
       TestUtil.join(stage);
     } catch (final CompletionException e) {
@@ -239,7 +304,7 @@ public class CombinatorsTest {
     }
   }
 
-  private <T> void assertIncomplete(final CompletionStage<T> stage) {
+  private static <T> void assertIncomplete(final CompletionStage<T> stage) {
     try {
       TestUtil.join(stage, 20, TimeUnit.MILLISECONDS);
       Assert.fail("not all futures complete, get should timeout");
