@@ -8,4 +8,4 @@ Pull requests for features or bug fixes are welcome. If you are working on a lar
 This project uses the DCO for individual contributions. If you are contributing as an individual, simply include a "Signed-off-by" in the commit message (git commit -s) or in the pull request description. This indicates you agree the commit satisfies the [Developer Certificate of Origin](DCO1.1.txt).
 
 ## Corporate Contributions
-If you are contributing to the project on behalf of a corporation (your company owns the IP you would like to contribute), then we must recieve a signed [CLA](cla.doc) for your company.
+If you are contributing to the project on behalf of a corporation (your company owns the IP you would like to contribute), then we must recieve a signed [CLA](cla.docx) for your company.
