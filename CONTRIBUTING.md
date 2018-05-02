@@ -1,5 +1,5 @@
 # Reporting bugs
-If you are a user and you find a bug, please submit an [issue](https://github.ibm.com/cs-team-atg/async-util/issues). Please try to provide sufficient information for someone else to reproduce the issue.
+If you are a user and you find a bug, please submit an [issue](https://github.com/IBM/java-async-util/issues). Please try to provide sufficient information for someone else to reproduce the issue.
 
 # Pull requests
 Pull requests for features or bug fixes are welcome. If you are working on a large contribution, please file an issue first. Feel free to ask for help or ask questions about a possible contribution.

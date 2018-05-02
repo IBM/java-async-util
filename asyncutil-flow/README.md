@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This optional module allows Java 9 users to translate the iteration primitive provided by asyncutil to and from [java.util.Flow constructs](https://docs.oracle.com/javase/9/docs/api/java/util/concurrent/Flow.html). An asyncutil [AsyncIterator](https://pages.github.ibm.com/cs-team-atg/async-util/apidocs/com/ibm/asyncutil/iteration/AsyncIterator.html) can be used as the source for a `Flow.Publisher`, and a `Flow.Publisher` can be consumed via an `AsyncIterator`.
+This optional module allows Java 9 users to translate the iteration primitive provided by asyncutil to and from [java.util.Flow constructs](https://docs.oracle.com/javase/9/docs/api/java/util/concurrent/Flow.html). An asyncutil [AsyncIterator](https://ibm.github.io/java-async-util/apidocs/com/ibm/asyncutil/iteration/AsyncIterator.html) can be used as the source for a `Flow.Publisher`, and a `Flow.Publisher` can be consumed via an `AsyncIterator`.
 
 ## Downloading
 TODO maven instructions
