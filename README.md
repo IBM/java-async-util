@@ -11,7 +11,24 @@ The library is broken up into three packages:
 To get started, you can browse the [javadocs](https://ibm.github.io/java-async-util/apidocs/overview-summary.html) or walk through some [example code](asyncutil/src/test/java/com/ibm/asyncutil/examples/nio/nio.md).
 
 ## Downloading
-TODO maven instructions
+
+To add a dependency on asyncutil
+```xml
+<dependency>
+    <groupId>com.ibm.async</groupId>
+    <artifactId>asyncutil</artifactId>
+    <version>0.1.0</version>
+</dependency>
+```
+
+To get support for [Flow](https://docs.oracle.com/javase/9/docs/api/java/util/concurrent/Flow.html) (JDK9+ only)
+```xml
+<dependency>
+    <groupId>com.ibm.async</groupId>
+    <artifactId>asyncutil-flow</artifactId>
+    <version>0.1.0</version>
+</dependency>
+```
 
 ## Locks
 The locks package provides asynchronous analogs of familiar synchronization primitives, all with efficient non-blocking implementations. Imagine we again have some source of asynchronity (say asynchronous network requests), and we'd like to implement an asynchronous method that makes a request and generates a result based on the request's response and some state that requires access under mutual exclusion.
