@@ -55,7 +55,7 @@ If we wrap the `mutableState` operations in a `synchronized` block, we'll end up
 * If there's lock contention, we'll also be incurring a lot of additional context switching on these threads
 * If many locations in our application solve similar problems, they'll also have to create their own thread pools which is not scalable. 
 
-Instead we can use `AsyncLock` to provide exclusive access to the `MutableState`. We will try to acquire the lock on the thread that completes the network operation stage, and if it is not available we'll recieve a CompletionStage that will notify us when it becomes available.
+Instead we can use `AsyncLock` to provide exclusive access to the `MutableState`. We will try to acquire the lock on the thread that completes the network operation stage, and if it is not available we'll receive a CompletionStage that will notify us when it becomes available.
 
 ```java
 ...
@@ -90,7 +90,7 @@ CompletionStage<Result> makeRequest(Request request) {
 The package provides asynchronous versions of read/write locks, stamped locks, semaphores and named locks. The full [locks javadoc](https://ibm.github.io/java-async-util/apidocs/com/ibm/asyncutil/locks/package-summary.html) contains more information.
 
 ## Iteration
-The classes in this package provide ways to generate and consume results asynchronously. The main mechanism the is `AsyncIterator` interface, which can be considered an asynchronous analog of the Stream API. The full [iteration javadocs](https://ibm.github.io/java-async-util/apidocs/com/ibm/asyncutil/iteration/package-summary.html) contains more information on `AsyncIterator` as well as other asynchronous iteration constructs.
+The classes in this package provide ways to generate and consume results asynchronously. The main mechanism is `AsyncIterator` interface, which can be considered an asynchronous analog of the Stream API. The full [iteration javadocs](https://ibm.github.io/java-async-util/apidocs/com/ibm/asyncutil/iteration/package-summary.html) contains more information on `AsyncIterator` as well as other asynchronous iteration constructs.
 
 Consider the following example from the `Stream` documentation
 ```java
@@ -134,7 +134,7 @@ sum.thenRun(() -> widgets.terminate());
 ```
 
 ## Util
-The util package contains interfaces and static functions for commonly reimplmented `CompletionStage` patterns. The best way to discover them all is to browse [the javadoc](https://ibm.github.io/java-async-util/apidocs/com/ibm/asyncutil/util/package-summary.html).
+The util package contains interfaces and static functions for commonly reimplemented `CompletionStage` patterns. The best way to discover them all is to browse [the javadoc](https://ibm.github.io/java-async-util/apidocs/com/ibm/asyncutil/util/package-summary.html).
 
 ### `StageSupport`
 StageSupport contains miscellaneous utility functions, including methods to create already completed exceptional stages, common transformations, and methods for working with resources that need to be asynchronously released.
